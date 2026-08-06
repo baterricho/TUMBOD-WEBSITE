@@ -1,0 +1,66 @@
+---
+/**
+ * The barangay admin.
+ *
+ * A single page that signs in against Supabase Auth and edits every collection
+ * in `collections.ts`. It is deliberately NOT part of the public site:
+ *
+ *   - it uses its own minimal layout, so nothing here can affect the pages
+ *     residents load on a metered connection;
+ *   - it is `noindex`, and excluded from the sitemap and the service worker;
+ *   - it is the ONLY route on the site that ships a third-party JS bundle.
+ *
+ * SECURITY. The publishable key in the client bundle is public by design — it
+ * identifies the project, it does not grant permission. Every table has
+ * row-level security: anonymous visitors can read published rows and nothing
+ * else, and writes require a session belonging to a row in `profiles`. Losing
+ * this key to a page source view costs nothing, which is why the service_role
+ * key is not here and must never be.
+ *
+ * The forms are generated from `COLLECTIONS`. Thirteen hand-written screens
+ * would drift from the schema the first time a column changed.
+ */
+import { COLLECTIONS } from '@/lib/cms/collections'
+
+const SUPABASE_URL = import.meta.env['PUBLIC_SUPABASE_URL'] ?? ''
+const SUPABASE_KEY = import.meta.env['PUBLIC_SUPABASE_ANON_KEY'] ?? ''
+const configured = Boolean(SUPABASE_URL && SUPABASE_KEY)
+---
+
+<!doctype html>
+<html lang="fil">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Admin — Barangay Tumbod</title>
+    <link rel="stylesheet" href="/admin.css" />
+  </head>
+  <body>
+    <div id="app" data-loading>
+      <p class="a-boot">Binubuksan ang CMS…</p>
+    </div>
+
+    {
+      !configured && (
+        <p class="a-fatal">
+          Walang naka-set na PUBLIC_SUPABASE_URL o PUBLIC_SUPABASE_ANON_KEY. Tingnan ang
+          <code>.env.example</code>.
+        </p>
+      )
+    }
+
+    {/* Config first, inline, so the module below finds it already set.
+        `define:vars` requires `is:inline` — Astro will not process a script it
+        has injected values into. */}
+    <script is:inline define:vars={{ SUPABASE_URL, SUPABASE_KEY, COLLECTIONS }}>
+      window.__ADMIN__ = { SUPABASE_URL, SUPABASE_KEY, COLLECTIONS }
+    </script>
+
+    {/* Bundled by Astro — this is where @supabase/supabase-js comes in, and
+        it is the only route on the site that pays for it. */}
+    <script>
+      import '../../scripts/admin/main'
+    </script>
+  </body>
+</html>

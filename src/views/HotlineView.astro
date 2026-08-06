@@ -1,0 +1,45 @@
+---
+/**
+ * Hotline directory body, locale-aware.
+ *
+ * The target of the always-visible emergency control, and precache tier 1.
+ * This page must open with no signal, no JavaScript, and no third-party
+ * anything. It is the single most important URL on the site.
+ */
+import Section from '@/components/Section.astro'
+import Icon from '@/components/Icon.astro'
+import PhoneNumber from '@/components/PhoneNumber.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { HOTLINES } from '@/lib/content/active'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{t.nav.emergencyLabel}</h1>
+  <p style="margin-top:var(--space-3);color:var(--ink-muted);max-width:var(--measure)">
+    {t.safety.mayBeNewer}
+  </p>
+</Section>
+
+<Section>
+  <ul style="list-style:none;padding:0;margin:0">
+    {
+      HOTLINES.map((line) => (
+        <li style="min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);border-bottom:1px solid var(--line);flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:var(--space-2)">
+            <Icon name="phone" size={20} />
+            <strong>{fil ? line.labelFil : line.labelEn}</strong>
+          </span>
+          <PhoneNumber number={line.number} locale={locale} large />
+        </li>
+      ))
+    }
+  </ul>
+</Section>

@@ -1,0 +1,63 @@
+---
+/**
+ * Service detail body, locale-aware.
+ *
+ * The requirement checklist is FIRST — the whole point is that a resident can
+ * run down the list at their door and know they can leave (UX-STRATEGY.md J2).
+ *
+ * No "send request" CTA: online intake is deferred (decision B5). The route and
+ * data model exist behind `acceptsOnline`; only the UI is dark.
+ */
+import Section from '@/components/Section.astro'
+import Placeholder from '@/components/Placeholder.astro'
+import ServiceRequirementChecklist from '@/components/ServiceRequirementChecklist.astro'
+import type { ServiceDetail } from '@/lib/content/services'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { isPlaceholder } from '@/lib/content/placeholder'
+
+interface Props {
+  service: ServiceDetail
+  locale: Locale
+}
+
+const { service, locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+---
+
+<Section divider={false}>
+  <nav aria-label={t.common.breadcrumb} style="font-size:var(--text-sm);color:var(--ink-muted)">
+    <a href={p || '/'}>{t.nav.home}</a> › <a href={`${p}/serbisyo`}>{t.services.title}</a> ›{' '}
+    {fil ? service.nameFil : service.nameEn}
+  </nav>
+  <h1 style="font-size:var(--text-3xl);margin-top:var(--space-3)">
+    {fil ? service.nameFil : service.nameEn}
+  </h1>
+  <p style="margin-top:var(--space-2);max-width:var(--measure);color:var(--ink-muted)">
+    {fil ? service.descriptionFil : service.descriptionEn}
+  </p>
+</Section>
+
+<Section divider={false}>
+  <ServiceRequirementChecklist service={service} locale={locale} />
+</Section>
+
+<Section title={t.services.process} titleId="process">
+  <ol style="padding-inline-start:var(--space-5);max-width:var(--measure);display:grid;gap:var(--space-2)">
+    {service.steps.map((step) => <li>{fil ? step.labelFil : step.labelEn}</li>)}
+  </ol>
+  <p style="margin-top:var(--space-4);font-size:var(--text-sm);color:var(--ink-muted);max-width:var(--measure)">
+    {t.services.notAutomated}
+  </p>
+</Section>
+
+<Section title={t.services.legalBasis} titleId="legal">
+  {
+    isPlaceholder(service.legalBasis) ? (
+      <Placeholder value={service.legalBasis} display="block" />
+    ) : (
+      <p>{service.legalBasis}</p>
+    )
+  }
+</Section>

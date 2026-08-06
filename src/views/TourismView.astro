@@ -1,0 +1,90 @@
+---
+/**
+ * Tourism and attractions.
+ *
+ * Deliberately NO booking links, prices, or named operators. A barangay page
+ * that links to a commercial operator it has not vetted has made an
+ * endorsement it cannot stand behind, and on a small island that is a real
+ * dispute waiting to happen. Attractions describe the place and how to reach
+ * it; commerce lives on the Local Businesses page as a neutral listing.
+ *
+ * Every entry also carries a safety line, because the way to reach most of
+ * these is by small boat across straits the Coast Guard closes in rough
+ * weather (RESEARCH.md §4).
+ */
+import Section from '@/components/Section.astro'
+import { ATTRACTIONS } from '@/lib/content/active'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{fil ? 'Turismo at mga Pasyalan' : 'Tourism and Attractions'}</h1>
+  <p class="section-lede" style="margin-top:var(--space-3)">
+    {
+      fil
+        ? 'Ang Tumbod ay nasa Pulo ng Tuluran. Bangka ang paraan ng pagpunta rito at sa halos lahat ng nakalista sa ibaba.'
+        : 'Tumbod is on Tuluran Island. Reaching it — and nearly everything listed below — means a boat.'
+    }
+  </p>
+</Section>
+
+{
+  ATTRACTIONS.length === 0 ? (
+    <Section>
+      <div class="card" style="max-width:var(--measure)">
+        <p>
+          {fil
+            ? 'Wala pang nakalistang pasyalan dito.'
+            : 'No attractions are listed here yet.'}
+        </p>
+        <p class="small muted" style="margin-top:var(--space-2)">
+          {fil
+            ? 'Kailangan ito mula sa barangay: anong lugar ang bukas sa bisita, paano marating, at alin ang sanctuary na bawal pasukin.'
+            : 'This must come from the barangay: which places are open to visitors, how to reach them, and which are sanctuaries that may not be entered.'}
+        </p>
+      </div>
+    </Section>
+  ) : (
+    <Section>
+      <div class="grid-cards">
+        {ATTRACTIONS.map((a) => (
+          <article class="fcard" data-reveal="pending">
+            {/* No stock photography. This is a labelled slot, not a picture of
+                somewhere else (DECISION-redesign.md §3). */}
+            <div class="fcard__media" aria-hidden="true">
+              {fil ? 'Larawan — wala pa' : 'Photograph — not yet supplied'}
+            </div>
+            <h3 class="fcard__title">{fil ? a.nameFil : a.nameEn}</h3>
+            <p class="fcard__meta">{fil ? a.bodyFil : a.bodyEn}</p>
+            <p class="fcard__meta">
+              <strong>{fil ? 'Paano marating: ' : 'Getting there: '}</strong>
+              {fil ? a.gettingThereFil : a.gettingThereEn}
+            </p>
+          </article>
+        ))}
+      </div>
+    </Section>
+  )
+}
+
+{/* Not decoration. Anyone planning a visit needs this before they plan it. */}
+<Section title={fil ? 'Bago kayo bumiyahe' : 'Before you travel'} titleId="before-you-travel" tone="sunken">
+  <p style="max-width:var(--measure)">
+    {
+      fil
+        ? 'Kapag masama ang panahon, ipinagbabawal ng Coast Guard ang paglayag ng maliliit na bangka sa Taytay at El Nido. Utos ito, hindi pasya ng bangkero, at walang bangkang maaaring lumabag.'
+        : 'In rough weather the Coast Guard prohibits small boats from sailing in Taytay and El Nido. It is an order, not the operator’s choice, and no boat may sail against it.'
+    }
+  </p>
+  <p style="margin-top:var(--space-3)">
+    <a href={`${p}/ligtas`}>{fil ? 'Tingnan ang lagay ng dagat' : 'Check sea conditions'} →</a>
+  </p>
+</Section>

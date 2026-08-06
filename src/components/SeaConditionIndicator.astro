@@ -1,0 +1,78 @@
+---
+/**
+ * Sea condition — a full-bleed colour band, the loudest thing on the page.
+ *
+ * This is the single most consequential piece of daily information on the
+ * island: it decides whether a resident can reach a hospital, sell a catch, or
+ * get a document signed. Giving it the whole width, in boat paint, at display
+ * size, is the correct hierarchy — it outranks anything ceremonial (§2).
+ *
+ * Never colour alone: colour + Filipino WORD + icon, plus wave height where
+ * known. Persona P7 reads slowly and may not distinguish the fills.
+ *
+ * Escalation runs through the actual palette of a Palawan bangka — teal, boat
+ * yellow, boat orange, boat red (DESIGN-PLAN.md §2.1).
+ */
+import Icon from './Icon.astro'
+import Placeholder from './Placeholder.astro'
+import type { SeaCondition } from '@/lib/content/types'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { formatTime } from '@/lib/time'
+import { isPlaceholder } from '@/lib/content/placeholder'
+
+interface Props {
+  condition: SeaCondition
+  locale: Locale
+}
+
+const { condition, locale } = Astro.props
+const t = getDictionary(locale)
+
+const STATE = {
+  calm: { icon: 'wave-calm', word: t.sea.calm },
+  moderate: { icon: 'wave-moderate', word: t.sea.moderate },
+  rough: { icon: 'wave-rough', word: t.sea.rough },
+  dangerous: { icon: 'wave-dangerous', word: t.sea.dangerous },
+} as const
+
+const s = STATE[condition.state]
+---
+
+<div class={`seaband seaband--${condition.state}`}>
+  <div class="seaband__inner">
+    <h2 class="seaband__label is-water">{t.home.seaNow}</h2>
+
+    <Icon name={s.icon} size={44} />
+    <strong class="seaband__word">{s.word}</strong>
+
+    {
+      !isPlaceholder(condition.waveHeightM) && (
+        <span class="seaband__figure is-water">
+          {t.sea.waveHeight} ~{condition.waveHeightM.toFixed(1)} m
+        </span>
+      )
+    }
+
+    <dl class="seaband__meta">
+      <div style="display:flex;gap:var(--space-2)">
+        <dt>{t.sea.wind}:</dt>
+        <dd style="margin:0">
+          {
+            isPlaceholder(condition.windKph) ? (
+              <Placeholder value={condition.windKph} />
+            ) : (
+              <span class="figure">{condition.windKph} kph</span>
+            )
+          }
+        </dd>
+      </div>
+      {/* Provenance is never optional. */}
+      <div style="display:flex;gap:var(--space-2)">
+        <dt>{t.sea.readAt}:</dt>
+        <dd class="figure" style="margin:0">
+          {formatTime(condition.observedAt)} · {condition.source}
+        </dd>
+      </div>
+    </dl>
+  </div>
+</div>

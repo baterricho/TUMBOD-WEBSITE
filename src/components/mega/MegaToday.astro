@@ -1,0 +1,310 @@
+---
+/**
+ * "Today" mega panel — the same three facts the homepage leads with, reachable
+ * from every page.
+ *
+ * NO SAMPLE DATA IN THIS PANEL. Sea state, the boat, and whether the office is
+ * open all come from `active.ts`, which is what /ligtas and the homepage read.
+ * These are the three questions the site exists to answer, and a plausible
+ * fake answer to "can a bangka sail today" is worse than no panel at all.
+ * Where a value is genuinely unknown it renders as the audited placeholder,
+ * not as an invented reading.
+ */
+import Icon from '../Icon.astro'
+import { seaCondition, nextBoat, officeHours } from '@/lib/content/active'
+import { isPlaceholder } from '@/lib/content/placeholder'
+import { prefix, label, note, type MenuLink } from '@/lib/content/menu'
+import { formatAbsolute } from '@/lib/time'
+import { getDictionary, type Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = prefix(locale)
+const t = getDictionary(locale)
+
+/** Build-time "now". The observation timestamp is printed beside the reading
+    so its age is always visible rather than implied. */
+const now = new Date()
+const sea = seaCondition(now)
+const boat = nextBoat(now)
+const office = officeHours(fil ? 'Ngayon' : 'Today')
+
+const SEA_ICON = {
+  calm: 'wave-calm',
+  moderate: 'wave-moderate',
+  rough: 'wave-rough',
+  dangerous: 'wave-dangerous',
+} as const
+
+const BOAT_STATE = {
+  running: { fil: 'May biyahe', en: 'Running' },
+  uncertain: { fil: 'Hindi sigurado', en: 'Uncertain' },
+  cancelled: { fil: 'Kanselado', en: 'Cancelled' },
+} as const
+
+const OFFICE_STATE = {
+  open: { fil: 'Bukas', en: 'Open' },
+  closed: { fil: 'Sarado', en: 'Closed' },
+  limited: { fil: 'Limitado', en: 'Limited' },
+} as const
+
+const ACTIONS: readonly MenuLink[] = [
+  {
+    href: '/serbisyo/barangay-clearance',
+    labelFil: 'Kumuha ng clearance',
+    labelEn: 'Get a clearance',
+    icon: 'document',
+    noteFil: 'Requirements at bayad',
+    noteEn: 'Requirements and fees',
+  },
+  {
+    href: '/ligtas/hotline',
+    labelFil: 'Mga emergency number',
+    labelEn: 'Emergency numbers',
+    icon: 'phone',
+    noteFil: 'Buong direktoryo',
+    noteEn: 'Full directory',
+  },
+  {
+    href: '/balita',
+    labelFil: 'Mga anunsyo',
+    labelEn: 'Announcements',
+    icon: 'megaphone',
+    noteFil: 'Pinakabago mula sa barangay',
+    noteEn: 'Latest from the barangay',
+  },
+  {
+    href: '/porma',
+    labelFil: 'Mga porma',
+    labelEn: 'Downloadable forms',
+    icon: 'download',
+    noteFil: 'I-print bago pumunta',
+    noteEn: 'Print before you travel',
+  },
+  {
+    href: '/hanapin',
+    labelFil: 'Hanapin',
+    labelEn: 'Search',
+    icon: 'search',
+    noteFil: 'Buong site',
+    noteEn: 'The whole site',
+  },
+  {
+    href: '/tungkol',
+    labelFil: 'Tungkol sa barangay',
+    labelEn: 'About the barangay',
+    icon: 'info',
+    noteFil: 'Pulo, populasyon, kasaysayan',
+    noteEn: 'Island, population, history',
+  },
+]
+---
+
+{/* ── Column 1: the sea ──────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{t.home.seaNow}</h2>
+
+  <div class={`mega-weather mega-weather--${sea.state}`}>
+    <span class="mega-weather__icon">
+      <Icon name={SEA_ICON[sea.state]} size={44} />
+    </span>
+    <span class="mega-weather__state">{t.sea[sea.state]}</span>
+  </div>
+
+  <ul class="mega-metrics">
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="wave-moderate" size={14} />
+        {t.sea.waveHeight}
+      </span>
+      <span class="mega-metric__value">
+        {
+          isPlaceholder(sea.waveHeightM) ? (
+            <span class="mega__meta">{fil ? 'walang datos' : 'no reading'}</span>
+          ) : (
+            <>
+              <span class="figure">{sea.waveHeightM}</span> m
+            </>
+          )
+        }
+      </span>
+    </li>
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="wind" size={14} />
+        {t.sea.wind}
+      </span>
+      <span class="mega-metric__value">
+        {
+          isPlaceholder(sea.windKph) ? (
+            <span class="mega__meta">{fil ? 'walang datos' : 'no reading'}</span>
+          ) : (
+            <>
+              <span class="figure">{sea.windKph}</span> km/h
+            </>
+          )
+        }
+      </span>
+    </li>
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="clock" size={14} />
+        {t.sea.readAt}
+      </span>
+      <span class="mega-metric__value mega-metric__value--sm">
+        <time datetime={sea.observedAt.toISOString()}>
+          {formatAbsolute(sea.observedAt, locale)}
+        </time>
+      </span>
+    </li>
+  </ul>
+
+  <a class="mega__viewall" href={`${p}/ligtas`}>
+    {fil ? 'Buong ulat' : 'Full report'}
+    <Icon name="chevron-right" size={16} />
+  </a>
+</section>
+
+{/* ── Column 2: the boat ─────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{t.home.nextTrip}</h2>
+
+  <div class={`mega-state mega-state--${boat.status}`}>
+    <Icon name="bangka" size={28} />
+    <span class="mega-state__value">
+      {fil ? BOAT_STATE[boat.status].fil : BOAT_STATE[boat.status].en}
+    </span>
+  </div>
+
+  <ul class="mega-metrics">
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="anchor" size={14} />
+        {fil ? 'Ruta' : 'Route'}
+      </span>
+      <span class="mega-metric__value mega-metric__value--sm">
+        {
+          isPlaceholder(boat.route) ? (
+            <span class="mega__meta">{fil ? 'wala pang datos' : 'not yet supplied'}</span>
+          ) : (
+            boat.route
+          )
+        }
+      </span>
+    </li>
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="clock" size={14} />
+        {fil ? 'Alis' : 'Departs'}
+      </span>
+      <span class="mega-metric__value mega-metric__value--sm">
+        {
+          isPlaceholder(boat.departureTime) ? (
+            <span class="mega__meta">{fil ? 'wala pang datos' : 'not yet supplied'}</span>
+          ) : (
+            boat.departureTime
+          )
+        }
+      </span>
+    </li>
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="document" size={14} />
+        {fil ? 'Pamasahe' : 'Fare'}
+      </span>
+      <span class="mega-metric__value mega-metric__value--sm">
+        {
+          isPlaceholder(boat.fare) ? (
+            <span class="mega__meta">{fil ? 'wala pang datos' : 'not yet supplied'}</span>
+          ) : (
+            boat.fare
+          )
+        }
+      </span>
+    </li>
+  </ul>
+
+  <a class="mega__viewall" href={`${p}/ligtas`}>
+    {t.home.boatTrips}
+    <Icon name="chevron-right" size={16} />
+  </a>
+</section>
+
+{/* ── Column 3: the office ───────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{t.home.officeStatus}</h2>
+
+  <div class={`mega-state mega-state--${office.state}`}>
+    <Icon name="calendar" size={28} />
+    <span class="mega-state__value">
+      {fil ? OFFICE_STATE[office.state].fil : OFFICE_STATE[office.state].en}
+    </span>
+  </div>
+
+  <ul class="mega-metrics">
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="clock" size={14} />
+        {fil ? 'Ngayon' : 'Today'}
+      </span>
+      <span class="mega-metric__value mega-metric__value--sm">
+        {
+          isPlaceholder(office.hoursToday) ? (
+            <span class="mega__meta">{fil ? 'wala pang datos' : 'not yet supplied'}</span>
+          ) : (
+            office.hoursToday
+          )
+        }
+      </span>
+    </li>
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="calendar" size={14} />
+        {fil ? 'Susunod na bukas' : 'Next open'}
+      </span>
+      <span class="mega-metric__value mega-metric__value--sm">
+        {
+          isPlaceholder(office.nextOpen) ? (
+            <span class="mega__meta">{fil ? 'wala pang datos' : 'not yet supplied'}</span>
+          ) : (
+            office.nextOpen
+          )
+        }
+      </span>
+    </li>
+  </ul>
+
+  <a class="mega__viewall" href={`${p}/kontak`}>
+    {t.nav.contact}
+    <Icon name="chevron-right" size={16} />
+  </a>
+</section>
+
+{/* ── Column 4: quick actions ────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{t.home.quickActions}</h2>
+  <ul class="mega-cards">
+    {
+      ACTIONS.map((item) => (
+        <li>
+          <a class="mega-card" href={`${p}${item.href}`}>
+            <span class="mega-card__icon">
+              <Icon name={item.icon} size={18} />
+            </span>
+            <span class="mega-card__body">
+              <span class="mega-row__title">{label(locale, item)}</span>
+              <span class="mega__meta">{note(locale, item)}</span>
+            </span>
+            <span class="mega-tile__arrow" aria-hidden="true">
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Barangay Tumbod">
+  <!--
+    App icon: the island between its two straits, drawn in the chart language.
+    Not a seal on a gradient. The wide gap is Blockade Strait (1.1 km, west),
+    the narrow one is Endeavor Strait (0.2 km, east) — the barangay's real
+    defining geography (RESEARCH.md §1).
+  -->
+  <rect width="512" height="512" fill="#dce6e0"/>
+  <path d="M56 300 Q140 236 256 232 Q372 236 456 300 Q372 340 256 344 Q140 340 56 300 Z" fill="#b9cfd4" opacity="0.7"/>
+  <path d="M104 288 Q168 244 256 240 Q344 244 408 288 Q344 316 256 320 Q168 316 104 288 Z" fill="#e4e7dd" stroke="#8aa096" stroke-width="6"/>
+  <circle cx="256" cy="280" r="20" fill="#b3160c"/>
+  <circle cx="256" cy="280" r="38" fill="none" stroke="#b3160c" stroke-width="8"/>
+  <text x="256" y="404" text-anchor="middle" font-family="system-ui, sans-serif" font-size="62" font-weight="700" letter-spacing="4" fill="#12211b">TUMBOD</text>
+</svg>

@@ -1,0 +1,373 @@
+---
+/**
+ * Homepage body, locale-aware — civic-portal direction
+ * (DECISION-redesign.md, 2026-08-05).
+ *
+ * THERE IS NOW A HERO. §12 and §35 forbade one until the owner retired that
+ * rule. The ordering below is the compromise that keeps the site useful:
+ *
+ *   hero  →  sea state  →  boat status  →  office  →  actions  →  everything else
+ *
+ * The hero is the welcome. The sea band immediately under it is still the
+ * first *fact*, and it still bleeds edge to edge in boat paint, because on an
+ * island whether the boat sails outranks how the site looks. A resident who
+ * scrolls one screen gets the same answer they got before the redesign; a
+ * first-time visitor now gets a front door as well.
+ *
+ * Module order and the persona each serves: UX-STRATEGY.md §2.
+ */
+import Section from '@/components/Section.astro'
+import Hero from '@/components/Hero.astro'
+import Icon from '@/components/Icon.astro'
+import Placeholder from '@/components/Placeholder.astro'
+import SeaConditionIndicator from '@/components/SeaConditionIndicator.astro'
+import BoatStatusRow from '@/components/BoatStatusRow.astro'
+import OfficeStatusBadge from '@/components/OfficeStatusBadge.astro'
+import LastUpdated from '@/components/LastUpdated.astro'
+import PhoneNumber from '@/components/PhoneNumber.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { formatDate, isoAttr } from '@/lib/time'
+import {
+  seaCondition,
+  nextBoat,
+  officeHours,
+  HOTLINES,
+  SERVICES,
+  ANNOUNCEMENTS,
+  HEALTH_OUTREACH,
+  CALENDAR,
+  PROJECTS,
+  STATS,
+} from '@/lib/content/active'
+import { isPlaceholder } from '@/lib/content/placeholder'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+
+const now = new Date()
+const sea = seaCondition(now)
+const boat = nextBoat(now)
+const office = officeHours(formatDate(now))
+
+/*
+ * Quick actions, rebuilt as CARDS (2026-08-06).
+ *
+ * These were four solid colour blocks — navy, red, gold, near-black — sitting
+ * directly beneath a cinematic satellite hero. Each one was individually
+ * defensible (colour + icon + label, every pair contrast-measured) and
+ * together they were the worst adjacency on the site: a 2015 metro-tile grid
+ * under a 2026 hero.
+ *
+ * The colour-coding rule is NOT retired. Every card still carries an icon and
+ * a label, so colour is never the sole carrier (A11Y-PLAN.md §6). What changed
+ * is that the colour is now a border and an icon wash rather than a full-bleed
+ * fill, which lets four actions sit together without four saturated rectangles
+ * fighting each other.
+ *
+ * The hotline card KEEPS the red treatment. It is the emergency path, it must
+ * be findable under stress, and `.fcard--urgent` is reserved for exactly this.
+ */
+const quickActions = [
+  {
+    href: `${p}/serbisyo/barangay-clearance`,
+    label: t.home.getClearance,
+    icon: 'document',
+    note: fil ? 'Requirements at bayad' : 'Requirements and fees',
+    cls: '',
+  },
+  {
+    href: `${p}/ligtas/hotline`,
+    label: t.home.emergencyNumbers,
+    icon: 'phone',
+    note: fil ? 'Buong direktoryo' : 'Full directory',
+    cls: ' fcard--urgent',
+  },
+  {
+    href: `${p}/ligtas`,
+    label: t.home.boatTrips,
+    icon: 'bangka',
+    note: fil ? 'Lagay ng dagat ngayon' : 'Sea conditions today',
+    cls: ' fcard--accent',
+  },
+  {
+    href: `${p}/hanapin`,
+    label: t.home.search,
+    icon: 'search',
+    note: fil ? 'Buong site' : 'The whole site',
+    cls: '',
+  },
+] as const
+
+/**
+ * Explore cards. The kicker text sits where a photograph will go once the
+ * barangay supplies one with consent — it names what belongs there rather than
+ * standing in for it with stock imagery (DECISION-redesign.md §3).
+ */
+const exploreCards = [
+  {
+    href: `${p}/kasaysayan`,
+    kicker: fil ? 'Larawan — wala pa' : 'Photograph — not yet supplied',
+    title: fil ? 'Kasaysayan' : 'History',
+    body: fil ? 'Paano nabuo ang barangay sa Pulo ng Tuluran.' : 'How the barangay formed on Tuluran Island.',
+  },
+  {
+    href: `${p}/turismo`,
+    kicker: fil ? 'Larawan — wala pa' : 'Photograph — not yet supplied',
+    title: fil ? 'Turismo' : 'Tourism',
+    body: fil ? 'Mga pasyalan at kung paano marating nang ligtas.' : 'Places to visit and how to reach them safely.',
+  },
+  {
+    href: `${p}/proyekto`,
+    kicker: fil ? 'Mga proyekto' : 'Projects',
+    title: fil ? 'Mga Proyekto' : 'Projects',
+    body: fil ? 'Ano ang ginagawa, magkano, at saan galing ang pondo.' : 'What is being built, its cost, and its funding.',
+  },
+  {
+    href: `${p}/opisyal`,
+    kicker: fil ? 'Sangguniang Barangay' : 'Sangguniang Barangay',
+    title: fil ? 'Mga Opisyal' : 'Officials',
+    body: fil ? 'Sino ang naglilingkod, at hanggang kailan.' : 'Who serves, and until when.',
+  },
+  {
+    href: `${p}/transparency`,
+    kicker: fil ? 'Full Disclosure' : 'Full Disclosure',
+    title: fil ? 'Transparency' : 'Transparency',
+    body: fil ? 'Ang pitong dokumentong kailangan ng batas.' : 'The seven documents the law requires.',
+  },
+  {
+    href: `${p}/larawan`,
+    kicker: fil ? 'Larawan — wala pa' : 'Photograph — not yet supplied',
+    title: fil ? 'Mga Larawan' : 'Gallery',
+    body: fil ? 'Tunay na larawan lamang ng Tumbod.' : 'Real photographs of Tumbod only.',
+  },
+]
+---
+
+{/* The hero owns the page's <h1> now, so the visually-hidden one is gone —
+    two h1s would be a structure violation the a11y suite catches. */}
+<Hero locale={locale} />
+
+{/*
+  Modules 1–3: the "today" answer. Still the first FACT on the page.
+
+  THE CHART BAND IS GONE FROM HERE. `LivingChartHeader` — the island outline
+  with the strait labels and the pulsing marker — used to sit directly under
+  the hero. The hero now IS a map of the same island, at satellite resolution,
+  with the same boundary drawn on it, so the chart repeated the one thing the
+  reader had just seen and pushed the sea state (the first thing that actually
+  changes day to day) another 400px down the page.
+
+  It is unchanged and still in use on /kontak, where it is the only map on the
+  page and answers "where is this place", and in the design-system catalogue.
+*/}
+<SeaConditionIndicator condition={sea} locale={locale} />
+<BoatStatusRow trip={boat} locale={locale} />
+
+<Section divider={false}>
+  <div class="office">
+    <OfficeStatusBadge hours={office} locale={locale} />
+  </div>
+</Section>
+
+{/* Module 4: intent capture. */}
+<Section title={t.home.quickActions} titleId="quick-actions">
+  <ul class="grid-cards grid-cards--tight">
+    {
+      quickActions.map((a) => (
+        <li>
+          <a href={a.href} class={`fcard fcard--icon${a.cls}`} data-plain>
+            <span class="fcard__icon">
+              <Icon name={a.icon} size={20} />
+            </span>
+            <span class="fcard__text">
+              <span class="fcard__title">{a.label}</span>
+              <span class="fcard__body">{a.note}</span>
+            </span>
+            <span class="fcard__arrow" aria-hidden="true">
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Section>
+
+{/* Module 7 promoted: emergency contacts now sit directly under the actions,
+    in a bordered block, because they must be findable under stress. */}
+<Section title={t.home.emergencyContacts} titleId="emergency-contacts">
+  <div class="hotlines">
+    <p class="hotlines__title">
+      <Icon name="phone" size={20} />
+      {t.safety.callNow}
+    </p>
+    <ul class="list-reset">
+      {
+        HOTLINES.slice(0, 4).map((line) => (
+          <li class="row">
+            <span class="row__label">{fil ? line.labelFil : line.labelEn}</span>
+            <PhoneNumber number={line.number} locale={locale} />
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+  <p style="margin-top:var(--space-3)"><a href={`${p}/ligtas/hotline`}>{t.home.fullDirectory} →</a></p>
+</Section>
+
+{/* Module 6: next health outreach. Largest age band here is 5–9, so child
+    health is not a minor module (RESEARCH.md §2.1). */}
+{
+  HEALTH_OUTREACH && (
+    <Section title={t.home.nextHealth} titleId="health">
+      <div class="card">
+        <p style="font-family:var(--font-display);font-size:var(--text-xl)">
+          {HEALTH_OUTREACH.titleFil}
+        </p>
+        <p class="figure" style="margin-top:var(--space-2)">
+          {HEALTH_OUTREACH.date} · {HEALTH_OUTREACH.time}
+        </p>
+        <p class="muted">{HEALTH_OUTREACH.location} · {HEALTH_OUTREACH.provider}</p>
+        <p style="margin-top:var(--space-2)">
+          <strong>{t.home.bring}:</strong> {HEALTH_OUTREACH.bringFil}
+        </p>
+      </div>
+    </Section>
+  )
+}
+
+{/* Module 5: announcements. */}
+<Section title={t.home.announcements} titleId="announcements">
+  <LastUpdated slot="aside" at={now} now={now} locale={locale} />
+  {ANNOUNCEMENTS.length === 0 ? (
+    <p class="muted" style="max-width:var(--measure)">{t.empty.announcements}</p>
+  ) : (
+    <ul class="list-reset" style="display:grid;gap:var(--space-3)">
+      {ANNOUNCEMENTS.map((a) => (
+        <li class="card">
+          <p class="small" style="letter-spacing:var(--tracking-caps);text-transform:uppercase;color:var(--ink-muted)">
+            {a.category}
+          </p>
+          <p style="font-family:var(--font-display);font-size:var(--text-lg);margin-top:var(--space-1)">
+            {isPlaceholder(a.titleFil) ? <Placeholder value={a.titleFil} /> : (fil ? a.titleFil : a.titleEn)}
+          </p>
+          {!isPlaceholder(a.excerptFil) && <p class="muted small">{a.excerptFil}</p>}
+          <p class="small muted" style="margin-top:var(--space-2)">
+            <time datetime={isoAttr(a.publishedAt)}>{formatDate(a.publishedAt)}</time>
+          </p>
+        </li>
+      ))}
+    </ul>
+  )}
+  <p style="margin-top:var(--space-3)"><a href={`${p}/balita`}>{t.home.allAnnouncements} →</a></p>
+</Section>
+
+{/* Module 8: most requested documents. */}
+<Section title={t.home.commonDocuments} titleId="documents">
+  <ul class="list-reset">
+    {
+      SERVICES.slice(0, 3).map((s) => (
+        <li>
+          <a href={`${p}/serbisyo/${s.slug}`} class="row" data-plain style="color:var(--ink)">
+            <span style="text-decoration:underline;text-underline-offset:0.2em;color:var(--interactive)">
+              {fil ? s.nameFil : s.nameEn}
+            </span>
+            <span class="small muted">
+              {isPlaceholder(s.fee) ? <Placeholder value={s.fee} /> : <span class="figure">{s.fee}</span>}
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Section>
+
+{/* Module 9: calendar. */}
+{
+  CALENDAR.length > 0 && (
+    <Section title={t.home.calendar} titleId="calendar">
+      <ul class="list-reset">
+        {CALENDAR.map((e) => (
+          <li class="row">
+            <span class="figure" style="min-width:6rem">{e.date}</span>
+            <span style="margin-right:auto">{e.title}</span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  )
+}
+
+{/* Module 10: projects — transparency made visible on the homepage. */}
+{
+  PROJECTS.length > 0 && (
+    <Section title={t.home.projects} titleId="projects">
+      <div style="display:grid;gap:var(--space-3)">
+        {PROJECTS.map((proj) => (
+          <div class="card">
+            <p style="font-family:var(--font-display);font-size:var(--text-lg)">{proj.title}</p>
+            <p style="margin-top:var(--space-2);display:flex;align-items:center;gap:var(--space-2)">
+              <span
+                aria-hidden="true"
+                class="dot"
+                style={`background:${proj.percent === 100 ? 'var(--status-open)' : 'var(--accent)'}`}
+              />
+              {/* Progress is stated as text, never as a bar alone. */}
+              <strong>{proj.status}</strong>
+              <span class="figure muted">{proj.percent}%</span>
+            </p>
+            <p class="small muted" style="margin-top:var(--space-1)">
+              <span class="figure">{proj.budget}</span> · {proj.fund}
+            </p>
+          </div>
+        ))}
+      </div>
+    </Section>
+  )
+}
+
+{/* Explore — the card grid §35 forbade. Every destination here is a real
+    route; none is a placeholder link. */}
+<Section title={fil ? 'Tuklasin ang Tumbod' : 'Explore Tumbod'} titleId="explore">
+  <div class="grid-cards">
+    {
+      exploreCards.map((c) => (
+        <a class="fcard" href={c.href} data-reveal="pending">
+          <div class="fcard__media" aria-hidden="true">{c.kicker}</div>
+          <span class="fcard__title">{c.title}</span>
+          <span class="fcard__meta">{c.body}</span>
+        </a>
+      ))
+    }
+  </div>
+</Section>
+
+{/* Module 13: "about us", now with the census figures alongside it.
+    Every number is PSA-sourced — a stat row of invented counts is exactly the
+    failure observed on brgy.to (PRECEDENT-SCAN.md §5). */}
+<Section title={t.home.aboutHeading} titleId="about" tone="sunken">
+  <div class="prose" style="margin-bottom:var(--space-4)">
+    <p>{t.home.aboutBody}</p>
+  </div>
+
+  <div class="stats">
+    {
+      STATS.map((s) => (
+        <div class="stat" data-reveal="pending">
+          <p class="stat__value">{s.value}</p>
+          <p class="stat__label">{fil ? s.labelFil : s.labelEn}</p>
+          {/* The source is part of the figure, not a footnote. */}
+          <p class="stat__note">{fil ? s.noteFil : s.noteEn}</p>
+        </div>
+      ))
+    }
+  </div>
+
+  <p style="margin-top:var(--space-4)"><a href={`${p}/kasaysayan`}>{t.home.readHistory} →</a></p>
+</Section>

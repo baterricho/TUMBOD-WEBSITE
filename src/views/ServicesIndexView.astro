@@ -1,0 +1,74 @@
+---
+/**
+ * Services index body, locale-aware.
+ * Fee and processing time are visible before the tap so nobody opens six pages
+ * to compare.
+ */
+import Section from '@/components/Section.astro'
+import Placeholder from '@/components/Placeholder.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { SERVICE_DETAILS } from '@/lib/content/active'
+import { isPlaceholder } from '@/lib/content/placeholder'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{t.services.title}</h1>
+  <p style="margin-top:var(--space-3);max-width:var(--measure)">
+    {
+      fil
+        ? 'Tingnan muna dito ang kailangang dalhin bago tumawid papuntang barangay hall.'
+        : 'Check what to bring here before making the crossing to the barangay hall.'
+    }
+  </p>
+</Section>
+
+{/*
+  Cards, not a list of underlined links with hairline rules.
+
+  This page is where somebody decides whether a boat trip is worth making, and
+  the two facts that decide it — what it costs and how long it takes — were
+  previously buried in small grey text under the description. They are now a
+  labelled meta row at the foot of each card, which is also where the Services
+  mega panel puts them, so the panel and the page finally agree.
+*/}
+<Section>
+  <ul class="grid-cards">
+    {
+      SERVICE_DETAILS.map((s) => (
+        <li>
+          <a href={`${p}/serbisyo/${s.slug}`} class="fcard" data-plain>
+            <span class="fcard__title">{fil ? s.nameFil : s.nameEn}</span>
+            <span class="fcard__body">{fil ? s.descriptionFil : s.descriptionEn}</span>
+            <span class="fcard__facts">
+              <span class="fcard__fact">
+                <span class="fcard__factlabel">{t.services.fee}</span>
+                {isPlaceholder(s.fee) ? (
+                  <Placeholder value={s.fee} />
+                ) : (
+                  <span class="figure">{s.fee}</span>
+                )}
+              </span>
+              <span class="fcard__fact">
+                <span class="fcard__factlabel">{t.services.processingTime}</span>
+                {isPlaceholder(s.processingTime) ? (
+                  <Placeholder value={s.processingTime} />
+                ) : (
+                  <span class="figure">{s.processingTime}</span>
+                )}
+              </span>
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Section>

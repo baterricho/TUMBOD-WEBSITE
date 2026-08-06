@@ -1,0 +1,83 @@
+---
+/**
+ * Photo gallery.
+ *
+ * There are ZERO photographs of Barangay Tumbod on this site, in demo mode or
+ * out of it. That is not an oversight — it is the one gap the precedent scan
+ * ranked as the single biggest contributor to a civic site feeling dead
+ * (PRECEDENT-SCAN.md §3), and it is still blocked on consent.
+ *
+ * Two things are therefore refused here:
+ *   - **Stock imagery.** A stock tropical beach on Tumbod's official gallery is
+ *     a photograph of somewhere that is not Tumbod.
+ *   - **AI-generated imagery.** Worse: it depicts a place that does not exist
+ *     at all, on a government record.
+ *
+ * So the grid renders honest empty cells that state what belongs in them. It
+ * looks unfinished because it IS unfinished, and that is the correct
+ * appearance.
+ */
+import Section from '@/components/Section.astro'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+
+/** What the barangay would need to photograph, in rough priority order. */
+const WANTED = [
+  { fil: 'Barangay hall', en: 'Barangay hall' },
+  { fil: 'Pantalan at mga bangka', en: 'The landing and the boats' },
+  { fil: 'Health station', en: 'Health station' },
+  { fil: 'Paaralan', en: 'The school' },
+  { fil: 'Lilikasan kapag bagyo', en: 'Evacuation site' },
+  { fil: 'Baybayin', en: 'The shoreline' },
+  { fil: 'Kabakawanan', en: 'The mangroves' },
+  { fil: 'Pista o pagtitipon', en: 'Fiesta or a gathering' },
+]
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{fil ? 'Mga Larawan' : 'Photo Gallery'}</h1>
+  <p class="section-lede" style="margin-top:var(--space-3)">
+    {
+      fil
+        ? 'Wala pang larawan dito. Hindi kami gagamit ng stock photo o larawang gawa ng AI — ang lalabas dito ay larawan lamang ng Tumbod.'
+        : 'There are no photographs here yet. We will not use stock or AI-generated images — only real photographs of Tumbod will appear here.'
+    }
+  </p>
+</Section>
+
+<Section title={fil ? 'Kailangang kunan' : 'Still to be photographed'} titleId="wanted">
+  <div class="gallery">
+    {
+      WANTED.map((w) => (
+        <div class="gallery__cell">
+          <span>{fil ? w.fil : w.en}</span>
+        </div>
+      ))
+    }
+  </div>
+</Section>
+
+<Section title={fil ? 'Tungkol sa pahintulot' : 'About consent'} titleId="consent" tone="sunken">
+  <div class="prose">
+    <p>
+      {
+        fil
+          ? 'Bago ilathala ang larawan ng sinuman dito, kailangan ang kanyang pahintulot para sa website — hindi sapat ang pahintulot para sa Facebook.'
+          : 'Before anyone’s photograph is published here, their consent for this website is required — consent for Facebook is not enough.'
+      }
+    </p>
+    <p class="small muted">
+      {
+        fil
+          ? 'Ang Facebook post ay nawawala sa feed pagkalipas ng ilang araw. Ang website ay permanente at hinahanap ng Google. Magkaibang bagay ang pinapayagan.'
+          : 'A Facebook post falls out of the feed within days. A website is permanent and indexed by Google. They are not the same permission.'
+      }
+    </p>
+  </div>
+</Section>

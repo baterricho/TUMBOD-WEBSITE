@@ -1,0 +1,231 @@
+---
+/**
+ * Contact mega panel — the hall, the map, the accounts, the services, and a
+ * newsletter row across the bottom.
+ *
+ * THE MAP LINKS USE VERIFIED COORDINATES (`SITE.coordinates`, PhilAtlas), so
+ * "Get directions" opens Tumbod rather than a guess at it. The preview is the
+ * inline coastline rather than an embedded Google frame: an iframe would put a
+ * third-party script and a cookie on every page of the site, for a picture.
+ *
+ * THE HALL DETAILS AND THE SOCIAL ACCOUNTS ARE SAMPLE, AND SAY SO. The one
+ * verified account is the Facebook page in `site.ts`; it is shown as a real
+ * link, separately and above the sample set, so the two are never confused.
+ * The sample email is on `.example` — IANA reserves that domain for exactly
+ * this (RFC 2606) so it cannot collide with a real one, and it cannot be
+ * mistaken for the official .gov.ph address the brief suggested, which this
+ * barangay has not published and which would be a fabricated government
+ * identifier if minted here.
+ */
+import Icon from '../Icon.astro'
+import SampleChip from '../SampleChip.astro'
+import { SITE } from '@/lib/content/site'
+import { SAMPLE_HALL, SAMPLE_SOCIAL } from '@/lib/content/sample'
+import { CONTACT_SHORTCUTS, MAP_LINKS, prefix, label } from '@/lib/content/menu'
+import { CHART_GEOMETRY } from '@/features/chart/geometry'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = prefix(locale)
+---
+
+{/* ── Column 1: the hall ─────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">
+    {fil ? 'Barangay Hall' : 'Barangay Hall'}
+    <SampleChip locale={locale} />
+  </h2>
+
+  <ul class="mega-list mega-list--facts">
+    <li class="mega-fact">
+      <Icon name="pin" size={18} />
+      <span>
+        <span class="mega-row__title">{fil ? SAMPLE_HALL.nameFil : SAMPLE_HALL.nameEn}</span>
+        <span class="mega__meta">{fil ? SAMPLE_HALL.addressFil : SAMPLE_HALL.addressEn}</span>
+      </span>
+    </li>
+
+    <li class="mega-fact">
+      <Icon name="phone" size={18} />
+      <span>
+        {/* Plain text, never a `tel:` — 0999-000-00xx is an unassigned
+            prefix and must not be dialable from a nav menu. */}
+        <span class="figure">{SAMPLE_HALL.phone}</span>
+        <span class="mega__meta">
+          {fil ? 'hindi gumagana — halimbawa' : 'not a working number — sample'}
+        </span>
+      </span>
+    </li>
+
+    <li class="mega-fact">
+      <Icon name="mail" size={18} />
+      <span>
+        <span>{SAMPLE_HALL.email}</span>
+        <span class="mega__meta">
+          {fil ? 'halimbawang address' : 'sample address'}
+        </span>
+      </span>
+    </li>
+
+    <li class="mega-fact">
+      <Icon name="clock" size={18} />
+      <span>
+        <span class="mega-row__title">{fil ? 'Oras ng opisina' : 'Office hours'}</span>
+        <span class="mega__meta">{fil ? SAMPLE_HALL.hoursFil : SAMPLE_HALL.hoursEn}</span>
+      </span>
+    </li>
+  </ul>
+
+  <a class="mega-cta mega-cta--block" href={`${p}/kontak`}>
+    <Icon name="mail" size={18} />
+    {fil ? 'Kontakin ang barangay' : 'Contact the barangay'}
+  </a>
+</section>
+
+{/* ── Column 2: the map ──────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{fil ? 'Hanapin kami' : 'Find us'}</h2>
+
+  <a class="mega-map" href={`${p}/kontak`}>
+    <svg
+      viewBox={CHART_GEOMETRY.viewBox}
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+      class="mega-map__svg"
+    >
+      {CHART_GEOMETRY.contours.map((d) => <path d={d} class="hero__contour" />)}
+      <path d={CHART_GEOMETRY.islandPath} class="hero__island" />
+    </svg>
+    <span class="mega-map__pin">
+      <Icon name="pin" size={18} />
+      Barangay Tumbod
+    </span>
+  </a>
+
+  {/* Each says where it goes — "open in Maps" is a different promise from
+      "directions", and on a metered connection the difference matters. */}
+  <ul class="mega-tiles">
+    <li>
+      <a class="mega-tile" href={MAP_LINKS.directions} rel="noopener" target="_blank">
+        <Icon name="bangka" size={18} />
+        <span>{fil ? 'Direksyon' : 'Get directions'}</span>
+        <Icon name="external" size={14} />
+      </a>
+    </li>
+    <li>
+      <a class="mega-tile" href={MAP_LINKS.satellite} rel="noopener" target="_blank">
+        <Icon name="layers" size={18} />
+        <span>{fil ? 'Satellite view' : 'Satellite view'}</span>
+        <Icon name="external" size={14} />
+      </a>
+    </li>
+    <li>
+      <a class="mega-tile" href={MAP_LINKS.view} rel="noopener" target="_blank">
+        <Icon name="pin" size={18} />
+        <span>{fil ? 'Buksan sa Google Maps' : 'Open Google Maps'}</span>
+        <Icon name="external" size={14} />
+      </a>
+    </li>
+  </ul>
+
+  <p class="mega__meta">
+    {
+      fil
+        ? 'Tuluran Island — walang kalsada papasok. Bangka lamang ang daan.'
+        : 'Tuluran Island — no road in. Every trip is by boat.'
+    }
+  </p>
+</section>
+
+{/* ── Column 3: social ───────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{fil ? 'Sundan kami' : 'Social media'}</h2>
+
+  {/* The one account that is real, kept clearly apart from the samples. */}
+  <a
+    class="mega-social__tile"
+    href={SITE.facebookUrl}
+    rel="noopener"
+    target="_blank"
+    style="--brand:#1877f2"
+  >
+    <Icon name="megaphone" size={22} />
+    <span>
+      <span class="mega-row__title">Facebook</span>
+      <span class="mega__meta">{fil ? 'Opisyal na page' : 'Official page'}</span>
+    </span>
+    <Icon name="external" size={14} />
+  </a>
+
+  <p class="mega__subhead">
+    {fil ? 'Iba pang account' : 'Other accounts'}
+    <SampleChip locale={locale} />
+  </p>
+
+  <ul class="mega-social">
+    {
+      SAMPLE_SOCIAL.filter((s) => s.id !== 'facebook').map((s) => (
+        /* Not links. There is no verified account behind any of them, and a
+           guessed handle either 404s or lands on somebody else holding the
+           name. A tile that reports a fact is honest; a broken link is not. */
+        <li>
+          <span class="mega-social__tile mega-social__tile--sample" style={`--brand:${s.brand}`}>
+            <Icon name={s.icon} size={22} />
+            <span>
+              <span class="mega-row__title">{s.network}</span>
+              <span class="mega__meta">{fil ? s.handleFil : s.handleEn}</span>
+            </span>
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+{/* ── Column 4: contact services ─────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{fil ? 'Mga serbisyo' : 'Contact services'}</h2>
+  <ul class="mega-tiles">
+    {
+      CONTACT_SHORTCUTS.map((item) => (
+        <li>
+          <a
+            class={`mega-tile${item.emergency ? ' mega-tile--emergency' : ''}`}
+            href={`${p}${item.href}`}
+          >
+            <Icon name={item.icon} size={20} />
+            <span>{label(locale, item)}</span>
+            <span class="mega-tile__arrow" aria-hidden="true">
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+{/* ── Bottom row ─────────────────────────────────────────────
+  NOT AN EMAIL FORM. The brief asks for a newsletter input and a Subscribe
+  button. There is no server to receive an address, no list to add it to, and
+  no privacy notice for holding one — an input that swallows an email address
+  and silently drops it is worse than no input, and on a government site it is
+  a data-protection problem as well as a broken promise. What the barangay
+  genuinely publishes to is the Facebook page, so that is what this row offers.
+*/}
+<a class="mega-hotlinebar mega-hotlinebar--calm" href={SITE.facebookUrl} rel="noopener" target="_blank">
+  <Icon name="megaphone" size={22} />
+  <span>
+    {
+      fil
+        ? 'Makakuha ng mga anunsyo — sundan ang opisyal na Facebook page'
+        : 'Stay updated with the latest announcements — follow the official Facebook page'
+    }
+  </span>
+  <Icon name="external" size={20} />
+</a>

@@ -1,0 +1,104 @@
+---
+/**
+ * News body, locale-aware.
+ *
+ * The empty state gives direction rather than apologising (§7.3), and it is
+ * honest about where the community actually is right now: the Facebook page.
+ *
+ * The Facebook block is NOT an embed or iframe — that would be a third-party
+ * request on a public route (§22.3) and would fail offline.
+ */
+import Section from '@/components/Section.astro'
+import Icon from '@/components/Icon.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { SITE } from '@/lib/content/site'
+import { ANNOUNCEMENTS } from '@/lib/content/active'
+import { isPlaceholder } from '@/lib/content/placeholder'
+import { formatAbsolute } from '@/lib/time'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+
+/** Titles are `Maybe<string>` — a story can exist with its headline pending. */
+const text = (v: unknown) => (isPlaceholder(v) ? null : (v as string))
+
+const CATEGORY: Record<string, { fil: string; en: string }> = {
+  anunsyo: { fil: 'Anunsyo', en: 'Notice' },
+  kalusugan: { fil: 'Kalusugan', en: 'Health' },
+  ayuda: { fil: 'Ayuda', en: 'Aid' },
+  babala: { fil: 'Babala', en: 'Warning' },
+  ordinansa: { fil: 'Ordinansa', en: 'Ordinance' },
+  kaganapan: { fil: 'Kaganapan', en: 'Event' },
+}
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{t.nav.news}</h1>
+</Section>
+
+{/*
+  THIS SECTION RENDERED NOTHING UNTIL 2026-08-06.
+
+  The template carried only the empty state — `ANNOUNCEMENTS.length === 0 &&
+  <p>…</p>` — and no branch for the case where announcements exist. So the page
+  was correct while the barangay had published nothing, and silently blank the
+  moment it published anything. The News mega panel listed six stories and its
+  own "View all news" link led here, to a page showing none of them.
+*/}
+<Section>
+  {
+    ANNOUNCEMENTS.length === 0 ? (
+      <div class="card" style="max-width:var(--measure)">
+        <p>{t.empty.announcements}</p>
+      </div>
+    ) : (
+      <ul class="grid-cards">
+        {ANNOUNCEMENTS.map((a) => (
+          <li>
+            <article class="fcard">
+              <p class="fcard__meta">
+                {fil ? CATEGORY[a.category]?.fil : CATEGORY[a.category]?.en}
+                {' · '}
+                <time datetime={a.publishedAt.toISOString()}>
+                  {formatAbsolute(a.publishedAt, locale)}
+                </time>
+              </p>
+              <h2 class="fcard__title">
+                {text(fil ? a.titleFil : a.titleEn) ?? (fil ? 'Walang pamagat' : 'Untitled')}
+              </h2>
+              {text(a.excerptFil) && <p class="fcard__body">{text(a.excerptFil)}</p>}
+            </article>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</Section>
+
+<Section title={t.home.fromFacebook} titleId="facebook">
+  <div style="max-width:var(--measure);display:grid;gap:var(--space-3)">
+    <p style="color:var(--ink-muted)">{t.empty.facebook}</p>
+    <p>
+      <a
+        href={SITE.facebookUrl}
+        rel="noopener noreferrer"
+        style="display:inline-flex;align-items:center;gap:var(--space-2);min-height:44px"
+      >
+        <Icon name="external" size={20} />
+        {t.home.openFacebook}
+      </a>
+    </p>
+    <p style="font-size:var(--text-sm);color:var(--ink-muted)">
+      {
+        fil
+          ? 'Ang Facebook page ay nangangailangan ng account at data. Ang website na ito ay hindi — at bubukas ito kahit walang signal.'
+          : 'The Facebook page needs an account and mobile data. This website needs neither — and it opens with no signal.'
+      }
+    </p>
+  </div>
+</Section>

@@ -1,0 +1,177 @@
+---
+/**
+ * Officials body, locale-aware.
+ *
+ * No headshot marquee, no carousel, no ribbon-cutting photos (§35) — and note
+ * that the precedent scan found even Quezon City's award-winning site runs a
+ * 38-member councillor carousel, which makes it the default, not the good idea.
+ *
+ * The elected roster is now REAL (2023–2026, confirmed 2026-08-05). Photographs
+ * are still absent, and that is a separate question from having the names: a
+ * photo cannot render without recorded consent, and consent for a Facebook post
+ * is not consent for a permanent indexed website (DISCOVERY-QUESTIONS.md B2).
+ *
+ * Where a body is only PARTLY known — the SK, where we have the Chairperson but
+ * not the Kagawad — the names render AND the gap renders. Showing the list
+ * alone would quietly imply the body is one person.
+ */
+import Section from '@/components/Section.astro'
+import Placeholder from '@/components/Placeholder.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+// Aliased: `Placeholder` is already the component imported above.
+import { needsData, type Placeholder as PlaceholderValue } from '@/lib/content/placeholder'
+import { OFFICIALS } from '@/lib/content/active'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+
+/** Maps a body to its demo roster key, when demo data is active. */
+const ROSTER_KEY: Record<string, keyof NonNullable<typeof OFFICIALS>> = {
+  'Sangguniang Barangay': 'sangguniang_barangay',
+  'Sangguniang Kabataan': 'sangguniang_kabataan',
+  'Mga Itinalaga': 'itinalaga',
+  'Appointed Officials': 'itinalaga',
+}
+
+interface Body {
+  readonly heading: string
+  readonly detailFil: string
+  readonly detailEn: string
+  /** Shown when we have no names at all for this body. */
+  readonly value: PlaceholderValue
+  /** Shown *in addition to* the names, when the body is only partly known. */
+  readonly stillMissing?: PlaceholderValue
+}
+
+const BODIES: readonly Body[] = [
+  {
+    heading: 'Sangguniang Barangay',
+    detailFil: 'Punong Barangay at 7 Barangay Kagawad, kasama ang komite ng bawat isa.',
+    detailEn: 'Punong Barangay and 7 Barangay Kagawad, with each member’s committee.',
+    value: needsData(
+      fil
+        ? 'pangalan, posisyon, komite at termino ng Punong Barangay at 7 Kagawad'
+        : 'names, positions, committees and terms of the Punong Barangay and 7 Kagawad',
+      'Barangay Secretary',
+      true,
+    ),
+  },
+  {
+    heading: 'Sangguniang Kabataan',
+    detailFil: 'SK Chairperson at SK Kagawad.',
+    detailEn: 'SK Chairperson and SK Kagawad.',
+    value: needsData(
+      fil ? 'pangalan at termino ng SK Chairperson at Kagawad' : 'SK Chairperson and Kagawad names and terms',
+      'SK',
+      true,
+    ),
+    /* We have the Chairperson only. Rendering the list without this would read
+       as a complete SK of one person. */
+    stillMissing: needsData(
+      fil ? 'pangalan ng 7 SK Kagawad' : 'names of the 7 SK Kagawad',
+      'SK Chairperson',
+      true,
+    ),
+  },
+  {
+    heading: fil ? 'Mga Itinalaga' : 'Appointed Officials',
+    detailFil: 'Barangay Secretary at Barangay Treasurer.',
+    detailEn: 'Barangay Secretary and Barangay Treasurer.',
+    value: needsData(
+      fil ? 'pangalan ng Secretary at Treasurer' : 'names of the Secretary and Treasurer',
+      'Barangay Secretary',
+      true,
+    ),
+  },
+  {
+    heading: 'Lupong Tagapamayapa',
+    detailFil: 'Namamagitan sa mga alitan sa antas ng barangay.',
+    detailEn: 'Mediates disputes at barangay level.',
+    value: needsData(
+      fil ? 'mga kasapi ng Lupong Tagapamayapa' : 'members of the Lupong Tagapamayapa',
+      'Barangay Secretary',
+      true,
+    ),
+  },
+  {
+    heading: 'Barangay Tanod',
+    detailFil: 'Nagbabantay sa kaayusan at tumutulong sa oras ng sakuna.',
+    detailEn: 'Keep order and assist during disasters.',
+    value: needsData(fil ? 'mga Barangay Tanod' : 'the Barangay Tanod', 'Barangay Secretary', true),
+  },
+  {
+    heading: 'BHW / BNS',
+    detailFil: 'Barangay Health Workers at Barangay Nutrition Scholar.',
+    detailEn: 'Barangay Health Workers and Barangay Nutrition Scholar.',
+    value: needsData(
+      fil ? 'mga BHW at ang BNS' : 'the BHWs and the BNS',
+      'Barangay Health Station',
+      true,
+    ),
+  },
+]
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{t.nav.officials}</h1>
+  <p style="margin-top:var(--space-3);max-width:var(--measure);color:var(--ink-muted)">
+    {
+      fil
+        ? 'Narito ang Sangguniang Barangay na nahalal para sa termino 2023–2026. Hindi pa kumpleto ang ibang bahagi ng listahan, at hindi namin ito pupunan ng hula — mas mabuting walang laman kaysa maling pangalan sa opisyal na talaan.'
+        : 'Below is the Sangguniang Barangay elected for the 2023–2026 term. Other parts of the roster are not yet complete, and we will not fill them with guesses — an empty entry is better than a wrong name in an official record.'
+    }
+  </p>
+  <p class="small muted" style="margin-top:var(--space-2);max-width:var(--measure)">
+    {
+      fil
+        ? 'Magtatapos ang terminong ito sa Halalan ng Barangay at SK sa 2 Nobyembre 2026.'
+        : 'This term ends at the Barangay and SK Elections on 2 November 2026.'
+    }
+  </p>
+</Section>
+
+{
+  BODIES.map((body) => (
+    <Section title={body.heading} titleId={body.heading.toLowerCase().replace(/[^a-z]+/g, '-')}>
+      <p style="max-width:var(--measure);color:var(--ink-muted);font-size:var(--text-sm)">
+        {fil ? body.detailFil : body.detailEn}
+      </p>
+      <div style="margin-top:var(--space-3)">
+        {
+          OFFICIALS && ROSTER_KEY[body.heading] ? (
+            <>
+              <ul class="grid-cards grid-cards--tight">
+                {OFFICIALS[ROSTER_KEY[body.heading]!]!.map((person) => (
+                  <li>
+                    {/* No photo: consent is not recorded, so none renders — a
+                        dignified typographic entry rather than a grey
+                        silhouette (DESIGN-SYSTEM.md §14). Not a link either;
+                        there is no page behind a name. */}
+                    <article class="fcard">
+                      <h3 class="fcard__title">{person.name}</h3>
+                      <p class="fcard__body">{person.position}</p>
+                      {person.committee && <p class="fcard__meta">{person.committee}</p>}
+                      <p class="fcard__meta figure">{person.term}</p>
+                    </article>
+                  </li>
+                ))}
+              </ul>
+              {body.stillMissing && (
+                <div style="margin-top:var(--space-3)">
+                  <Placeholder value={body.stillMissing} display="block" />
+                </div>
+              )}
+            </>
+          ) : (
+            <Placeholder value={body.value} display="block" />
+          )
+        }
+      </div>
+    </Section>
+  ))
+}

@@ -1,0 +1,86 @@
+---
+/**
+ * Renders a missing value visibly and auditably (BUILD-PROMPT.md §0.2).
+ *
+ * A placeholder that looks like real data is worse than a visible gap. This
+ * makes absence obvious to a reader and machine-detectable to the CI audit,
+ * which fails the production build while any launch-blocking one remains.
+ *
+ * COLOUR: inherits. It used to hardcode `--ink-muted`, which is tuned for the
+ * page surface; dropped onto the sea band or boat strip it fell to 1.32:1 and
+ * axe caught it. A component that hardcodes a colour cannot be placed on an
+ * arbitrary background. It is distinguished by italics and a dotted underline
+ * instead — both of which cost no contrast.
+ */
+import { placeholderText, type Placeholder } from '@/lib/content/placeholder'
+
+interface Props {
+  value: Placeholder
+  display?: 'inline' | 'block'
+}
+
+const { value, display = 'inline' } = Astro.props
+const Tag = display === 'block' ? 'p' : 'span'
+---
+
+{/*
+  THE FULL MARKER TEXT STAYS IN THE DOM. `scripts/check-placeholders.mjs`
+  matches `data-placeholder="true" … data-launch-blocking="…">` and captures the
+  text up to the first `<`, so both attributes must keep this order and the text
+  must be a direct child with no wrapping element. Screen readers get the whole
+  string too. Only the PRESENTATION is compacted, in CSS.
+*/}
+<Tag
+  class="placeholder"
+  data-placeholder="true"
+  data-launch-blocking={value.launchBlocking ? 'true' : 'false'}
+  title={placeholderText(value)}
+>
+  {placeholderText(value)}
+</Tag>
+
+<style is:global>
+  /*
+   * QUIETER, 2026-08-06.
+   *
+   * This was a magenta dashed box at body size. Once the interior pages became
+   * card grids it was the loudest element on `/serbisyo` and `/kontak` — three
+   * wrapped lines of audit marker inside a card whose real content was one
+   * line — and the pages read as broken rather than as incomplete.
+   *
+   * Nothing about the AUDIT changed: the full text and both data attributes
+   * are still in the HTML, so CI still finds every one. What changed is that
+   * it now reads as a small "not supplied yet" chip. It clamps to a single
+   * line and carries the full text in `title` for a pointer, so the detail is
+   * one hover away rather than occupying the card.
+   *
+   * Amber, not magenta: this is the same "provisional" signal as `.samplechip`,
+   * and the site should not have two different colours meaning "not real".
+   * Colour is not the only carrier — the italics and the dotted underline
+   * remain, so it is still distinguishable without it.
+   */
+  .placeholder {
+    display: inline-block;
+    max-width: min(26ch, 100%);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+    padding-inline: 0.4em;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--palette-bangka-yellow) 20%, transparent);
+    color: inherit;
+    font-style: italic;
+    font-size: var(--text-2xs);
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+  }
+
+  /* In development the marker should still be impossible to miss — that is
+     what it is for. The compaction is about the SHIPPED preview builds the
+     barangay reviews, not about hiding work from whoever is doing it. */
+  html[data-env='dev'] .placeholder {
+    background: color-mix(in srgb, var(--palette-bangka-orange) 26%, transparent);
+    outline: 1px dashed var(--palette-bangka-orange);
+  }
+</style>

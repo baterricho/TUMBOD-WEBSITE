@@ -1,0 +1,64 @@
+---
+/**
+ * Is the barangay hall open right now?
+ *
+ * On an island where reaching the hall costs a boat trip, this prevents a
+ * wasted crossing — the site's whole value proposition (UX-STRATEGY.md §4.2).
+ * Computed in Asia/Manila, never from the visitor's clock.
+ */
+import Placeholder from './Placeholder.astro'
+import type { OfficeHours } from '@/lib/content/types'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { isPlaceholder } from '@/lib/content/placeholder'
+
+interface Props {
+  hours: OfficeHours
+  locale: Locale
+}
+
+const { hours, locale } = Astro.props
+const t = getDictionary(locale)
+
+const LABEL = { open: t.office.open, limited: t.office.limited, closed: t.office.closed } as const
+const COLOR = {
+  open: 'var(--status-open)',
+  limited: 'var(--status-limited)',
+  closed: 'var(--status-closed)',
+} as const
+---
+
+<div>
+  <p style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap">
+    <span
+      aria-hidden="true"
+      style={`width:12px;height:12px;border-radius:var(--radius-full);background-color:${COLOR[hours.state]};flex-shrink:0`}
+    ></span>
+    <strong style="font-family:var(--font-display);letter-spacing:var(--tracking-caps)">
+      {LABEL[hours.state]}
+    </strong>
+    <span style="color:var(--ink-muted)">· {hours.todayLabel}</span>
+  </p>
+  <p style="font-size:var(--text-sm);color:var(--ink-muted);margin-top:var(--space-1)">
+    {
+      hours.state === 'closed' ? (
+        <>
+          {t.office.opensTomorrow},{' '}
+          {isPlaceholder(hours.nextOpen) ? (
+            <Placeholder value={hours.nextOpen} />
+          ) : (
+            <span class="figure">{hours.nextOpen}</span>
+          )}
+        </>
+      ) : (
+        <>
+          {t.office.hoursToday}:{' '}
+          {isPlaceholder(hours.hoursToday) ? (
+            <Placeholder value={hours.hoursToday} />
+          ) : (
+            <span class="figure">{hours.hoursToday}</span>
+          )}
+        </>
+      )
+    }
+  </p>
+</div>

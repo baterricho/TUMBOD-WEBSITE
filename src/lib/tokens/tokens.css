@@ -1,0 +1,306 @@
+/**
+ * THE SINGLE SOURCE OF DESIGN TOKENS
+ * Barangay Tumbod — see DESIGN-SYSTEM.md §1–§6
+ *
+ * Three tiers:
+ *   1. primitive  --palette-* / --size-*   (raw values, physical sources)
+ *   2. semantic   --surface / --ink / ...  (what components consume)
+ *   3. component  --btn-* / --alert-* ...  (declared beside the component)
+ *
+ * RULE: components reference tier 2 or 3 ONLY. A raw --palette-* reference
+ * inside a component is a lint error (BUILD-PROMPT.md §32).
+ *
+ * Every colour carries its physical referent. A colour whose justification is
+ * "it looked good" does not belong here (§8.2).
+ */
+
+/* ─────────────────────────────────────────────────────────────
+   TIER 1 — PRIMITIVES
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* THE CHART — substrate. Cool, desaturated, quiet. */
+  --palette-glare: #eff1ec;         /* bleached sand + noon glare on Malampaya */
+  --palette-paper-raised: #f7f8f4;  /* chart paper held to the light */
+  /*
+   * Deepened from #dce6e0, 2026-08-06. The alternating page bands are painted
+   * in this against `--palette-glare`, and at #dce6e0 the two measured 1.12:1 —
+   * far too close to read as a deliberate change of plane. Bands looked like a
+   * rendering artefact rather than structure.
+   *
+   * #d0ded6 is 1.22:1 against glare: still quiet, now legibly a different
+   * surface. Everything set on it keeps comfortable AA —
+   *   --ink        11.99:1
+   *   --ink-muted   6.14:1
+   *   --interactive 5.45:1
+   */
+  --palette-shoal: #d0ded6;         /* shallow water over seagrass */
+  --palette-mangrove: #12211b;      /* mangrove in shadow — reads black */
+  --palette-mangrove-wet: #3d5145;  /* wet roots exposed at low tide */
+  --palette-sound-deep: #0b3b54;    /* deep water of the Outer Sound */
+
+  /* THE BANGKA — signal. Hardware-store paint. Unfashionable on purpose. */
+  --palette-hull-blue: #2e7fb8;      /* sky blue painted on hulls */
+  --palette-hull-blue-ink: #1f6796;  /* same blue, darkened to carry text */
+  --palette-bangka-yellow: #f5b301;  /* outrigger boom yellow — FILL ONLY */
+  --palette-bangka-orange: #e2711d;  /* hull stripe orange */
+  --palette-bangka-red: #d6382b;     /* hot red hull stripe */
+  --palette-signal-red: #b3160c;     /* RESERVED: emergency + focus ring only */
+  --palette-red-ink: #a82318;        /* bangka red darkened to carry text */
+
+  /* THE REEF — place. The colour the barangay boundary is drawn in on the
+     hero map, promoted to a primitive now that the navigation borrows it to
+     say "you are here". Two values because one cannot do both jobs: the bright
+     one is for dark imagery, the ink one for the paper-coloured header
+     (4.8:1 there, so the 3px rule clears 1.4.11 non-text contrast). */
+  --palette-reef: #7ee787;
+  --palette-reef-ink: #1f7a45;
+
+  --palette-white: #ffffff;
+
+  /* SPACING — base 4px, non-linear at the top */
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 24px;  --space-6: 32px;  --space-7: 48px;  --space-8: 64px;
+  --space-9: 96px;  --space-10: 128px;
+
+  /* RADIUS — deliberately bimodal (DESIGN-SYSTEM.md §4).
+     0 for chart/data surfaces, 4px for touch controls. The contrast is intent;
+     zero-everywhere is itself a flagged anti-pattern. */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* MOTION */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* TYPE */
+  /* Metric-matched fallbacks sit ahead of the generic stacks so layout holds
+     still while the webfont loads (see styles/fonts.css). */
+  --font-display: "Archivo Narrow", "Archivo Narrow Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Source Sans 3 Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  --text-2xs: 0.6875rem;  /* 11px — chart labels & legal ONLY, never body */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;      /* 16px — MINIMUM for body, no exceptions */
+  --text-lg: 1.125rem;
+  --text-xl: clamp(1.25rem, 1rem + 1.1vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 1.2rem + 1.6vw, 2rem);
+  --text-3xl: clamp(1.875rem, 1.4rem + 2.2vw, 2.75rem);
+  --text-4xl: clamp(2.25rem, 1.6rem + 3vw, 3.75rem);
+
+  --leading-tight: 1.18;
+  --leading-body: 1.6;
+  --tracking-display: -0.01em;
+  --tracking-caps: 0.06em;
+  --measure: 68ch;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TIER 2 — SEMANTIC (light)
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --surface: var(--palette-glare);
+  --surface-raised: var(--palette-paper-raised);
+  --surface-sunken: var(--palette-shoal);
+  --surface-inverse: var(--palette-sound-deep);
+
+  --ink: var(--palette-mangrove);          /* 14.67:1 on surface */
+  --ink-muted: var(--palette-mangrove-wet); /*  7.40:1 on surface */
+  --ink-inverse: var(--palette-glare);
+
+  --line: #c3cfc7;
+  --line-strong: #8aa096;
+
+  --accent: var(--palette-bangka-yellow);  /* FILL ONLY — 1.63:1 as text */
+  --accent-ink: var(--palette-mangrove);   /* 9.01:1 on accent */
+
+  /* "You are here" in the primary navigation. Deliberately NOT --accent:
+     yellow is the action colour, and location is not an action. */
+  --nav-indicator: var(--palette-reef-ink);
+
+  /*
+   * LINKS ARE GREEN, NOT BLUE — the site runs three accent hues, not four.
+   *
+   * The hull blue that used to sit here carried no meaning. Gold is the action
+   * colour (CTA fills, section markers), red is emergency and nothing else, and
+   * green already meant "interactive / confirmed / you are here" in the
+   * navigation. A fourth hue for links was one more thing on screen competing
+   * for the same attention without saying anything the others did not.
+   *
+   * NOT `--palette-reef-ink` (#1f7a45) directly, which is what the nav
+   * indicator uses. That measures 4.18:1 on `--surface-sunken`, and body links
+   * appear on the sunken bands — it would have shipped a failing pair on every
+   * alternating section. This is one step darker, and clears AA on all three
+   * light surfaces with room to spare.
+   *
+   * Measured (see the ratios; re-measure if any surface token moves):
+   *   #17603a on --surface 6.66:1 · --surface-raised 7.11:1 · --surface-sunken 5.93:1
+   *   #14522f on --surface 8.11:1 · --surface-raised 8.64:1 · --surface-sunken 7.22:1
+   */
+  --interactive: #17603a;
+  --interactive-hover: #14522f;
+  /*
+   * Visited stays DISTINGUISHABLE but leaves the accent system: it is the
+   * muted mangrove ink, so a read link reads as "spent" rather than as a
+   * fourth colour. Collapsing visited into unvisited would have been the
+   * tidier palette and the worse site — on a page of twenty service links,
+   * "which of these have I already opened" is the question being asked.
+   *   #3d5145 on --surface 7.50:1 · --surface-raised 8.00:1 · --surface-sunken 6.68:1
+   */
+  --interactive-visited: #3d5145;
+  --focus-ring: var(--palette-signal-red);
+
+  --error-ink: var(--palette-red-ink);     /* 6.32:1 on surface */
+
+  /* SEA STATE — the escalation is painted in bangka colours.
+     Never colour alone: always colour + Filipino word + icon (§2.4). */
+  --sea-calm: #16697a;      --sea-calm-ink: var(--palette-white);      /* 6.23:1 */
+  --sea-moderate: var(--palette-bangka-yellow);
+  --sea-moderate-ink: var(--palette-mangrove);                          /* 9.01:1 */
+  --sea-rough: var(--palette-bangka-orange);
+  --sea-rough-ink: var(--palette-mangrove);                             /* 5.26:1 */
+  --sea-dangerous: var(--palette-bangka-red);
+  --sea-dangerous-ink: var(--palette-white);                            /* 4.70:1 */
+
+  --status-open: #16697a;
+  --status-closed: #6b7a72;
+  --status-limited: var(--palette-bangka-orange);
+
+  --alert-info: var(--palette-hull-blue-ink);
+  --alert-advisory: var(--palette-bangka-yellow);
+  --alert-warning: var(--palette-bangka-orange);
+  --alert-emergency: var(--palette-signal-red);
+  --alert-emergency-ink: var(--palette-white);                          /* 6.95:1 */
+  /*
+   * Emergency red used AS TEXT on a page surface, rather than as a fill with
+   * white on top. The two pull in opposite directions: a fill must be dark
+   * enough for white text, on-surface text must be light enough to read
+   * against a dark background. One token cannot satisfy both in both themes —
+   * trying to made "TUMAWAG AGAD" fail at 3.47:1 the moment the fill was
+   * darkened to fix the EMERGENCY button.
+   *
+   * In light mode they coincide; in dark mode they must not.
+   */
+  --alert-emergency-on-surface: var(--palette-signal-red);              /* 6.92:1 on light surface */
+
+  /* CHART CONTOURS — shallow to deep */
+  --chart-contour-1: #dce6e0;
+  --chart-contour-2: #b9cfd4;
+  --chart-contour-3: #8fb4c1;
+  --chart-contour-4: #4e7e95;
+  --chart-contour-5: #0b3b54;
+  --chart-land: #e4e7dd;
+  --chart-rule: #8aa096;
+
+  --elev-1: 0 0 0 1px var(--line);
+  --elev-2: 0 0 0 1px var(--line-strong);
+  --elev-3: 0 8px 24px -8px rgb(18 33 27 / 0.28); /* the ONLY shadow token */
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TIER 2 — SEMANTIC (dark)
+
+   Not an inversion. Night use here is real: brownouts, pre-dawn departures,
+   typhoon nights, an evacuation centre at 2am. Emergency red is LIGHTENED
+   rather than dimmed so it stays unmistakable at minimum screen brightness.
+   ───────────────────────────────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface: #0c1614;
+    --surface-raised: #14211d;
+    --surface-sunken: #081110;
+    --surface-inverse: #eff1ec;
+
+    --ink: #e4eae4;
+    --ink-muted: #9fb0a6;
+    --ink-inverse: #0c1614;
+
+    --line: #2c3a34;
+    --line-strong: #4a5e54;
+
+    /* Same reversal as light mode: links join the reef-green system rather
+       than being a fourth hue. The bright reef green is used here because the
+       ink variant would disappear into a dark surface.
+         #7ee787 on --surface 11.98:1 · --surface-raised 10.80:1 · --surface-sunken 12.45:1
+         #9fe6a8 on --surface 12.59:1 · --surface-raised 11.35:1 · --surface-sunken 13.08:1
+         #a8c4b0 on --surface  9.81:1 · --surface-raised  8.84:1 · --surface-sunken 10.19:1 */
+    --interactive: #7ee787;
+    --interactive-hover: #9fe6a8;
+    --interactive-visited: #a8c4b0;
+    --focus-ring: #ff5a4d;
+    --error-ink: #ff8177;
+
+    /* Lightened from the light-mode red so it stays unmistakable at minimum
+       screen brightness — but NOT as light as #e33f32, which was shipping
+       white text at 4.18:1 and failing AA on the EMERGENCY button of every
+       single page. Measured 4.77:1 against white. The dark-mode axe project
+       added on 2026-08-05 is what caught it. */
+    --alert-emergency: #d4382b;
+    /* Lighter than the fill, because here the red IS the text. 5.14:1 on
+       --surface-raised. */
+    --alert-emergency-on-surface: #ef6154;
+    --alert-info: #6fb3dc;
+
+    /* The bright reef green here: the header is dark, and the ink variant
+       would disappear into it. 8.6:1 on --surface-raised. */
+    --nav-indicator: var(--palette-reef);
+
+    --status-closed: #7d8c84;
+
+    /* Contours invert: a lit chart table, not a dimmed image. */
+    --chart-contour-1: #16302c;
+    --chart-contour-2: #1d4552;
+    --chart-contour-3: #2f6478;
+    --chart-contour-4: #4e8ba3;
+    --chart-contour-5: #8fc4d6;
+    --chart-land: #182521;
+    --chart-rule: #4a5e54;
+
+    --elev-3: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  --surface: #0c1614;
+  --surface-raised: #14211d;
+  --surface-sunken: #081110;
+  --surface-inverse: #eff1ec;
+  --ink: #e4eae4;
+  --ink-muted: #9fb0a6;
+  --ink-inverse: #0c1614;
+  --line: #2c3a34;
+  --line-strong: #4a5e54;
+  /* See the dark media-query block above — these two must stay in step. */
+  --interactive: #7ee787;
+  --interactive-hover: #9fe6a8;
+  --interactive-visited: #a8c4b0;
+  --focus-ring: #ff5a4d;
+  --error-ink: #ff8177;
+  /* Kept in step with the media-query block above: 4.77:1 against white.
+     #e33f32 measured 4.18:1 and failed AA. */
+  --alert-emergency: #d4382b;
+  --alert-emergency-on-surface: #ef6154;
+  --alert-info: #6fb3dc;
+
+  /* See the dark media-query block above. */
+  --nav-indicator: var(--palette-reef);
+  --status-closed: #7d8c84;
+  --chart-contour-1: #16302c;
+  --chart-contour-2: #1d4552;
+  --chart-contour-3: #2f6478;
+  --chart-contour-4: #4e8ba3;
+  --chart-contour-5: #8fc4d6;
+  --chart-land: #182521;
+  --chart-rule: #4a5e54;
+  --elev-3: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+}

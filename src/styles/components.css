@@ -1,0 +1,507 @@
+/**
+ * Component classes — Barangay Tumbod.
+ *
+ * The "bolder bangka" direction (approved 2026-08-04). Same Working Chart
+ * concept, much higher visual energy: full-bleed colour bands, a larger and
+ * more graphic chart, and quick-action tiles carrying real boat-paint colour.
+ *
+ * These are classes rather than inline styles because the bold treatment
+ * repeats across pages — as inline styles it would bloat every document, and
+ * bytes are the one thing this project will not spend carelessly.
+ *
+ * Every colour pairing here is contrast-checked; ratios noted inline.
+ */
+
+/* ── THE ONE ORCHESTRATED MOMENT (DESIGN-SYSTEM.md §6) ───────
+   On first load in a session, the depth bands resolve outward and the pin
+   lands last. It earns its place by NARRATING the geography: the contours
+   settle and the island emerges as the thing between two channels. It teaches
+   the shape in under a second, then never plays again.
+
+   Once per session only — `html[data-motion="seen"]` suppresses it, set by the
+   inline script in Base.astro. Not on scroll. No parallax. CSS only. */
+
+@keyframes chart-band-in {
+  from { opacity: 0; transform: scale(1.06); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes chart-land-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes chart-pin-in {
+  0%   { opacity: 0; transform: scale(0.4); }
+  70%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.chart-band,
+.chart-land,
+.chart-pin,
+.chart-label {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+html:not([data-motion='seen']) .chart-band {
+  opacity: 0;
+  animation: chart-band-in 300ms var(--ease-standard) forwards;
+}
+
+html:not([data-motion='seen']) .chart-land {
+  opacity: 0;
+  animation: chart-land-in 260ms var(--ease-standard) 380ms forwards;
+}
+
+html:not([data-motion='seen']) .chart-label {
+  opacity: 0;
+  animation: chart-land-in 240ms var(--ease-standard) 520ms forwards;
+}
+
+html:not([data-motion='seen']) .chart-pin {
+  opacity: 0;
+  animation: chart-pin-in 320ms var(--ease-standard) 620ms forwards;
+}
+
+/* Reduced motion: final state immediately. Nothing to disable beyond this,
+   because no other animation exists on the site. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='seen']) .chart-band,
+  html:not([data-motion='seen']) .chart-land,
+  html:not([data-motion='seen']) .chart-label,
+  html:not([data-motion='seen']) .chart-pin {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* ── Page rhythm ────────────────────────────────────────────── */
+
+.wrap {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: var(--space-4);
+}
+
+.section {
+  padding-block: var(--space-5);
+  border-top: 1px solid var(--chart-rule);
+}
+
+.section--flush {
+  border-top: 0;
+}
+
+.section__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+/* Section titles are set in the display face and preceded by a short accent
+   rule — a chart's section marker, made loud. */
+.section__title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.section__title::before {
+  content: '';
+  width: var(--space-5);
+  height: 4px;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ── The sea band — full bleed, the loudest thing on the page ── */
+
+.seaband {
+  padding-block: var(--space-5);
+  padding-inline: var(--space-4);
+}
+
+.seaband__inner {
+  max-width: 1200px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.seaband__label {
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  opacity: 0.85;
+  width: 100%;
+}
+
+.seaband__word {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.seaband__figure {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-lg);
+}
+
+.seaband__meta {
+  width: 100%;
+  font-size: var(--text-sm);
+  opacity: 0.9;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+/* State fills. Contrast verified in DESIGN-PLAN.md §2.3. */
+.seaband--calm      { background: var(--sea-calm);      color: var(--sea-calm-ink); }      /* 6.23:1 */
+.seaband--moderate  { background: var(--sea-moderate);  color: var(--sea-moderate-ink); }  /* 9.01:1 */
+.seaband--rough     { background: var(--sea-rough);     color: var(--sea-rough-ink); }     /* 5.26:1 */
+.seaband--dangerous { background: var(--sea-dangerous); color: var(--sea-dangerous-ink); } /* 4.70:1 */
+
+/* ── Boat strip — sits directly under the sea band ──────────── */
+
+.boatstrip {
+  background: var(--surface-inverse);
+  color: var(--ink-inverse);
+  padding-block: var(--space-4);
+  padding-inline: var(--space-4);
+}
+
+.boatstrip__inner {
+  max-width: 1200px;
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.boatstrip__route {
+  font-size: var(--text-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.boatstrip__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+/* ── Quick action tiles — bold, each with its own boat colour ── */
+
+.tiles {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 116px;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+}
+
+/* Colour is never the sole carrier: every tile has an icon AND a label. */
+.tile--doc   { background: var(--surface-inverse);   color: var(--ink-inverse); }      /* 11.86:1 */
+.tile--sos   { background: var(--alert-emergency);   color: var(--alert-emergency-ink); } /* 6.95:1 */
+.tile--boat  { background: var(--accent);            color: var(--accent-ink); }       /* 9.01:1 */
+
+/*
+ * DARK-MODE BUG, fixed 2026-08-05.
+ *
+ * This was `background: var(--palette-mangrove); color: var(--ink-inverse)`.
+ * The background is a FIXED primitive but the ink was SEMANTIC, so in dark
+ * mode `--ink-inverse` flipped to #0c1614 and the tile rendered near-black
+ * text on near-black paint — measured 1.06:1. The "Hanapin" tile was
+ * effectively invisible at night, which is exactly when this site is used
+ * during a brownout or a pre-dawn departure.
+ *
+ * Rule this enforces: a FIXED background takes a FIXED ink. Never pair a
+ * primitive with a token that inverts.
+ */
+.tile--list  { background: var(--palette-mangrove);  color: var(--palette-glare); }    /* 14.67:1 */
+
+/* In dark mode the mangrove tile also sits too close to the page surface to
+   read as a distinct target, so it lifts to the wet-root tone and keeps an
+   explicit edge. Glare on mangrove-wet measures 7.4:1. */
+:root[data-theme='dark'] .tile--list,
+:root:not([data-theme='light']) .tile--list {
+  border-color: var(--line-strong);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .tile--list {
+    background: var(--palette-mangrove-wet);
+    border-color: var(--line-strong);
+  }
+}
+
+:root[data-theme='dark'] .tile--list {
+  background: var(--palette-mangrove-wet);
+}
+
+/* ── Office status ──────────────────────────────────────────── */
+
+.office {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-caps);
+}
+
+/* ── Rows: hotlines, documents ──────────────────────────────── */
+
+.row {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.row__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.list-reset {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* ── Hotline block — emergency numbers get real weight ──────── */
+
+.hotlines {
+  background: var(--surface-raised);
+  border: 2px solid var(--alert-emergency);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.hotlines__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  /* The on-surface variant, not the fill. See tokens.css — the fill is tuned
+     to carry white text and is too dark to BE text on a dark surface. */
+  color: var(--alert-emergency-on-surface);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.hotlines .row:last-child {
+  border-bottom: 0;
+}
+
+/* ── Prose ──────────────────────────────────────────────────── */
+
+.prose {
+  max-width: var(--measure);
+  display: grid;
+  gap: var(--space-4);
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+
+.small {
+  font-size: var(--text-sm);
+}
+
+.page-title {
+  font-size: var(--text-4xl);
+}
+
+/* ── Cards ──────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+/* ── Location map ───────────────────────────────────────────────
+   The map is opt-in (see LocationMap.astro for why). These styles cover
+   BOTH states: the zero-cost idle card, and the mounted Leaflet map.
+   ─────────────────────────────────────────────────────────────── */
+
+.mapcard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-raised);
+}
+
+.mapcard__head {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.mapcard__place {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.mapcard__coords {
+  margin-top: var(--space-2);
+  /* Coordinates are a figure: tabular, unambiguous 0/1, readable aloud. */
+  font-family: var(--font-mono);
+}
+
+.mapcard__caveat {
+  margin-top: var(--space-2);
+  max-width: var(--measure);
+}
+
+.mapcard__slot {
+  /* Reserve the height the map will occupy so mounting it shifts nothing.
+     CLS is measured at 0.000 across the site and stays that way. */
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* PAIRED tokens. Setting --sea-calm as a background without its matching ink
+     left default dark text on teal at 2.64:1 — axe caught it as a serious
+     violation. These two are defined together and measured at 6.23:1; never
+     take one without the other. */
+  background: var(--sea-calm);
+  color: var(--sea-calm-ink);
+}
+
+/* Once the map mounts, the centring that framed the idle panel must go — a
+   flex item with `width: auto` collapses the map and pushes its controls out
+   of reach. */
+.mapcard__slot--live {
+  display: block;
+}
+
+.mapcard__idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  text-align: center;
+  max-width: var(--measure);
+}
+
+.mapcard__btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  /* 44px minimum target — the project's own mandate, not a suggestion. */
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--surface-inverse);
+  color: var(--ink-inverse);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  cursor: pointer;
+}
+
+.mapcard__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* The data cost is part of the label, not fine print hidden elsewhere. */
+.mapcard__cost {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  opacity: 0.85;
+}
+
+.mapcard__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+/* Leaflet ships its own link styling; keep ours so outbound links stay
+   underlined (axe `link-in-text-block` — do not remove). */
+.mapcard__links a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline;
+}
+
+/* Leaflet's default control text is 12px on a white chip. Bring it up to the
+   site's own minimum so it survives a cracked LCD in sunlight (persona P1). */
+.mapcard .leaflet-control-layers,
+.mapcard .leaflet-container .leaflet-control-attribution {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+}
+
+.mapcard .leaflet-control-layers-base label {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Tailwind preflight sets `display` on elements, which beats the `hidden`
+   attribute's UA style. Restore it — the opt-in map button relies on `hidden`
+   to stay invisible until JavaScript proves it can act. */
+[hidden] {
+  display: none !important;
+}

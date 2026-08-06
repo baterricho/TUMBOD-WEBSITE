@@ -1,0 +1,54 @@
+---
+/**
+ * A hotline number.
+ *
+ * Renders as a `tel:` link normally. In demo mode it renders as PLAIN TEXT
+ * with a "hindi gumagana" note — the one genuinely dangerous outcome of a demo
+ * build is someone tapping a fake number during an emergency, and a link
+ * invites exactly that.
+ *
+ * Missing numbers fall through to the placeholder treatment.
+ */
+import Placeholder from './Placeholder.astro'
+import { isPlaceholder, type Maybe } from '@/lib/content/placeholder'
+import { IS_DEMO } from '@/lib/content/active'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  number: Maybe<string>
+  locale: Locale
+  large?: boolean
+}
+
+const { number, locale, large = false } = Astro.props
+const size = large ? 'font-size:var(--text-lg)' : ''
+
+/**
+ * Display keeps the hyphens — `0927-978-7629` is far easier to read aloud, copy
+ * onto paper, or check digit-by-digit than an 11-digit run. The `tel:` href
+ * strips them.
+ *
+ * RFC 3966 does permit visual separators, and mainline Android dialers cope.
+ * But feature phones and older WebViews are squarely in this audience, some
+ * mis-parse them, and the failure mode is a dialer that opens blank during an
+ * emergency. Stripping costs nothing.
+ */
+const dialable = isPlaceholder(number) ? '' : number.replace(/[^\d+]/g, '')
+---
+
+{
+  isPlaceholder(number) ? (
+    <Placeholder value={number} />
+  ) : IS_DEMO ? (
+    <span style={`display:flex;flex-direction:column;align-items:flex-end;${size}`}>
+      <span class="figure">{number}</span>
+      <span style="font-size:var(--text-2xs);opacity:0.8">
+        {locale === 'fil' ? 'hindi gumagana — demo' : 'not a working number — demo'}
+      </span>
+    </span>
+  ) : (
+    <a class="figure" href={`tel:${dialable}`} style={size}>
+      {number}
+    </a>
+  )
+}

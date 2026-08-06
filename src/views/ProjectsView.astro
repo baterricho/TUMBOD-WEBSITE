@@ -1,0 +1,96 @@
+---
+/**
+ * Projects.
+ *
+ * Progress is stated as TEXT with a percentage figure, and the bar is a
+ * secondary, `aria-hidden` echo of it. A bar alone carries meaning by length
+ * and colour only, which fails for a screen-reader user and for anyone reading
+ * a cracked screen in sunlight (A11Y-PLAN.md §6).
+ *
+ * Each project names its funding source, because "where did the money come
+ * from" is the question a project list is actually asked.
+ */
+import Section from '@/components/Section.astro'
+import { PROJECTS } from '@/lib/content/active'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{fil ? 'Mga Proyekto' : 'Projects'}</h1>
+  <p class="section-lede" style="margin-top:var(--space-3)">
+    {
+      fil
+        ? 'Ano ang ginagawa ngayon, magkano, at saan galing ang pondo.'
+        : 'What is being built now, how much it costs, and where the money came from.'
+    }
+  </p>
+</Section>
+
+<Section>
+  {
+    PROJECTS.length === 0 ? (
+      <div class="card" style="max-width:var(--measure)">
+        <p>{fil ? 'Wala pang nakalistang proyekto dito.' : 'No projects are listed here yet.'}</p>
+        <p class="small muted" style="margin-top:var(--space-2)">
+          {fil
+            ? 'Kailangan ito mula sa Annual Investment Program at sa 20% Development Fund ng barangay.'
+            : 'This must come from the barangay’s Annual Investment Program and its 20% Development Fund.'}
+        </p>
+      </div>
+    ) : (
+      <div class="grid-cards">
+        {PROJECTS.map((proj) => (
+          <article class="fcard" data-reveal="pending">
+            <h3 class="fcard__title">{proj.title}</h3>
+            {/* The percentage is text FIRST. */}
+            <p>
+              <strong>{proj.status}</strong>
+              <span class="figure muted"> · {proj.percent}%</span>
+            </p>
+            <div
+              aria-hidden="true"
+              style="height:6px;border-radius:var(--radius-full);background:var(--surface-sunken);overflow:hidden"
+            >
+              <div
+                style={`height:100%;width:${proj.percent}%;background:${
+                  proj.percent === 100 ? 'var(--status-open)' : 'var(--accent)'
+                }`}
+              />
+            </div>
+            <p class="fcard__facts">
+              <span class="fcard__fact">
+                <span class="fcard__factlabel">{fil ? 'Badyet' : 'Budget'}</span>
+                <span class="figure">{proj.budget}</span>
+              </span>
+              <span class="fcard__fact">
+                <span class="fcard__factlabel">{fil ? 'Pondo' : 'Funded by'}</span>
+                <span>{proj.fund}</span>
+              </span>
+            </p>
+          </article>
+        ))}
+      </div>
+    )
+  }
+</Section>
+
+<Section title={fil ? 'Saan makikita ang buong talaan' : 'Where the full record lives'} titleId="fdp" tone="sunken">
+  <p style="max-width:var(--measure)">
+    {
+      fil
+        ? 'Pitong dokumento ang kailangang ipaskil ng bawat barangay ayon sa batas, kasama ang paggamit ng 20% Development Fund na siyang pinagkukunan ng mga proyektong ito.'
+        : 'Every barangay must post seven documents by law, including the use of the 20% Development Fund that pays for these projects.'
+    }
+  </p>
+  <p style="margin-top:var(--space-3)">
+    <a href={`${p}/transparency`}>{fil ? 'Transparency' : 'Transparency'} →</a>
+  </p>
+</Section>

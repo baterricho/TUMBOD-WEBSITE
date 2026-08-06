@@ -1,0 +1,142 @@
+---
+/**
+ * Ligtas body, locale-aware. The highest-priority page on the site.
+ *
+ * Not hypothetical preparedness: Typhoon Tino made landfall at Batas Island in
+ * this municipality in November 2025 with storm surge above 3 m
+ * (RESEARCH.md §4).
+ *
+ * Renders entirely from static fallbacks — no CMS dependency, no single point
+ * of failure. No images required to be useful. Zero JS.
+ */
+import Section from '@/components/Section.astro'
+import Alert from '@/components/Alert.astro'
+import Icon from '@/components/Icon.astro'
+import Placeholder from '@/components/Placeholder.astro'
+import PhoneNumber from '@/components/PhoneNumber.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { HOTLINES, CHECKLIST as TYPHOON_CHECKLIST, EVACUATION_SITES } from '@/lib/content/active'
+import { isPlaceholder, needsData } from '@/lib/content/placeholder'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+
+/** How word spreads on the island when the network is down. Not guessable. */
+const NO_SIGNAL_METHOD = needsData(
+  fil
+    ? 'lokal na paraan ng pagpapaalam kapag walang signal'
+    : 'the local method of spreading word when there is no signal',
+  'BDRRMC',
+  true,
+)
+
+const row =
+  'min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);border-bottom:1px solid var(--line);flex-wrap:wrap'
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{t.safety.title}</h1>
+</Section>
+
+{/* Answer first: current threat level. */}
+<Section title={t.safety.currentStatus} titleId="status" divider={false}>
+  <Alert level="info" locale={locale}>
+    <strong>{t.safety.noWarning}</strong><br />
+    {t.safety.normalConditions}
+  </Alert>
+  <p style="margin-top:var(--space-2);font-size:var(--text-sm);color:var(--ink-muted)">
+    {t.safety.mayBeNewer}
+  </p>
+</Section>
+
+{/* Then: the numbers. Above the fold, always. */}
+<Section title={t.safety.callNow} titleId="hotlines">
+  <ul style="list-style:none;padding:0;margin:0">
+    {
+      HOTLINES.map((line) => (
+        <li style={row}>
+          <span style="display:flex;align-items:center;gap:var(--space-2)">
+            <Icon name="phone" size={18} />
+            {fil ? line.labelFil : line.labelEn}
+          </span>
+          <PhoneNumber number={line.number} locale={locale} />
+        </li>
+      ))
+    }
+  </ul>
+</Section>
+
+<Section title={t.safety.whereToEvacuate} titleId="evacuation">
+  <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+    {
+      EVACUATION_SITES.map((site) => (
+        <div class="card">
+          {isPlaceholder(site.name) ? (
+            <Placeholder value={site.name} display="block" />
+          ) : (
+            <>
+              <p style="font-family:var(--font-display);font-size:var(--text-lg)">{site.name}</p>
+              <p class="small muted">
+                {!isPlaceholder(site.purok) && <span>{t.safety.purok}: {site.purok}</span>}
+                {!isPlaceholder(site.capacity) && (
+                  <span> · {t.safety.capacity}: <span class="figure">{site.capacity}</span></span>
+                )}
+              </p>
+              {!isPlaceholder(site.accessNoteFil) && <p style="margin-top:var(--space-2)">{site.accessNoteFil}</p>}
+              {!isPlaceholder(site.contactPerson) && (
+                <p class="small muted" style="margin-top:var(--space-1)">{site.contactPerson}</p>
+              )}
+            </>
+          )}
+        </div>
+      ))
+    }
+    {
+      EVACUATION_SITES.some((s) => isPlaceholder(s.name)) && (
+        <p class="muted small">{t.safety.evacuationIncomplete}</p>
+      )
+    }
+  </div>
+</Section>
+
+<Section title={t.safety.beforeTyphoon} titleId="checklist">
+  <ul style="list-style:none;padding:0;margin:0">
+    {
+      TYPHOON_CHECKLIST.map((item) => (
+        <li style="display:flex;gap:var(--space-3);align-items:flex-start;min-height:44px;padding-block:var(--space-1)">
+          <span
+            aria-hidden="true"
+            style="width:20px;height:20px;margin-top:3px;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);flex-shrink:0"
+          ></span>
+          <span>{fil ? item.labelFil : item.labelEn}</span>
+        </li>
+      ))
+    }
+  </ul>
+</Section>
+
+{/*
+  VERIFIED and operationally decisive: most bangka serving this island are
+  under 3 GT, so a cancellation is often a binding municipality-wide
+  prohibition rather than an operator's choice (RESEARCH.md §4).
+*/}
+<Section title={t.safety.seaTravel} titleId="sea-travel">
+  <p class="is-water" style="max-width:var(--measure)">{t.safety.coastGuardRule}</p>
+</Section>
+
+<Section title={t.safety.noSignal} titleId="no-signal">
+  <ul style="padding-inline-start:var(--space-5);max-width:var(--measure)">
+    <li>{fil ? 'Makinig sa radyong de-baterya.' : 'Listen to a battery-powered radio.'}</li>
+    <li>{fil ? 'Pumunta sa barangay hall kung ligtas ang daan.' : 'Go to the barangay hall if the way is safe.'}</li>
+    <li><Placeholder value={NO_SIGNAL_METHOD} /></li>
+  </ul>
+  <p style="margin-top:var(--space-4)">
+    <a href={`${p}/ligtas/hotline`}>{t.nav.emergencyLabel} →</a>
+  </p>
+</Section>

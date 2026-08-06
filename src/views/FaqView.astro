@@ -1,0 +1,68 @@
+---
+/**
+ * Frequently asked questions.
+ *
+ * Native <details>/<summary>: keyboard-operable and screen-reader-correct with
+ * no JavaScript, works offline, and prints expanded. An accordion built from
+ * divs and click handlers would be strictly worse in every one of those.
+ *
+ * The QUESTIONS are real — drawn from what the service and safety pages
+ * already imply people need to ask. The ANSWERS are demo values wherever a fee
+ * or a time is involved, because those are set by ordinance and must come from
+ * the barangay.
+ */
+import Section from '@/components/Section.astro'
+import { FAQ } from '@/lib/content/active'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{fil ? 'Mga Madalas Itanong' : 'Frequently Asked Questions'}</h1>
+</Section>
+
+<Section>
+  {
+    FAQ.length === 0 ? (
+      <div class="card" style="max-width:var(--measure)">
+        <p>{fil ? 'Wala pang nakalathalang sagot dito.' : 'No answers have been published here yet.'}</p>
+        <p class="small muted" style="margin-top:var(--space-2)">
+          {fil
+            ? 'Ang mga tanong ay alam na namin. Ang mga sagot — bayad, oras, lilikasan — ay nakatakda sa ordinansa at kailangang manggaling sa barangay.'
+            : 'The questions are known. The answers — fees, hours, evacuation sites — are set by ordinance and must come from the barangay.'}
+        </p>
+      </div>
+    ) : (
+      <div class="faq">
+        {FAQ.map((f, i) => (
+          <details name="faq" open={i === 0}>
+            <summary>{fil ? f.qFil : f.qEn}</summary>
+            <div>
+              <p>{fil ? f.aFil : f.aEn}</p>
+            </div>
+          </details>
+        ))}
+      </div>
+    )
+  }
+</Section>
+
+<Section title={fil ? 'Wala rito ang tanong ninyo?' : 'Question not here?'} titleId="ask" tone="sunken">
+  <p style="max-width:var(--measure)">
+    {
+      fil
+        ? 'Puntahan ang barangay hall o tawagan ang barangay hotline. Walang online form dito dahil walang makakasagot nito araw-araw — mas mabuting sabihin iyon kaysa magpadala kayo ng mensaheng walang babasa.'
+        : 'Visit the barangay hall or call the barangay hotline. There is no online form here because nobody could answer one daily — better to say so than to have you send a message no one reads.'
+    }
+  </p>
+  <p style="margin-top:var(--space-3)">
+    <a href={`${p}/kontak`}>{fil ? 'Paano makipag-ugnayan' : 'How to get in touch'} →</a>
+  </p>
+</Section>

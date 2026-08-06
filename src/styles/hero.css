@@ -1,0 +1,898 @@
+/**
+ * Hero carousel styles.
+ *
+ * Split out of redesign.css because the hero grew from a gradient panel into
+ * a media component with a scroll-snap strip, a deferred map, thumbnails and
+ * chevrons. Keeping it here means the hero can be reworked without touching
+ * the layers everything else depends on.
+ *
+ * The load-bearing rule: the strip works with NO JavaScript. Scroll-snap and
+ * anchor links do the navigation; the chevrons are decoration on top.
+ */
+
+/* ── Media strip ────────────────────────────────────────────────── */
+
+/*
+ * Explicit stacking order, bottom to top:
+ *   0  media strip
+ *   1  scrim
+ *   2  copy
+ *   3  chevrons
+ * The media was on a negative layer when the hero was a bare gradient. With a
+ * real scroll strip that no longer works: a negative layer sits behind the
+ * hero's own background, and anything interactive inside it is unreachable.
+ */
+.hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero__scrim {
+  z-index: 1;
+}
+
+.hero__inner {
+  position: relative;
+  z-index: 2;
+}
+
+/*
+ * The decorative haze in polish.css existed to give a bare gradient some
+ * depth. There is real imagery now, and tinting satellite photography yellow
+ * only makes it muddy.
+ */
+.hero::before {
+  content: none;
+}
+
+.hero__track {
+  display: flex;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  /* The strip is its own scroll container, so `scroll-behavior: smooth` set
+     globally on <html> does not apply here — set explicitly. */
+  scroll-behavior: smooth;
+  /* Hide the scrollbar without disabling scrolling: this is a media strip,
+     and a visible bar across a photograph reads as a defect. Keyboard and
+     touch scrolling are unaffected. */
+  scrollbar-width: none;
+}
+
+.hero__track::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__track {
+    scroll-behavior: auto;
+  }
+}
+
+.hero__slide {
+  position: relative;
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  overflow: hidden;
+}
+
+/* ── Slide 1: the map ───────────────────────────────────────────── */
+
+/* Poster — real coastline in inline SVG. Visible immediately, replaced by
+   satellite imagery only once that has actually painted. */
+.hero__poster {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--palette-sound-deep) 0%, #0e3a47 100%);
+  transition: opacity 600ms var(--ease-standard);
+}
+
+.hero__poster.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hero__postersvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hero__contour {
+  fill: none;
+  stroke: rgb(126 231 135 / 0.14);
+  stroke-width: 0.8;
+}
+
+.hero__island {
+  fill: rgb(126 231 135 / 0.1);
+  stroke: #7ee787;
+  stroke-width: 1.4;
+}
+
+.hero__map {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 600ms var(--ease-standard);
+  background: var(--palette-sound-deep);
+}
+
+.hero__map.is-ready {
+  opacity: 1;
+}
+
+/* Leaflet's own chrome, toned down to sit inside a hero rather than a page. */
+.hero__map .leaflet-container {
+  height: 100%;
+  background: var(--palette-sound-deep);
+  font-family: var(--font-body);
+}
+
+.hero__map .leaflet-control-attribution {
+  background: rgb(6 22 26 / 0.72);
+  color: #dfe7e2;
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.hero__map .leaflet-control-attribution a {
+  color: #cfe3ef;
+}
+
+/*
+ * Label pinned ON the island — name above, pin below, the way a map labels a
+ * place. Sits above the scrim (z-index 3) and fades in only while the map
+ * slide is active, so it never appears over a photograph of somewhere else.
+ *
+ * The default `left`/`top` here are the POSTER's island. Once the live map is
+ * ready the script overwrites both from `latLngToContainerPoint`, so the label
+ * tracks the real coastline through every zoom.
+ *
+ * No glass pill: over satellite imagery the pill read as a UI chip stuck in a
+ * corner rather than a place name. Contrast comes from a text shadow, which
+ * survives both dark water and bright reef.
+ */
+.hero__mapbadge {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  translate: -50% -50%;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 250ms var(--ease-standard);
+  pointer-events: none;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  letter-spacing: 0.01em;
+  text-shadow:
+    0 1px 3px rgb(0 0 0 / 0.9),
+    0 0 14px rgb(0 0 0 / 0.6);
+}
+
+.hero__mapbadge svg {
+  color: #7ee787;
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.9));
+}
+
+@media (min-width: 60rem) {
+  .hero__mapbadge {
+    /* Poster fallback only — clears the copy column. */
+    left: 66%;
+    font-size: var(--text-lg);
+  }
+}
+
+/*
+ * Not on a phone. There is no copy column to sit beside at 412px — the
+ * headline fills the hero — so the label landed squarely on top of the primary
+ * call to action, printing "Barangay Tumbod" through the middle of "Mga
+ * serbisyo at requirements". Nothing is lost: the <h1> two lines above says
+ * the same words, and the map is a backdrop at this width.
+ */
+@media (max-width: 60rem) {
+  .hero__mapbadge {
+    display: none;
+  }
+}
+
+.hero__mapbadge.is-visible {
+  opacity: 1;
+}
+
+/* No script means no observer to toggle it, and the map slide is the one
+   showing — so reveal it. */
+html:not([data-reveal-ready]) .hero__mapbadge {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__mapbadge {
+    transition: none;
+  }
+}
+
+/* ── Map controls ───────────────────────────────────────────────
+   Glass, the second and last place it appears (the header is the first).
+   `hidden` in the markup until the script proves the map exists — the same
+   rule the chevrons follow. */
+
+/* Top and bottom of the IMAGERY: the selector sits in the top-right corner,
+   the zoom stack rests just above the filmstrip — which is what the 190px
+   bottom inset is measuring. */
+.hero__mapchrome {
+  position: absolute;
+  inset-block: var(--space-4) 190px;
+  right: var(--space-5);
+  z-index: 3;
+  display: grid;
+  align-content: space-between;
+  justify-items: end;
+  gap: var(--space-4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms var(--ease-standard);
+}
+
+.hero__mapchrome.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hero__zoom {
+  display: grid;
+  gap: 1px;
+  padding: 3px;
+  border-radius: var(--r-inner);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  background: rgb(6 22 26 / 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* One glass control, used by the basemap summary and the three round buttons. */
+.hero__glassbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding-inline: var(--space-3);
+  border-radius: var(--r-inner);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  background: rgb(6 22 26 / 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  list-style: none;
+  transition:
+    background-color 180ms var(--ease-standard),
+    border-color 180ms var(--ease-standard);
+}
+
+/* The three in the stack share one glass panel, so they lose their own. */
+.hero__zoom .hero__glassbtn {
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.hero__glassbtn--icon {
+  width: 44px;
+  min-height: 44px;
+  padding-inline: 0;
+}
+
+.hero__glassbtn:hover:not(:disabled),
+.hero__glassbtn:focus-visible {
+  background: rgb(6 22 26 / 0.78);
+  border-color: rgb(255 255 255 / 0.6);
+}
+
+.hero__zoom .hero__glassbtn:hover:not(:disabled),
+.hero__zoom .hero__glassbtn:focus-visible {
+  background: rgb(255 255 255 / 0.16);
+}
+
+.hero__glassbtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Safari renders a disclosure triangle on `summary` regardless of
+   `list-style`, which puts a stray marker inside the glass button. */
+.hero__glassbtn::-webkit-details-marker {
+  display: none;
+}
+
+.hero__basemap {
+  position: relative;
+}
+
+.hero__basemap[open] .hero__glassbtn {
+  border-color: rgb(255 255 255 / 0.6);
+}
+
+.hero__basemap-panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  display: grid;
+  min-width: 10rem;
+  padding: var(--space-1);
+  border-radius: var(--r-inner);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  background: rgb(6 22 26 / 0.86);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 28px -10px rgb(0 0 0 / 0.6);
+}
+
+.hero__basemap-panel button {
+  min-height: 44px;
+  padding-inline: var(--space-3);
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.hero__basemap-panel button:hover,
+.hero__basemap-panel button:focus-visible {
+  background: rgb(255 255 255 / 0.14);
+}
+
+/* Selected state is not colour alone — it carries a tick. */
+.hero__basemap-panel button[aria-pressed='true']::after {
+  content: ' ✓';
+  color: #7ee787;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__mapchrome,
+  .hero__glassbtn {
+    transition: none;
+  }
+}
+
+/*
+ * Pointer widths only. On a phone the cluster lands on top of the imagery the
+ * slide exists to show, and the strip is swiped, not zoomed. The map at
+ * /kontak is the one built for interrogating.
+ */
+@media (max-width: 60rem) {
+  .hero__mapchrome {
+    display: none;
+  }
+}
+
+/* ── Empty photo slides ─────────────────────────────────────────
+   Named slots, not stock imagery. Each says what belongs in it. */
+
+.hero__slide--empty {
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(155deg, rgb(22 105 122 / 0.55) 0%, rgb(11 59 84 / 0.9) 100%),
+    var(--palette-sound-deep);
+}
+
+.hero__slotlabel {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: var(--space-4);
+  text-align: center;
+  color: rgb(255 255 255 / 0.92);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.hero__slotnote {
+  font-family: var(--font-body);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.62);
+}
+
+/* ── Chevrons ───────────────────────────────────────────────────
+   Hidden until script enables them, so there is never a dead control. */
+
+/* Centred on the IMAGERY, not on the hero box — the filmstrip owns the bottom
+   ~180px, and a true 50% put both chevrons level with the thumbnails. */
+.hero__chev {
+  position: absolute;
+  top: 46%;
+  translate: 0 -50%;
+  z-index: 3;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  border: 1px solid rgb(255 255 255 / 0.35);
+  background: rgb(6 22 26 / 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px -10px rgb(0 0 0 / 0.7);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    background-color 180ms var(--ease-standard),
+    border-color 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard),
+    scale 180ms var(--ease-standard);
+}
+
+.hero__chev:hover:not(:disabled),
+.hero__chev:focus-visible {
+  background: rgb(6 22 26 / 0.72);
+  border-color: rgb(255 255 255 / 0.8);
+  scale: 1.08;
+  box-shadow:
+    0 0 0 6px rgb(255 255 255 / 0.08),
+    0 10px 28px -10px rgb(0 0 0 / 0.8);
+}
+
+.hero__chev:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.hero__chev--prev {
+  left: var(--space-5);
+}
+
+.hero__chev--next {
+  right: var(--space-5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__chev:hover:not(:disabled),
+  .hero__chev:focus-visible {
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__chev {
+    transition: none;
+  }
+}
+
+/*
+ * Pointer widths only. At 412px the chevrons land squarely on top of the two
+ * call-to-action buttons — they covered "Mga serbisyo at requirements", which
+ * is the most important control on the page.
+ *
+ * Nothing is lost: the strip swipes natively on touch, and the thumbnails
+ * below are ordinary links, so keyboard users keep a full path through every
+ * slide at every width.
+ */
+@media (max-width: 60rem) {
+  .hero__chev {
+    display: none;
+  }
+}
+
+/* ── Filmstrip ──────────────────────────────────────────────────
+   Thumbnails plus pagination, across the full width of the hero. Sits above
+   the scrim so the imagery behind it stays dark enough for the borders and
+   the dots to read. */
+
+.hero__filmstrip {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: 0 var(--space-4) var(--space-5);
+  display: grid;
+  gap: var(--space-4);
+  justify-items: center;
+}
+
+/* ── Thumbnails ─────────────────────────────────────────────────
+   Plain anchors. They navigate the strip with no JS at all. */
+
+.hero__thumbs {
+  display: flex;
+  width: 100%;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* The lift on hover would otherwise be clipped by the scroll container. */
+  padding-block: var(--space-1);
+}
+
+.hero__thumbs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Equal columns that divide the hero rather than a fixed 8.5rem card, so the
+   strip reaches both edges at every width. `min-width: 0` is what allows a
+   flex item to shrink below its content — without it the row overflows. */
+.hero__thumbs > li {
+  flex: 1 1 0;
+  min-width: 8rem;
+  display: flex;
+}
+
+.hero__thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 8rem;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  border: 2px solid rgb(255 255 255 / 0.25);
+  background:
+    linear-gradient(155deg, rgb(22 105 122 / 0.5) 0%, rgb(11 59 84 / 0.85) 100%),
+    var(--palette-sound-deep);
+  color: rgb(255 255 255 / 0.9);
+  text-decoration: none;
+  box-shadow: 0 10px 24px -12px rgb(0 0 0 / 0.7);
+  transition:
+    border-color 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard),
+    transform 180ms var(--ease-standard);
+}
+
+.hero__thumb:hover,
+.hero__thumb:focus-visible {
+  border-color: rgb(255 255 255 / 0.75);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 30px -12px rgb(0 0 0 / 0.75);
+}
+
+.hero__thumb.is-active {
+  border-color: #7ee787;
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 0 1px rgb(126 231 135 / 0.5),
+    0 12px 28px -12px rgb(0 0 0 / 0.75);
+}
+
+/* The map thumbnail draws the real coastline, at the same scale as the poster. */
+.hero__thumbsvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/*
+ * Visually hidden, not removed. The reference strip carries no lettering and
+ * the images say what they are — but the anchor still needs an accessible
+ * name, and "link, #hero-cove-1" is not one.
+ */
+.hero__thumblabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__thumb {
+    transition: none;
+  }
+  .hero__thumb:hover,
+  .hero__thumb:focus-visible,
+  .hero__thumb.is-active {
+    transform: none;
+  }
+}
+
+/* ── Pagination ─────────────────────────────────────────────────
+   A pointer-only echo of the strip above: `aria-hidden` in the markup, so it
+   adds no tab stops and no screen-reader noise. */
+
+.hero__dots {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hero__dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: rgb(255 255 255 / 0.35);
+  transition:
+    width 260ms var(--ease-standard),
+    background-color 260ms var(--ease-standard);
+}
+
+.hero__dot:hover {
+  background: rgb(255 255 255 / 0.65);
+}
+
+.hero__dot.is-active {
+  width: 28px;
+  background: #7ee787;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__dot {
+    transition: none;
+  }
+}
+
+/* ── Layout at width ────────────────────────────────────────────
+   On a wide screen the copy occupies the left half and the map stays visible
+   on the right, as in the reference. The scrim becomes a left-to-right
+   gradient so the imagery is not dimmed across its whole width. */
+
+/*
+ * Two rows: the copy takes the flexible one, the filmstrip hugs the bottom.
+ * Without explicit rows the hero's `align-items: end` did nothing once the
+ * strip became a second flow child, and both sat at the top of a 900px box.
+ */
+.hero {
+  grid-template-rows: 1fr auto;
+}
+
+@media (min-width: 60rem) {
+  /* The reference hero is tall — the map needs room to be a map rather than a
+     band of texture behind a headline. `max-height` is lifted with it; at
+     820px the island was cropped top and bottom at every desktop width. */
+  .hero {
+    min-height: 900px;
+    max-height: none;
+  }
+
+  .hero__inner {
+    max-width: 1280px;
+    align-self: center;
+    padding-block: var(--space-6);
+  }
+
+  .hero__title,
+  .hero__lede,
+  .hero__cta,
+  .hero__eyebrow,
+  .hero__place {
+    max-width: 34rem;
+  }
+
+  /*
+   * Left-to-right, so only the copy column is dimmed and the imagery keeps its
+   * colour on the right. The second layer is a floor wash that puts enough
+   * dark under the filmstrip for white borders and grey dots to read over a
+   * bright reef.
+   */
+  .hero__scrim {
+    background:
+      linear-gradient(
+        100deg,
+        rgb(6 22 26 / 0.95) 0%,
+        rgb(6 22 26 / 0.86) 30%,
+        rgb(6 22 26 / 0.3) 58%,
+        rgb(6 22 26 / 0.08) 100%
+      ),
+      linear-gradient(0deg, rgb(6 22 26 / 0.72) 0%, rgb(6 22 26 / 0) 30%);
+  }
+
+  /* Oversized, and wrapped to two lines the way the reference sets it. */
+  .hero__title {
+    font-size: clamp(3.25rem, 5vw, 4.5rem);
+    max-width: 9ch;
+    letter-spacing: -0.015em;
+  }
+
+  .hero__lede {
+    max-width: 32ch;
+    font-size: var(--text-base);
+  }
+}
+
+/* ── Supporting bits ────────────────────────────────────────────── */
+
+.hero__eyebrow {
+  color: #7ee787;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: var(--text-lg);
+}
+
+/* The hero's two CTAs carry the softer radius the rest of the redesign uses.
+   `--radius-md` (4px) is the token for a control in a form; at hero scale it
+   read as a clipped rectangle beside the rounded glass everywhere else. */
+.hero__cta .btn {
+  border-radius: var(--r-inner);
+  transition:
+    transform 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard),
+    background-color 180ms var(--ease-standard);
+}
+
+.hero__cta .btn:hover,
+.hero__cta .btn:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -12px rgb(0 0 0 / 0.8);
+}
+
+.hero__cta .btn--ghost:hover,
+.hero__cta .btn--ghost:focus-visible {
+  background: rgb(255 255 255 / 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__cta .btn {
+    transition: none;
+  }
+  .hero__cta .btn:hover,
+  .hero__cta .btn:focus-visible {
+    transform: none;
+  }
+}
+
+.hero__place {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: rgb(255 255 255 / 0.85);
+}
+
+/* ── Video slide ────────────────────────────────────────────────
+   `object-fit: cover` so a 16:9 clip fills a hero of any shape without
+   letterboxing. The poster carries the same framing, so there is no jump when
+   the first frame arrives. */
+
+.hero__slide--video {
+  background: var(--palette-sound-deep);
+}
+
+.hero__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Pause control. Bottom-right so it clears the copy column on desktop and the
+   thumbnails on a phone. Always visible — never a hover-only affordance,
+   because a touch user has no hover and WCAG 2.2.2 is not optional. */
+.hero__videobtn {
+  position: absolute;
+  right: var(--space-3);
+  top: calc(var(--space-4) + 56px);
+  /* Above `.hero__inner` (z-index 2), which otherwise swallows the click. */
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease-standard);
+  min-height: 44px;
+  padding-inline: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-full);
+  border: 1px solid rgb(255 255 255 / 0.35);
+  background: rgb(6 22 26 / 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+/* Only on the video slide. */
+.hero__videobtn.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Keyboard users must be able to reach it even mid-fade. */
+.hero__videobtn:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hero__videobtn:hover,
+.hero__videobtn:focus-visible {
+  background: rgb(6 22 26 / 0.78);
+  border-color: rgb(255 255 255 / 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__videobtn {
+    transition: none;
+  }
+}
+
+/* The video thumbnail shows the real poster frame rather than a flat tint. */
+.hero__thumb--image {
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+/* Scrim under the label, so white text stays legible over a bright frame. */
+.hero__thumb--image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgb(6 22 26 / 0.1) 40%, rgb(6 22 26 / 0.8) 100%);
+}
+
+.hero__thumb--image .hero__thumblabel {
+  position: relative;
+}
+
+/* ── Photo slides ───────────────────────────────────────────────
+   `object-fit: cover` so any aspect ratio fills the hero. The pantalan shot is
+   portrait; without this it would letterbox with black bars down both sides. */
+
+.hero__slide--photo {
+  background: var(--palette-sound-deep);
+}
+
+.hero__photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* The subject in all four sits low-centre; biasing the crop upward would cut
+     the boats, which are the point. */
+  object-position: center;
+  display: block;
+}
+
+/* The thumbnail sits behind as an instant, already-downloaded preview; the
+   full photograph fades in over it once the observer requests it. Without
+   this a deferred slide would flash empty before its image arrived. */
+.hero__slide--photo {
+  background-size: cover;
+  background-position: center;
+}
+
+.hero__photo {
+  opacity: 0;
+  transition: opacity 400ms var(--ease-standard);
+}
+
+.hero__photo.is-loaded,
+.hero__photo--noscript {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__photo {
+    transition: none;
+  }
+}

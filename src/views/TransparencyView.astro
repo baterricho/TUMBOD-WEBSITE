@@ -1,0 +1,145 @@
+---
+/**
+ * Full Disclosure Board body, locale-aware.
+ *
+ * An honest "not yet posted" with a reason beats an empty table that implies
+ * non-compliance where there is only a delay (§20). Every document, when
+ * posted, requires a plain-language one-line summary — an ordinance nobody can
+ * read is not disclosure.
+ */
+import Section from '@/components/Section.astro'
+import Placeholder from '@/components/Placeholder.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { needsData } from '@/lib/content/placeholder'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+
+/**
+ * The SEVEN documents the Barangay Full Disclosure Policy legally requires
+ * (DILG MC 2010-083, updated 2022; posting obligation RA 7160 §352).
+ *
+ * This page previously listed five self-invented categories. The real list was
+ * found during the precedent scan (PRECEDENT-SCAN.md §6) — a compliance gap no
+ * amount of design judgement would have surfaced. Official wording is kept so
+ * the barangay can match documents to headings one-to-one; the plain-Filipino
+ * explanation sits underneath, because a heading nobody understands is not
+ * disclosure.
+ */
+const CATEGORIES = [
+  {
+    headingFil: 'Barangay Financial Report',
+    headingEn: 'Barangay Financial Report',
+    detailFil: 'Ang buong ulat sa pera ng barangay — pumasok at lumabas.',
+    detailEn: 'The full financial report — money in and money out.',
+    value: needsData(fil ? 'Barangay Financial Report' : 'the Barangay Financial Report', 'Barangay Treasurer', true),
+  },
+  {
+    headingFil: 'Taunang Badyet',
+    headingEn: 'Annual Budget',
+    detailFil: 'Magkano ang badyet ngayong taon at saan ito nakalaan.',
+    detailEn: 'How much the barangay has this year and what it is allocated to.',
+    value: needsData(fil ? 'Annual Budget' : 'the Annual Budget', 'Barangay Treasurer', true),
+  },
+  {
+    headingFil: 'Annual Procurement Plan',
+    headingEn: 'Annual Procurement Plan',
+    detailFil: 'Ano ang balak bilhin ng barangay ngayong taon.',
+    detailEn: 'What the barangay plans to purchase this year.',
+    value: needsData(fil ? 'Annual Procurement Plan' : 'the Annual Procurement Plan', 'Barangay Treasurer', true),
+  },
+  {
+    headingFil: 'Summary of Income and Expenditures',
+    headingEn: 'Summary of Income and Expenditures',
+    detailFil: 'Buod ng kita at gastos.',
+    detailEn: 'Summary of income and spending.',
+    value: needsData(fil ? 'Summary of Income and Expenditures' : 'the Summary of Income and Expenditures', 'Barangay Treasurer', true),
+  },
+  {
+    headingFil: 'Itemized Monthly Collection',
+    headingEn: 'Itemized Monthly Collection',
+    detailFil: 'Buwan-buwang listahan ng nakolektang bayad — kasama ang bayad sa clearance at iba pang dokumento.',
+    detailEn: 'Month-by-month record of fees collected, including document fees.',
+    value: needsData(fil ? 'Itemized Monthly Collection' : 'the Itemized Monthly Collection', 'Barangay Treasurer', true),
+  },
+  {
+    headingFil: 'List of Notice of Award',
+    headingEn: 'List of Notice of Award',
+    detailFil: 'Sino ang nanalo sa mga kontrata ng barangay.',
+    detailEn: 'Who was awarded barangay contracts.',
+    value: needsData(fil ? 'List of Notice of Award' : 'the List of Notice of Award', 'Barangay Secretary'),
+  },
+  {
+    headingFil: '20% Component ng IRA Utilization',
+    headingEn: '20% Component of the IRA Utilization',
+    detailFil:
+      'Ang 20% ng pondo mula sa nasyonal na gobyerno na dapat gamitin sa proyektong pangkaunlaran — mga proyektong nakikita ninyo sa barangay.',
+    detailEn:
+      'The 20% of national funds that must go to development projects — the ones you can see around the barangay.',
+    value: needsData(fil ? '20% Component ng IRA Utilization' : 'the 20% Component of the IRA Utilization', 'Barangay Treasurer', true),
+  },
+  {
+    headingFil: 'Mga Ordinansa at Resolusyon',
+    headingEn: 'Ordinances and Resolutions',
+    detailFil:
+      'Hindi kasama sa pitong kailangan ng batas, pero inilalagay namin dito. Bawat isa ay may maikling paliwanag sa simpleng salita, hindi lang PDF.',
+    detailEn:
+      'Not among the seven the law requires, but published here anyway. Each carries a plain-language summary, not just a PDF.',
+    value: needsData(
+      fil
+        ? 'mga ordinansa at resolusyon, kasama ang plain-language summary'
+        : 'ordinances and resolutions, with plain-language summaries',
+      'Barangay Secretary',
+      true,
+    ),
+  },
+]
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{t.nav.transparency}</h1>
+  <div class="prose" style="margin-top:var(--space-3)">
+    <p>
+      {
+        fil
+          ? 'Pitong dokumento ang kailangang ipaskil ng bawat barangay ayon sa batas — sa loob ng barangay hall at sa website. Nasa ibaba ang pitong iyon, at ang paliwanag kung ano ang bawat isa.'
+          : 'Every barangay is legally required to post seven documents — inside the barangay hall and on its website. Those seven are listed below, with an explanation of what each one is.'
+      }
+    </p>
+    <p class="small muted">
+      {
+        fil
+          ? 'Batayan: DILG Memorandum Circular 2010-083 (Full Disclosure Policy), at Seksyon 352 ng RA 7160 — dapat ipaskil sa loob ng 30 araw pagkatapos ng bawat taon ng pananalapi.'
+          : 'Basis: DILG Memorandum Circular 2010-083 (Full Disclosure Policy), and Section 352 of RA 7160 — to be posted within 30 days of the end of each fiscal year.'
+      }
+    </p>
+    <p>
+      {
+        fil
+          ? 'Wala pang na-post na dokumento dito. Ipapaskil ang bawat isa pagdating nila.'
+          : 'No documents have been posted here yet. Each will appear as it arrives.'
+      }
+    </p>
+  </div>
+</Section>
+
+{
+  CATEGORIES.map((c) => (
+    <Section
+      title={fil ? c.headingFil : c.headingEn}
+      titleId={c.headingEn.toLowerCase().replace(/[^a-z]+/g, '-')}
+    >
+      <p style="max-width:var(--measure);color:var(--ink-muted);font-size:var(--text-sm)">
+        {fil ? c.detailFil : c.detailEn}
+      </p>
+      <div style="margin-top:var(--space-3)">
+        <Placeholder value={c.value} display="block" />
+      </div>
+    </Section>
+  ))
+}

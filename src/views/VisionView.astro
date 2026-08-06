@@ -1,0 +1,65 @@
+---
+/**
+ * Vision, mission and values.
+ *
+ * These are adopted by resolution of the Sangguniang Barangay, so they are not
+ * copy a website may write on the barangay's behalf. Outside demo mode the
+ * page asks for the resolution rather than filling the space.
+ */
+import Section from '@/components/Section.astro'
+import { VISION } from '@/lib/content/active'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const values = VISION ? (fil ? VISION.valuesFil : VISION.valuesEn) : []
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{fil ? 'Bisyon at Misyon' : 'Vision and Mission'}</h1>
+</Section>
+
+{
+  VISION === null ? (
+    <Section>
+      <div class="card" style="max-width:var(--measure)">
+        <p>
+          {fil
+            ? 'Wala pang nakalathalang bisyon at misyon dito.'
+            : 'No vision and mission statement has been published here yet.'}
+        </p>
+        <p class="small muted" style="margin-top:var(--space-2)">
+          {fil
+            ? 'Ang bisyon at misyon ay pinagtitibay sa pamamagitan ng resolusyon ng Sangguniang Barangay. Hindi ito maaaring isulat ng website para sa barangay — kailangan ang kopya ng resolusyon.'
+            : 'A vision and mission are adopted by resolution of the Sangguniang Barangay. A website cannot write them on the barangay’s behalf — a copy of the resolution is required.'}
+        </p>
+      </div>
+    </Section>
+  ) : (
+    <>
+      <Section title={fil ? 'Bisyon' : 'Vision'} titleId="vision">
+        <p class="section-lede" data-reveal="pending">{fil ? VISION.visionFil : VISION.visionEn}</p>
+      </Section>
+
+      <Section title={fil ? 'Misyon' : 'Mission'} titleId="mission" tone="sunken">
+        <p class="section-lede" data-reveal="pending">{fil ? VISION.missionFil : VISION.missionEn}</p>
+      </Section>
+
+      <Section title={fil ? 'Mga Pinahahalagahan' : 'Values'} titleId="values">
+        <div class="grid-cards">
+          {values.map((v, i) => (
+            <div class="fcard" data-reveal="pending">
+              {/* The number is decorative ordering, not a ranking of importance. */}
+              <p class="stat__value" aria-hidden="true">{String(i + 1).padStart(2, '0')}</p>
+              <p class="fcard__title">{v}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+    </>
+  )
+}

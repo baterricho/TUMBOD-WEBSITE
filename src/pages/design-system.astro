@@ -1,0 +1,225 @@
+---
+/**
+ * /design-system — THE SOURCE OF TRUTH.
+ *
+ * Built before any page layout (Phase 3 conflict resolution). If a pattern is
+ * not on this page, it does not exist. Noindexed, excluded from the sitemap.
+ */
+import Base from '@/layouts/Base.astro'
+import Section from '@/components/Section.astro'
+import Alert from '@/components/Alert.astro'
+import Icon from '@/components/Icon.astro'
+import Placeholder from '@/components/Placeholder.astro'
+import LastUpdated from '@/components/LastUpdated.astro'
+import OfficeStatusBadge from '@/components/OfficeStatusBadge.astro'
+import SeaConditionIndicator from '@/components/SeaConditionIndicator.astro'
+import BoatStatusRow from '@/components/BoatStatusRow.astro'
+import LivingChartHeader from '@/components/LivingChartHeader.astro'
+import { needsData } from '@/lib/content/placeholder'
+import type { SeaState, AlertLevel, BoatStatus } from '@/lib/content/types'
+import type { IconName } from '@/components/Icon.astro'
+
+const SEA_STATES: SeaState[] = ['calm', 'moderate', 'rough', 'dangerous']
+const ALERT_LEVELS: AlertLevel[] = ['info', 'advisory', 'warning', 'emergency']
+const BOAT_STATES: BoatStatus[] = ['running', 'uncertain', 'cancelled']
+
+const ICONS: IconName[] = [
+  'bangka', 'wave-calm', 'wave-moderate', 'wave-rough', 'wave-dangerous', 'wind',
+  'anchor', 'mangrove', 'health', 'rice-sack', 'document', 'phone', 'megaphone',
+  'calendar', 'clock', 'pin', 'download', 'checklist', 'warning', 'info',
+  'evacuation', 'offline', 'search', 'print', 'copy', 'external',
+]
+
+const PALETTE = [
+  { token: '--palette-glare', source: 'bleached sand + noon glare on Malampaya' },
+  { token: '--palette-paper-raised', source: 'chart paper held to the light' },
+  { token: '--palette-shoal', source: 'shallow water over seagrass' },
+  { token: '--palette-mangrove', source: 'mangrove in shadow — reads black' },
+  { token: '--palette-mangrove-wet', source: 'wet roots at low tide' },
+  { token: '--palette-sound-deep', source: 'deep water of the Outer Sound' },
+  { token: '--palette-hull-blue', source: 'sky blue painted on bangka hulls' },
+  { token: '--palette-hull-blue-ink', source: 'same blue, darkened to carry text' },
+  { token: '--palette-bangka-yellow', source: 'outrigger boom yellow — FILL ONLY' },
+  { token: '--palette-bangka-orange', source: 'hull stripe orange' },
+  { token: '--palette-bangka-red', source: 'hot red hull stripe' },
+  { token: '--palette-signal-red', source: 'RESERVED: emergency + focus ring' },
+]
+
+const SPACES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+const RADII = ['none', 'sm', 'md', 'lg']
+
+const now = new Date('2026-08-04T05:00:00+08:00')
+const later = new Date('2026-08-04T14:00:00+08:00')
+const stale = new Date('2026-08-02T05:00:00+08:00')
+
+const waveFor = (s: SeaState) => (s === 'calm' ? 0.3 : s === 'moderate' ? 1.0 : s === 'rough' ? 2.0 : 3.5)
+---
+
+<Base
+  locale="fil"
+  pathname="/design-system"
+  title="Design system"
+  description="Design system source of truth for the Barangay Tumbod website."
+  noindex
+>
+  <Section divider={false}>
+    <h1 style="font-size:var(--text-4xl)">Design system</h1>
+    <p style="margin-top:var(--space-3);max-width:var(--measure)">
+      Barangay Tumbod. Every token and component, in both themes. If a pattern
+      is not here, it does not exist.
+    </p>
+  </Section>
+
+  <Section title="Colour — primitives with physical sources" titleId="ds-colour">
+    <div style="display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(min(14rem,100%),1fr))">
+      {
+        PALETTE.map((e) => (
+          <div style="border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden">
+            <div style={`height:56px;background-color:var(${e.token})`}></div>
+            <div style="padding:var(--space-2)">
+              <code style="font-family:var(--font-mono);font-size:var(--text-xs)">{e.token}</code>
+              <p style="font-size:var(--text-xs);color:var(--ink-muted)">{e.source}</p>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </Section>
+
+  <Section title="Typography" titleId="ds-type">
+    <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+      <p style="font-family:var(--font-display);font-size:var(--text-4xl)">Ngayon sa Tumbod</p>
+      <p style="font-size:var(--text-base);max-width:var(--measure)">
+        Source Sans 3 — katawan. Ang mga titik na may tuldik: á é í ó ú ñ Ñ.
+        Sinusubok sa Filipino dahil iyon ang kanonikal na wika ng site na ito.
+      </p>
+      <p class="figure" style="font-size:var(--text-lg)">
+        IBM Plex Mono — 0123456789 · ₱1,234.50 · 10.9856 N 119.2773 E
+      </p>
+      <p>
+        Chart rule: <span class="is-land">TUMBOD</span> (land, upright) ·
+        <span class="is-water">Blockade Strait</span> (water, italic)
+      </p>
+    </div>
+  </Section>
+
+  <Section title="Spacing" titleId="ds-spacing">
+    <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+      {
+        SPACES.map((n) => (
+          <div style="display:flex;gap:var(--space-3);align-items:center">
+            <code style="font-family:var(--font-mono);font-size:var(--text-xs);width:7rem">--space-{n}</code>
+            <div style={`height:12px;width:var(--space-${n});background-color:var(--interactive)`}></div>
+          </div>
+        ))
+      }
+    </div>
+  </Section>
+
+  <Section title="Radius — bimodal by intent" titleId="ds-radius">
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-4)">
+      {
+        RADII.map((r) => (
+          <div style="text-align:center">
+            <div style={`width:64px;height:64px;background-color:var(--surface-sunken);border:1px solid var(--line-strong);border-radius:var(--radius-${r})`}></div>
+            <code style="font-size:var(--text-xs)">{r}</code>
+          </div>
+        ))
+      }
+    </div>
+    <p style="margin-top:var(--space-3);font-size:var(--text-sm);color:var(--ink-muted);max-width:var(--measure)">
+      0 for chart and data surfaces, 4px for touch controls. The contrast is the
+      intent — zero-everywhere is itself a flagged anti-pattern.
+    </p>
+  </Section>
+
+  <Section title="Icons" titleId="ds-icons">
+    <div style="display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(min(6rem,100%),1fr))">
+      {
+        ICONS.map((name) => (
+          <div style="text-align:center">
+            <div style="display:flex;justify-content:center"><Icon name={name} /></div>
+            <p style="font-size:var(--text-2xs);color:var(--ink-muted)">{name}</p>
+          </div>
+        ))
+      }
+    </div>
+  </Section>
+
+  <Section title="Sea condition — colour + word + icon" titleId="ds-sea">
+    <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+      {
+        SEA_STATES.map((state) => (
+          <SeaConditionIndicator
+            locale="fil"
+            condition={{
+              state,
+              waveHeightM: waveFor(state),
+              windKph: 25,
+              windDirection: 'Habagat',
+              observedAt: now,
+              source: 'PAGASA (halimbawa lamang)',
+              manualOverride: false,
+            }}
+          />
+        ))
+      }
+    </div>
+  </Section>
+
+  <Section title="Boat status — statusReason distinguishes a binding ban" titleId="ds-boat">
+    <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+      {
+        BOAT_STATES.map((status) => (
+          <BoatStatusRow
+            locale="fil"
+            trip={{
+              id: status,
+              route: 'Tumbod → Liminangcong',
+              operator: needsData('bangkero', 'Barangay'),
+              departureTime: '6:00 AM',
+              fare: needsData('pamasahe', 'Barangay'),
+              status,
+              statusReason:
+                status === 'cancelled' ? 'pcg_sailing_ban' : status === 'uncertain' ? 'sea_conditions' : null,
+              updatedAt: now,
+            }}
+          />
+        ))
+      }
+    </div>
+  </Section>
+
+  <Section title="Alerts — colour AND icon AND leading word" titleId="ds-alerts">
+    <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+      {ALERT_LEVELS.map((level) => <Alert level={level} locale="fil">Halimbawa ng mensahe sa antas na ito.</Alert>)}
+    </div>
+  </Section>
+
+  <Section title="Office status" titleId="ds-office">
+    <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+      <OfficeStatusBadge locale="fil" hours={{ state: 'open', todayLabel: 'Martes', hoursToday: '8:00 AM – 5:00 PM', nextOpen: '8:00 AM' }} />
+      <OfficeStatusBadge locale="fil" hours={{ state: 'limited', todayLabel: 'Sabado', hoursToday: '8:00 AM – 12:00 NN', nextOpen: '8:00 AM' }} />
+      <OfficeStatusBadge locale="fil" hours={{ state: 'closed', todayLabel: 'Linggo', hoursToday: needsData('oras', 'Secretary'), nextOpen: '8:00 AM' }} />
+    </div>
+  </Section>
+
+  <Section title="LastUpdated — fresh, warn, stale" titleId="ds-updated">
+    <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+      <LastUpdated at={later} now={later} locale="fil" source="PAGASA" warnOnStale />
+      <LastUpdated at={now} now={later} locale="fil" source="PAGASA" warnOnStale />
+      <LastUpdated at={stale} now={later} locale="fil" source="PAGASA" warnOnStale />
+    </div>
+  </Section>
+
+  <Section title="Placeholders — absence is visible, never faked" titleId="ds-placeholder">
+    <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+      <Placeholder value={needsData('numero ng barangay hotline', 'Barangay Secretary', true)} display="block" />
+      <Placeholder value={needsData('pamasahe', 'bangkero')} display="block" />
+    </div>
+  </Section>
+
+  <Section title="Living Chart Header — the signature element" titleId="ds-chart">
+    <LivingChartHeader locale="fil" />
+  </Section>
+</Base>

@@ -1,0 +1,94 @@
+---
+/**
+ * Downloadable forms.
+ *
+ * `file: null` on every entry, and that is deliberate: none of these PDFs
+ * exist yet. A download link that 404s is worse than no link — on a 2G
+ * connection the failure costs a minute of someone's data to discover, and on
+ * a government site it reads as neglect.
+ *
+ * So each row names the form, says where to get it today (the barangay hall),
+ * and shows a disabled state rather than a live link. When a real PDF is
+ * added, only `file` changes.
+ */
+import Section from '@/components/Section.astro'
+import Icon from '@/components/Icon.astro'
+import { FORMS } from '@/lib/content/active'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{fil ? 'Mga Form na Pwedeng I-download' : 'Downloadable Forms'}</h1>
+  <p class="section-lede" style="margin-top:var(--space-3)">
+    {
+      fil
+        ? 'Karamihan sa mga transaksyon dito ay hindi nangangailangan ng form na dala mula sa bahay — punan ito sa barangay hall.'
+        : 'Most transactions here do not need a form brought from home — they are filled in at the barangay hall.'
+    }
+  </p>
+</Section>
+
+<Section>
+  {
+    FORMS.length === 0 ? (
+      <div class="card" style="max-width:var(--measure)">
+        <p>{fil ? 'Wala pang form na nakalagay dito.' : 'No forms have been posted here yet.'}</p>
+      </div>
+    ) : (
+      <ul class="grid-cards grid-cards--stack">
+        {FORMS.map((f) => (
+          <li>
+            {/* A form WITH a PDF is a link card; one without is a static card.
+                The shape tells you whether there is anything to tap before you
+                read a word of it, which on a metered connection matters. */}
+            {f.file === null ? (
+              <article class="fcard">
+                <h2 class="fcard__title">{fil ? f.nameFil : f.nameEn}</h2>
+                <p class="fcard__body">{fil ? f.noteFil : f.noteEn}</p>
+                <p class="fcard__meta">
+                  {fil
+                    ? 'Wala pang PDF. Makukuha ang form sa barangay hall.'
+                    : 'No PDF yet. The form is available at the barangay hall.'}
+                </p>
+              </article>
+            ) : (
+              <a href={f.file} class="fcard fcard--icon" download data-plain>
+                <span class="fcard__icon">
+                  <Icon name="download" size={20} />
+                </span>
+                <span class="fcard__text">
+                  <span class="fcard__title">{fil ? f.nameFil : f.nameEn}</span>
+                  <span class="fcard__body">{fil ? f.noteFil : f.noteEn}</span>
+                </span>
+                <span class="fcard__arrow" aria-hidden="true">
+                  <Icon name="chevron-right" size={16} />
+                </span>
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</Section>
+
+<Section title={fil ? 'Ano ang dalhin' : 'What to bring'} titleId="requirements" tone="sunken">
+  <p style="max-width:var(--measure)">
+    {
+      fil
+        ? 'Ang mahalaga ay hindi ang form kundi ang mga dalang requirements. Nasa bawat pahina ng serbisyo ang listahan, at pwede itong i-check habang naghahanda.'
+        : 'What matters is not the form but the documents you bring. Every service page carries the list, and it can be ticked off while you prepare.'
+    }
+  </p>
+  <p style="margin-top:var(--space-3)">
+    <a href={`${p}/serbisyo`}>{fil ? 'Mga serbisyo at requirements' : 'Services and requirements'} →</a>
+  </p>
+</Section>

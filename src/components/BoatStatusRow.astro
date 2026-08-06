@@ -1,0 +1,78 @@
+---
+/**
+ * Next boat — a full-bleed dark strip directly beneath the sea band, so the
+ * two together read as one answer: "what is the sea doing, and can I travel?"
+ *
+ * `statusReason` exists because research found cancellation here is often a
+ * Coast Guard prohibition on vessels of 3 gross tons and below covering Taytay
+ * and El Nido — binding and municipality-wide — rather than an operator's
+ * judgement call. "Utos ng Coast Guard" and "malakas ang alon" mean very
+ * different things to someone deciding whether to wait at the pier
+ * (RESEARCH.md §4, §8A).
+ */
+import Icon from './Icon.astro'
+import Placeholder from './Placeholder.astro'
+import type { BoatTrip } from '@/lib/content/types'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { isPlaceholder } from '@/lib/content/placeholder'
+
+interface Props {
+  trip: BoatTrip
+  locale: Locale
+}
+
+const { trip, locale } = Astro.props
+const t = getDictionary(locale)
+
+const COLOR = {
+  running: 'var(--status-open)',
+  uncertain: 'var(--sea-moderate)',
+  cancelled: 'var(--sea-dangerous)',
+} as const
+
+const WORD = {
+  running: t.boat.running,
+  uncertain: t.boat.uncertain,
+  cancelled: t.boat.cancelled,
+} as const
+
+const REASON = {
+  sea_conditions: t.boat.reasonSea,
+  pcg_sailing_ban: t.boat.reasonBan,
+  operator: t.boat.reasonOperator,
+  other: t.boat.reasonOther,
+} as const
+---
+
+<div class="boatstrip">
+  <div class="boatstrip__inner">
+    <h2 class="seaband__label is-water" style="opacity:0.75">{t.home.nextTrip}</h2>
+
+    <p class="boatstrip__route is-water">
+      <Icon name="bangka" size={24} />
+      {isPlaceholder(trip.route) ? <Placeholder value={trip.route} /> : trip.route}
+    </p>
+
+    {/* Status: colour + word + a shape, never colour alone. */}
+    <p class="boatstrip__status">
+      <span aria-hidden="true" class="dot" style={`background:${COLOR[trip.status]}`}></span>
+      <span>{WORD[trip.status]}</span>
+      {
+        trip.statusReason && (
+          <span style="font-weight:400;opacity:0.85">— {REASON[trip.statusReason]}</span>
+        )
+      }
+    </p>
+
+    <p class="small" style="width:100%;opacity:0.85;margin-top:var(--space-1)">
+      {t.boat.departure}:{' '}
+      {
+        isPlaceholder(trip.departureTime) ? (
+          <Placeholder value={trip.departureTime} />
+        ) : (
+          <span class="figure">{trip.departureTime}</span>
+        )
+      }
+    </p>
+  </div>
+</div>

@@ -1,0 +1,245 @@
+/**
+ * Card EXTENSIONS — additions to the existing `.fcard` system.
+ *
+ * ─────────────────────────────────────────────────────────────────
+ * CORRECTION, 2026-08-06. The first version of this file declared its own
+ * `.card` / `.cardgrid` component and, because it loads after components.css
+ * and polish.css, silently restyled the `.card` class that ten existing views
+ * already use for static callout panels. It also duplicated `.fcard`, which
+ * had been the link-card system all along.
+ *
+ * That is exactly the "two cards drift within a month" failure this file's own
+ * header warned about. So there is no third system here any more. What remains
+ * are the parts the interior pages genuinely needed and `.fcard` did not have:
+ * a description slot, label/value fact pairs, an icon+arrow row variant, and
+ * two emphasis modifiers.
+ * ─────────────────────────────────────────────────────────────────
+ *
+ * The vocabulary, for reference:
+ *   .card        static panel with a gold left border  (components.css)
+ *   .fcard       link card, hover-lifts                (redesign.css + polish.css)
+ *   .grid-cards  the responsive card grid              (redesign.css)
+ *
+ * Everything below extends the middle one.
+ */
+
+/* ── Grid modifiers ─────────────────────────────────────────────
+   `.grid-cards` already does `auto-fit` + `minmax(17rem, 1fr)`. These only
+   change the track size for denser or narrower content. */
+
+/* Actions and shortcuts — more, smaller. */
+.grid-cards--tight {
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: var(--space-3);
+}
+
+/* Read top-to-bottom rather than scanned: FAQs, forms, officials. */
+.grid-cards--stack {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: var(--measure);
+  gap: var(--space-3);
+}
+
+/* `.grid-cards` on a <ul> — the markup wants list semantics, the layout does
+   not want bullets. */
+.grid-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * Cards in a row share a height. `.fcard__facts` uses `margin-top: auto` to
+ * sit at the foot of its card, which does nothing unless the card is taller
+ * than its content — so without this the fee/duration rows sat at a different
+ * height in every card and could not be compared across a row, which is the
+ * one thing that list is for.
+ */
+.grid-cards > li {
+  display: flex;
+}
+
+.grid-cards > li > .fcard {
+  flex: 1;
+}
+
+/* ── Link colour on the title ───────────────────────────────────
+   The whole card is the hit area, but the underline belongs on the words. A
+   card of green text is unreadable, so only the title carries it. */
+
+a.fcard .fcard__title {
+  color: var(--interactive);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: from-font;
+}
+
+a.fcard:hover .fcard__title,
+a.fcard:focus-visible .fcard__title {
+  color: var(--interactive-hover);
+}
+
+/* polish.css lifts the card and greys the border on hover. Green says
+   "interactive" everywhere else on this site; it should here too. */
+a.fcard:hover,
+a.fcard:focus-visible {
+  border-color: var(--interactive);
+}
+
+/* ── Description ────────────────────────────────────────────────
+   `.fcard__meta` is a single muted line. This is the sentence under the
+   title — capped at a readable measure so a card in a wide column does not
+   run to 90 characters. */
+
+.fcard__body {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  line-height: var(--leading-body);
+  max-width: 52ch;
+}
+
+/* ── Fact pairs ─────────────────────────────────────────────────
+   Fee, processing time, date, budget. Label above value, wrapping as a row —
+   these are the numbers somebody is comparing across cards, and burying them
+   in the description is what made /serbisyo unusable for that. */
+
+.fcard__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: auto;
+  padding-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.fcard__fact {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.fcard__factlabel {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* ── Icon row variant ───────────────────────────────────────────
+   icon · (title + note) · arrow. Used by the homepage quick actions and by
+   the shortcut lists, matching the mega panels' `.mega-card`. */
+
+.fcard--icon {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.fcard--icon .fcard__title {
+  font-size: var(--text-base);
+}
+
+.fcard__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--r-inner);
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+
+a.fcard:hover .fcard__icon,
+a.fcard:focus-visible .fcard__icon {
+  background: color-mix(in srgb, var(--interactive) 14%, transparent);
+  color: var(--interactive);
+}
+
+.fcard__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.fcard__arrow {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--ink-muted);
+  transition: translate var(--motion-base) var(--ease-standard);
+}
+
+a.fcard:hover .fcard__arrow,
+a.fcard:focus-visible .fcard__arrow {
+  translate: 4px 0;
+  color: var(--interactive);
+}
+
+/* ── Emphasis ───────────────────────────────────────────────────
+   Red stays reserved for the emergency path, and still never travels alone —
+   these cards carry an icon and a label too (§2.4). */
+
+.fcard--urgent {
+  border-color: color-mix(in srgb, var(--alert-emergency) 45%, transparent);
+  background: color-mix(in srgb, var(--alert-emergency) 6%, var(--surface-raised));
+}
+
+a.fcard--urgent:hover,
+a.fcard--urgent:focus-visible {
+  border-color: var(--alert-emergency);
+}
+
+a.fcard--urgent .fcard__title { color: var(--alert-emergency-on-surface); }
+.fcard--urgent .fcard__icon { background: color-mix(in srgb, var(--alert-emergency) 12%, transparent); }
+
+/* Gold is a FILL, never text — 1.63:1 as ink. A rule down the leading edge
+   gives a card weight without shouting. */
+.fcard--accent { border-inline-start: 4px solid var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fcard__arrow { transition: none; }
+}
+
+/* ── Page header band ───────────────────────────────────────────
+ *
+ * `.section--airy` is on the opening <Section> of nine interior pages. It was
+ * declared in redesign.css, which loads BEFORE polish.css — and polish.css
+ * sets `.section { padding-block: … }` at the same specificity, so from 46rem
+ * up the airy rule never applied at all. The page header got default padding
+ * plus the standard contour rule.
+ *
+ * The visible result: an <h1> and a lede floating in ~220px of empty band,
+ * then a divider, then the content — reading as two unrelated zones rather
+ * than as a page with a title.
+ *
+ * Two changes, and neither adds a colour:
+ *   1. Generous space ABOVE the title, tight space below it. A heading belongs
+ *      with what it introduces, not centred in its own band.
+ *   2. The section immediately after loses its top rule. The gap was already
+ *      doing the separating; the line on top of it made the split look like a
+ *      boundary between sections rather than a masthead over its page.
+ *
+ * Declared here because this file loads last and must beat polish.css.
+ */
+.section--airy {
+  padding-block: calc(var(--space-4) * 3) var(--space-5);
+}
+
+@media (min-width: 46rem) {
+  .section--airy {
+    padding-block: calc(var(--space-4) * 3.75) var(--space-5);
+  }
+}
+
+.section--airy + .section {
+  border-top: 0;
+  padding-top: var(--space-5);
+}
+
+/* The lede is the sentence under the title. It reads as one unit with it, so
+   it does not get its own top margin from a utility. */
+.section--airy .section-lede {
+  margin-top: var(--space-3);
+}

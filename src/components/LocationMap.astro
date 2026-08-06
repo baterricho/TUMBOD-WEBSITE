@@ -1,0 +1,271 @@
+---
+/**
+ * Interactive location map — click to load.
+ *
+ * WHY IT IS NOT LOADED BY DEFAULT
+ *
+ * Every other component on this site ships zero third-party requests (§22.3).
+ * A map cannot: tiles come from someone else's servers, and each pan or zoom
+ * is another few hundred kilobytes. On this island that is somebody's mobile
+ * data, and the site already has to survive `/ligtas` being opened during a
+ * typhoon. So the map is **opt-in**:
+ *
+ *   - Default state costs 0 external requests and 0 KB of JavaScript.
+ *   - Coordinates, the marker's meaning, and a Google Maps link all work with
+ *     no JavaScript at all, and work offline from cache.
+ *   - Leaflet (148 KB) and tiles load only after a deliberate tap, behind a
+ *     button that says what it will cost.
+ *
+ * WHY NOT THE GOOGLE MAPS JAVASCRIPT API
+ *
+ * It was requested, and it is the wrong tool here for four reasons: it needs a
+ * billable API key the barangay would have to own and monitor; it sets
+ * third-party cookies on a government site; it cannot degrade without
+ * JavaScript; and it cannot be cached for offline use. Leaflet is named in the
+ * same request as an acceptable alternative, is self-hosted here (no CDN), and
+ * delivers the same satellite and hybrid views via Esri World Imagery. The
+ * "View in Google Maps" button gives the familiar experience to anyone who
+ * wants it, at zero cost to everyone who does not.
+ *
+ * HONESTY ABOUT THE MARKER (§0.2)
+ *
+ * The coordinates are the barangay's recorded centroid from PSA/PhilAtlas —
+ * NOT the barangay hall. The hall's address is still unknown
+ * (DISCOVERY-QUESTIONS.md B2), and a marker implying otherwise would send
+ * someone to the wrong beach. The label says so.
+ */
+import Section from '@/components/Section.astro'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+
+/**
+ * Barangay Tumbod centroid — 10.9856 N, 119.2773 E.
+ * Source: PhilAtlas / PSA, re-verified 2026-08-05 (FINDINGS-2026-08-05.md §3).
+ * This is the barangay, not the hall.
+ */
+const LAT = 10.9856
+const LON = 119.2773
+const ZOOM = 14
+
+const gmaps = `https://www.google.com/maps/search/?api=1&query=${LAT},${LON}`
+const osm = `https://www.openstreetmap.org/?mlat=${LAT}&mlon=${LON}#map=${ZOOM}/${LAT}/${LON}`
+---
+
+<Section title={fil ? 'Lokasyon' : 'Location'} titleId="lokasyon">
+  <div class="mapcard">
+    <div class="mapcard__head">
+      <p class="mapcard__place">Barangay Tumbod</p>
+      <p class="small muted">Taytay, Palawan, Philippines</p>
+      <p class="small figure mapcard__coords">
+        {LAT}&deg; N, {LON}&deg; E
+      </p>
+      <p class="small muted mapcard__caveat">
+        {
+          fil
+            ? 'Ito ang gitna ng barangay ayon sa talaan ng PSA — hindi pa ito ang eksaktong kinatatayuan ng barangay hall.'
+            : 'This is the barangay’s recorded centre per PSA records — it is not yet the exact location of the barangay hall.'
+        }
+      </p>
+    </div>
+
+    {/* The map mounts here. Empty and zero-cost until asked for. */}
+    <div id="map-slot" class="mapcard__slot">
+      <div id="map-idle" class="mapcard__idle">
+        <p class="small">
+          {
+            fil
+              ? 'Hindi awtomatikong bumubukas ang mapa para hindi ito umubos ng data.'
+              : 'The map does not open automatically, so it does not spend your data.'
+          }
+        </p>
+        {/* Hidden until JS confirms it can act. A button that does nothing is
+            worse than no button. */}
+        <button id="map-load" type="button" class="mapcard__btn" hidden>
+          {fil ? 'Buksan ang mapa' : 'Open the map'}
+          <span class="mapcard__cost">
+            {fil ? '~150 KB + mga tile' : '~150 KB + tiles'}
+          </span>
+        </button>
+        {/* Without JavaScript the button cannot work, so say so plainly and
+            point at the links that DO work, rather than leaving a dead
+            control. Every route must stay useful with JS off
+            (ARCHITECTURE.md §2). */}
+        <noscript>
+          <p class="small">
+            {
+              fil
+                ? 'Kailangan ng JavaScript ang mapa. Gamitin ang mga link sa ibaba — gumagana ang mga iyon.'
+                : 'The map needs JavaScript. Use the links below instead — those work.'
+            }
+          </p>
+        </noscript>
+      </div>
+    </div>
+
+    <div class="mapcard__links">
+      {/* Plain links: these work with no JavaScript, and from cache offline. */}
+      <a href={gmaps} target="_blank" rel="noopener noreferrer">
+        {fil ? 'Tingnan sa Google Maps' : 'View in Google Maps'}
+        <span class="sr-only">{fil ? ' (bubukas sa bagong tab)' : ' (opens in a new tab)'}</span>
+      </a>
+      <a href={osm} target="_blank" rel="noopener noreferrer">
+        {fil ? 'Tingnan sa OpenStreetMap' : 'View in OpenStreetMap'}
+        <span class="sr-only">{fil ? ' (bubukas sa bagong tab)' : ' (opens in a new tab)'}</span>
+      </a>
+    </div>
+  </div>
+</Section>
+
+<script
+  is:inline
+  define:vars={{ LAT, LON, ZOOM, fil }}
+>
+  ;(function () {
+    var btn = document.getElementById('map-load')
+    var slot = document.getElementById('map-slot')
+    var idle = document.getElementById('map-idle')
+    if (!btn || !slot || !idle) return
+
+    // Only now is the control real.
+    btn.hidden = false
+
+    function say(msg) {
+      idle.innerHTML = ''
+      var p = document.createElement('p')
+      p.className = 'small'
+      p.setAttribute('role', 'status')
+      p.textContent = msg
+      idle.appendChild(p)
+    }
+
+    function asset(href, tag) {
+      return new Promise(function (resolve, reject) {
+        var el
+        if (tag === 'css') {
+          el = document.createElement('link')
+          el.rel = 'stylesheet'
+          el.href = href
+        } else {
+          el = document.createElement('script')
+          el.src = href
+        }
+        el.onload = resolve
+        el.onerror = reject
+        document.head.appendChild(el)
+      })
+    }
+
+    btn.addEventListener('click', function () {
+      btn.disabled = true
+      say(fil ? 'Binubuksan ang mapa…' : 'Opening the map…')
+
+      // Self-hosted, not a CDN — the zero-third-party-script rule still holds.
+      // Only the TILES are third-party, and only after this deliberate tap.
+      Promise.all([
+        asset('/vendor/leaflet/leaflet.css', 'css'),
+        asset('/vendor/leaflet/leaflet.js', 'js'),
+      ])
+        .then(function () {
+          var L = window.L
+          idle.remove()
+
+          // The slot centres the idle panel with flexbox. Left in place, that
+          // makes the map a flex item with `width: auto` — it collapsed to a
+          // sliver, loaded 2 tiles instead of a full viewport, and left the
+          // layer control unclickable outside the visible area.
+          slot.classList.add('mapcard__slot--live')
+
+          var host = document.createElement('div')
+          host.id = 'map'
+          host.style.height = '420px'
+          host.style.width = '100%'
+          host.setAttribute('role', 'application')
+          host.setAttribute(
+            'aria-label',
+            fil ? 'Mapa ng Barangay Tumbod' : 'Map of Barangay Tumbod',
+          )
+          slot.appendChild(host)
+
+          var map = L.map(host, { scrollWheelZoom: false }).setView([LAT, LON], ZOOM)
+
+          // Attribution is a licence condition, not decoration. Do not remove.
+          var streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors',
+          })
+          var satellite = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            { maxZoom: 19, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics' },
+          )
+          var labels = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+            { maxZoom: 19 },
+          )
+          var terrain = L.tileLayer('https://tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: '&copy; OpenTopoMap (CC-BY-SA), &copy; OpenStreetMap contributors',
+          })
+          var hybrid = L.layerGroup([satellite, labels])
+
+          // Satellite first: on a barrier island the coastline and the reef are
+          // the information people actually need. A road map of Tumbod is
+          // mostly empty.
+          satellite.addTo(map)
+
+          var base = {}
+          base[fil ? 'Satellite' : 'Satellite'] = satellite
+          base[fil ? 'Satellite + pangalan' : 'Hybrid'] = hybrid
+          base[fil ? 'Kalsada' : 'Streets'] = streets
+          base[fil ? 'Terrain' : 'Terrain'] = terrain
+          // Expanded, the four-way layer switcher covers a third of a 412px
+          // phone screen — the device most people here use. Collapse it to an
+          // icon on narrow viewports, leave it open where there is room.
+          L.control
+            .layers(base, null, { collapsed: window.innerWidth < 640 })
+            .addTo(map)
+
+          L.marker([LAT, LON])
+            .addTo(map)
+            .bindPopup(
+              '<strong>Barangay Tumbod</strong><br>Taytay, Palawan, Philippines<br>' +
+                '<span style="opacity:.75">' +
+                (fil
+                  ? 'Gitna ng barangay (PSA) — hindi ang barangay hall.'
+                  : 'Barangay centre (PSA) — not the barangay hall.') +
+                '</span>',
+              { maxWidth: 240 },
+            )
+          // Deliberately NOT opened on load: on a phone the popup covered the
+          // marker it was describing and clipped its own last line. It opens on
+          // tap, which is what was asked for anyway.
+
+          // Scroll-wheel zoom hijacks the page scroll on a phone. Require an
+          // explicit click first — WCAG 2.5.7 pointer-gesture friendliness.
+          map.once('click', function () {
+            map.scrollWheelZoom.enable()
+          })
+
+          // The container was created and sized in the same frame Leaflet
+          // measured it. Re-measure, or the tile grid is computed against the
+          // wrong dimensions and only part of the map paints.
+          requestAnimationFrame(function () {
+            map.invalidateSize()
+          })
+        })
+        .catch(function () {
+          btn.disabled = false
+          say(
+            fil
+              ? 'Hindi mabuksan ang mapa — mukhang walang koneksyon. Gumagana pa rin ang mga link sa ibaba.'
+              : 'The map could not load — you may be offline. The links below still work.',
+          )
+        })
+    })
+  })()
+</script>

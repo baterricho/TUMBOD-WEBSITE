@@ -1,0 +1,155 @@
+---
+/**
+ * ServiceRequirementChecklist — the most important component on the site
+ * (DESIGN-SYSTEM.md §13).
+ *
+ * A resident gathers documents over several days, so ticked items persist in
+ * localStorage. The "Kopyahin ang listahan" button copies plain text for
+ * pasting into Messenger, because that is how it will actually be shared.
+ *
+ * Progressive enhancement: renders as a complete static list with no JS. The
+ * checkboxes and copy button are an island, and the answer — fee, time, who to
+ * approach, what to bring — is fully readable without any of it.
+ */
+import Placeholder from './Placeholder.astro'
+import Icon from './Icon.astro'
+import type { ServiceDetail } from '@/lib/content/services'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { isPlaceholder } from '@/lib/content/placeholder'
+
+interface Props {
+  service: ServiceDetail
+  locale: Locale
+}
+
+const { service, locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+
+const factRow = 'display:flex;justify-content:space-between;gap:var(--space-3);padding-block:var(--space-2);border-bottom:1px solid var(--line);flex-wrap:wrap'
+---
+
+{/* Answer first: fee, time, hours, and a NAME to approach. */}
+<dl style="margin:0;border-top:1px solid var(--line-strong)">
+  <div style={factRow}>
+    <dt style="color:var(--ink-muted)">{t.services.fee}</dt>
+    <dd style="margin:0;font-weight:600">
+      {isPlaceholder(service.fee) ? <Placeholder value={service.fee} /> : <span class="figure">{service.fee}</span>}
+    </dd>
+  </div>
+  <div style={factRow}>
+    <dt style="color:var(--ink-muted)">{t.services.processingTime}</dt>
+    <dd style="margin:0;font-weight:600">
+      {isPlaceholder(service.processingTime) ? <Placeholder value={service.processingTime} /> : <span class="figure">{service.processingTime}</span>}
+    </dd>
+  </div>
+  <div style={factRow}>
+    <dt style="color:var(--ink-muted)">{t.services.approach}</dt>
+    <dd style="margin:0;font-weight:600">
+      {isPlaceholder(service.responsibleOfficial) ? <Placeholder value={service.responsibleOfficial} /> : service.responsibleOfficial}
+    </dd>
+  </div>
+</dl>
+
+<h2 style="margin-top:var(--space-5);font-size:var(--text-xl)">{t.services.bringThis}</h2>
+
+<ul id="req-list" style="list-style:none;padding:0;margin-top:var(--space-3)">
+  {
+    service.requirements.map((req) => {
+      const label = fil ? req.labelFil : req.labelEn
+      return (
+        <li style="display:flex;gap:var(--space-3);align-items:flex-start;min-height:44px;padding-block:var(--space-2);border-bottom:1px solid var(--line)">
+          <input
+            type="checkbox"
+            id={`req-${req.id}`}
+            data-req={req.id}
+            data-service={service.slug}
+            style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--sea-calm)"
+          />
+          <label for={`req-${req.id}`} style="flex:1">
+            {isPlaceholder(label) ? <Placeholder value={label} /> : label}
+            {req.noteFil && fil && (
+              <span style="display:block;font-size:var(--text-sm);color:var(--ink-muted)">{req.noteFil}</span>
+            )}
+          </label>
+        </li>
+      )
+    })
+  }
+</ul>
+
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-4)">
+  <button
+    type="button"
+    id="copy-list"
+    style="display:inline-flex;align-items:center;gap:var(--space-2);min-height:48px;padding-inline:var(--space-4);background-color:var(--surface-raised);border:1px solid var(--line-strong);border-radius:var(--radius-md);color:var(--ink);cursor:pointer"
+  >
+    <Icon name="copy" size={20} />
+    {t.services.copyList}
+  </button>
+  <button
+    type="button"
+    id="print-list"
+    class="no-print"
+    style="display:inline-flex;align-items:center;gap:var(--space-2);min-height:48px;padding-inline:var(--space-4);background-color:var(--surface-raised);border:1px solid var(--line-strong);border-radius:var(--radius-md);color:var(--ink);cursor:pointer"
+  >
+    <Icon name="print" size={20} />
+    {t.services.print}
+  </button>
+</div>
+
+<p id="copy-status" role="status" style="margin-top:var(--space-2);font-size:var(--text-sm);color:var(--ink-muted)"></p>
+
+{/*
+  The only client JS on a service page. ~1KB. Everything above is already
+  complete and usable without it (BUILD-PROMPT.md §25 progressive enhancement).
+*/}
+<script is:inline define:vars={{ slug: service.slug, copiedLabel: t.services.copied, title: fil ? service.nameFil : service.nameEn }}>
+  ;(function () {
+    var key = 'tumbod:req:' + slug
+    var boxes = document.querySelectorAll('input[data-service="' + slug + '"]')
+    var saved = {}
+    try {
+      saved = JSON.parse(localStorage.getItem(key) || '{}')
+    } catch (e) {
+      saved = {}
+    }
+    function persist() {
+      var state = {}
+      boxes.forEach(function (b) {
+        state[b.dataset.req] = b.checked
+      })
+      try {
+        localStorage.setItem(key, JSON.stringify(state))
+      } catch (e) {
+        /* storage full or blocked — ticking still works for this session */
+      }
+    }
+    boxes.forEach(function (b) {
+      if (saved[b.dataset.req]) b.checked = true
+      b.addEventListener('change', persist)
+    })
+
+    var copyBtn = document.getElementById('copy-list')
+    var status = document.getElementById('copy-status')
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        var lines = [title, '']
+        document.querySelectorAll('#req-list label').forEach(function (l) {
+          lines.push('- ' + l.textContent.trim())
+        })
+        lines.push('', location.href)
+        var text = lines.join('\n')
+        function done() {
+          if (status) status.textContent = copiedLabel
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () {})
+        }
+      })
+    }
+
+    var printBtn = document.getElementById('print-list')
+    if (printBtn) printBtn.addEventListener('click', function () { window.print() })
+  })()
+</script>

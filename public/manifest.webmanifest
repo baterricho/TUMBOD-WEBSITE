@@ -1,0 +1,44 @@
+{
+  "name": "Barangay Tumbod — Taytay, Palawan",
+  "short_name": "Brgy. Tumbod",
+  "description": "Lagay ng dagat, biyahe ng bangka, requirements ng dokumento, at mga numerong pang-emergency. Gumagana kahit walang signal.",
+  "lang": "fil",
+  "dir": "ltr",
+  "start_url": "/?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eff1ec",
+  "theme_color": "#eff1ec",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mga numerong pang-emergency",
+      "short_name": "Emergency",
+      "url": "/ligtas/hotline"
+    },
+    {
+      "name": "Ligtas — bagyo at dagat",
+      "short_name": "Ligtas",
+      "url": "/ligtas"
+    },
+    {
+      "name": "Mga serbisyo",
+      "short_name": "Serbisyo",
+      "url": "/serbisyo"
+    }
+  ]
+}

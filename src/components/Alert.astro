@@ -1,0 +1,45 @@
+---
+/**
+ * Alert — four levels, distinguished by colour AND icon AND a leading word.
+ *
+ * Colour never carries meaning alone (A11Y-PLAN.md §6; persona P7 "Ka Ben",
+ * who reads slowly). Warning and emergency use role="alert"; quieter levels
+ * use role="status" so they do not interrupt.
+ */
+import Icon from './Icon.astro'
+import type { AlertLevel } from '@/lib/content/types'
+import { getDictionary, type Locale } from '@/lib/i18n'
+
+interface Props {
+  level: AlertLevel
+  locale: Locale
+}
+
+const { level, locale } = Astro.props
+const t = getDictionary(locale)
+
+const STYLE = {
+  info: { bg: 'var(--alert-info)', fg: 'var(--ink-inverse)', icon: 'info' },
+  advisory: { bg: 'var(--alert-advisory)', fg: 'var(--accent-ink)', icon: 'megaphone' },
+  warning: { bg: 'var(--alert-warning)', fg: 'var(--accent-ink)', icon: 'warning' },
+  emergency: { bg: 'var(--alert-emergency)', fg: 'var(--alert-emergency-ink)', icon: 'warning' },
+} as const
+
+const style = STYLE[level]
+const isUrgent = level === 'warning' || level === 'emergency'
+---
+
+<div
+  role={isUrgent ? 'alert' : 'status'}
+  style={`background-color:${style.bg};color:${style.fg};padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);display:flex;gap:var(--space-3);align-items:flex-start`}
+>
+  <Icon name={style.icon} />
+  <div>
+    <strong
+      style="font-family:var(--font-display);letter-spacing:var(--tracking-caps);text-transform:uppercase;font-size:var(--text-sm)"
+    >
+      {t.alert[level]}
+    </strong>
+    <div style="font-size:var(--text-base)"><slot /></div>
+  </div>
+</div>

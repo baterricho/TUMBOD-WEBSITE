@@ -1,0 +1,271 @@
+---
+/**
+ * Safety mega panel — emergency contacts, conditions, guides, evacuation map,
+ * and a hotline bar across the bottom.
+ *
+ * THE EMERGENCY COLUMN IS THE MOST DANGEROUS THING ON THIS SITE, so it has
+ * rules the other panels do not.
+ *
+ *   - VERIFIED NUMBERS WIN. If `active.ts` has a real, confirmed number it is
+ *     shown and it dials, through `PhoneNumber.astro` — which also handles
+ *     demo mode by rendering plain text.
+ *   - SAMPLE NUMBERS NEVER DIAL. The fallback set uses 0999-000-00xx, which is
+ *     not an assigned Philippine prefix, is rendered as text, and carries both
+ *     a SAMPLE DATA chip and a line saying it does not work. The brief supplied
+ *     0917-555-100x; 0917 is a live Globe prefix, so those numbers reach a real
+ *     stranger's handset, and a resident dialling one during a storm is the
+ *     precise failure this project is built to avoid.
+ *   - THE REAL DIRECTORY IS ALWAYS ONE TAP AWAY. The red bar at the bottom goes
+ *     to /ligtas/hotline, which is precache tier 1 and works offline.
+ *
+ * THE WEATHER COLUMN IS LABELLED SAMPLE and links to /ligtas. There is no
+ * meteorological feed wired to this site; a widget that reads "29°C, Sunny"
+ * but is baked into the HTML at build time is worse than none, because it
+ * looks live. What the site genuinely has — sea state, wave height, wind, with
+ * an observation time — is on /ligtas and in the Today panel.
+ */
+import Icon from '../Icon.astro'
+import PhoneNumber from '../PhoneNumber.astro'
+import SampleChip from '../SampleChip.astro'
+import { HOTLINES, ACTIVE_ADVISORY, IS_DEMO } from '@/lib/content/active'
+import { isPlaceholder } from '@/lib/content/placeholder'
+import { SAMPLE_EMERGENCY, SAMPLE_WEATHER, SAMPLE_EVAC } from '@/lib/content/sample'
+import { PROCEDURES, prefix, label, note } from '@/lib/content/menu'
+import { CHART_GEOMETRY } from '@/features/chart/geometry'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import type { IconName } from '../Icon.astro'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = prefix(locale)
+const t = getDictionary(locale)
+
+/** Only numbers we actually hold. A placeholder is not a contact. */
+const verified = HOTLINES.filter((h) => h.active && !isPlaceholder(h.number))
+
+const CATEGORY_ICON: Record<string, IconName> = {
+  barangay: 'phone',
+  disaster: 'warning',
+  health: 'health',
+  maritime: 'anchor',
+  police: 'shield',
+}
+
+const alert = ACTIVE_ADVISORY
+const alertLevel = alert
+  ? alert.level === 'emergency' || alert.level === 'warning'
+    ? 'emergency'
+    : 'warning'
+  : 'normal'
+
+const ALERT_TEXT = {
+  normal: { fil: 'Normal — walang babala', en: 'Normal — no active alert' },
+  warning: { fil: 'May paalala', en: 'Advisory in effect' },
+  emergency: { fil: 'May babala — basahin agad', en: 'Warning in effect — read now' },
+} as const
+---
+
+{/* ── Column 1: emergency contacts ───────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{t.nav.emergencyLabel}</h2>
+
+  {/* Real, confirmed numbers first — these dial. */}
+  {
+    verified.length > 0 && (
+      <ul class="mega-list">
+        {verified.map((h) => (
+          <li class="mega-hotline">
+            <span class="mega-hotline__icon">
+              <Icon name={CATEGORY_ICON[h.category] ?? 'phone'} size={20} />
+            </span>
+            <span class="mega-hotline__body">
+              <span class="mega-row__title">{fil ? h.labelFil : h.labelEn}</span>
+              <span class="mega-hotline__number">
+                <PhoneNumber number={h.number} locale={locale} />
+              </span>
+            </span>
+            {/* No Call button in demo mode — `PhoneNumber` deliberately
+                renders demo numbers as un-tappable text, and a red CALL
+                button beside it hands back the exact tap it prevents. */}
+            {!IS_DEMO && !isPlaceholder(h.number) && (
+              <a
+                class="mega-call"
+                href={`tel:${h.number.replace(/[^\d+]/g, '')}`}
+                aria-label={`${fil ? 'Tawagan ang' : 'Call'} ${fil ? h.labelFil : h.labelEn}`}
+              >
+                <Icon name="phone" size={16} />
+                <span>{fil ? 'Tawag' : 'Call'}</span>
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  {/* Everything the barangay has not confirmed yet, shown as sample. */}
+  <p class="mega__subhead">
+    {fil ? 'Iba pang ahensya' : 'Other agencies'}
+    <SampleChip locale={locale} />
+  </p>
+
+  <ul class="mega-list">
+    {
+      SAMPLE_EMERGENCY.map((c) => (
+        <li class="mega-hotline mega-hotline--sample">
+          <span class="mega-hotline__icon">
+            <Icon name={c.icon} size={20} />
+          </span>
+          <span class="mega-hotline__body">
+            <span class="mega-row__title">{fil ? c.labelFil : c.labelEn}</span>
+            {/* Plain text. Never a tel: link. */}
+            <span class="figure mega-hotline__number">{c.number}</span>
+            <span class="mega__meta">
+              {fil ? 'hindi gumagana — halimbawa' : 'not a working number — sample'}
+            </span>
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+{/* ── Column 2: weather ──────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">
+    {fil ? 'Panahon' : 'Weather'}
+    <SampleChip locale={locale} />
+  </h2>
+
+  <div class="mega-weather mega-weather--calm">
+    <span class="mega-weather__icon">
+      <Icon name="sun" size={40} />
+    </span>
+    <span class="mega-weather__temp">
+      <span class="figure">{SAMPLE_WEATHER.temperature}</span>°C
+    </span>
+    <span class="mega-weather__state">
+      {fil ? SAMPLE_WEATHER.conditionFil : SAMPLE_WEATHER.conditionEn}
+    </span>
+  </div>
+
+  <ul class="mega-metrics">
+    {
+      SAMPLE_WEATHER.metrics.map((m) => (
+        <li>
+          <span class="mega-metric__label">
+            <Icon name={m.icon} size={14} />
+            {fil ? m.labelFil : m.labelEn}
+          </span>
+          <span class="mega-metric__value">{m.value}</span>
+        </li>
+      ))
+    }
+  </ul>
+
+  {/* The honest reading lives here, and it says where. */}
+  <a class="mega__viewall" href={`${p}/ligtas`}>
+    {fil ? 'Tunay na lagay ng dagat' : 'Real sea conditions'}
+    <Icon name="chevron-right" size={16} />
+  </a>
+</section>
+
+{/* ── Column 3: safety guides ────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{fil ? 'Mga gabay sa kaligtasan' : 'Safety guides'}</h2>
+  <ul class="mega-list">
+    {
+      PROCEDURES.map((item) => (
+        <li>
+          <a class="mega-proc" href={`${p}${item.href}`}>
+            <Icon name={item.icon} size={20} />
+            <span class="mega-proc__body">
+              <span class="mega-row__title">{label(locale, item)}</span>
+              <span class="mega__meta">{note(locale, item)}</span>
+            </span>
+            <span class="mega-tile__arrow" aria-hidden="true">
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+{/* ── Column 4: map + status ─────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{fil ? 'Mapa ng kaligtasan' : 'Safety map'}</h2>
+
+  {/*
+    The SAME coastline the hero draws, inline. A screenshot of a map would be
+    ~40 KB on every page for a preview nobody studies twice; this is 0 KB,
+    geographically correct, and works with no network.
+  */}
+  <a class="mega-map" href={`${p}/ligtas`}>
+    <svg
+      viewBox={CHART_GEOMETRY.viewBox}
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+      class="mega-map__svg"
+    >
+      {CHART_GEOMETRY.contours.map((d) => <path d={d} class="hero__contour" />)}
+      <path d={CHART_GEOMETRY.islandPath} class="hero__island" />
+    </svg>
+    <span class="mega-map__pin">
+      <Icon name="pin" size={18} />
+      Barangay Tumbod
+    </span>
+    <span class="mega-map__open">
+      <Icon name="evacuation" size={16} />
+      {fil ? 'Buksan ang mapa ng kaligtasan' : 'Open safety map'}
+    </span>
+  </a>
+
+  <p class="mega__subhead">
+    {fil ? 'Mga evacuation centre' : 'Evacuation centres'}
+    <SampleChip locale={locale} />
+  </p>
+
+  <ul class="mega-list">
+    {
+      SAMPLE_EVAC.map((s) => (
+        <li>
+          <a class="mega-card" href={`${p}/ligtas`}>
+            <span class="mega-card__icon">
+              <Icon name="evacuation" size={18} />
+            </span>
+            <span class="mega-card__body">
+              <span class="mega-row__title">{fil ? s.nameFil : s.nameEn}</span>
+              <span class="mega__meta">{fil ? s.noteFil : s.noteEn}</span>
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class={`mega-status mega-status--${alertLevel}`}>
+    <span class="mega-status__dot" aria-hidden="true"></span>
+    <span>
+      <span class="mega-status__label">{fil ? 'Kalagayan ngayon' : 'Current status'}</span>
+      <span class="mega-status__value">
+        {fil ? ALERT_TEXT[alertLevel].fil : ALERT_TEXT[alertLevel].en}
+      </span>
+    </span>
+  </p>
+</section>
+
+{/* ── Bottom row ─────────────────────────────────────────────
+  Goes to the DIRECTORY, not to a `tel:`. A one-tap dial out of a navigation
+  menu is too easy to hit by accident, and the directory page is the surface
+  that says which numbers are confirmed and when they were last checked. */}
+<a class="mega-hotlinebar" href={`${p}/ligtas/hotline`}>
+  <Icon name="phone" size={22} />
+  <span>{fil ? 'Tawagan ang barangay hotline' : 'Call the barangay hotline'}</span>
+  <Icon name="chevron-right" size={20} />
+</a>

@@ -1,0 +1,40 @@
+---
+/**
+ * Section — owns its padding, its contour rule, and its own width constraint.
+ *
+ * Layout primitives are the ONLY things that own vertical rhythm; a content
+ * component never sets its own outer margin (DESIGN-SYSTEM.md §3).
+ *
+ * The section title is set in the display face with a short accent rule before
+ * it — a chart's section marker, made loud for the bolder direction.
+ */
+interface Props {
+  title?: string
+  titleId?: string
+  divider?: boolean
+  tone?: 'default' | 'sunken'
+  /** Extra classes — added for `section--airy` in the redesign layer. */
+  class?: string
+}
+
+const { title, titleId, divider = true, tone = 'default', class: extra } = Astro.props
+const cls = ['section', divider ? '' : 'section--flush', extra].filter(Boolean).join(' ')
+---
+
+<section
+  aria-labelledby={titleId}
+  class={cls}
+  style={tone === 'sunken' ? 'background-color:var(--surface-sunken)' : undefined}
+>
+  <div class="wrap">
+    {
+      title && (
+        <div class="section__head">
+          <h2 id={titleId} class="section__title">{title}</h2>
+          <slot name="aside" />
+        </div>
+      )
+    }
+    <slot />
+  </div>
+</section>

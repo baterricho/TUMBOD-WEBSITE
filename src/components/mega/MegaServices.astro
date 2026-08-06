@@ -1,0 +1,187 @@
+---
+/**
+ * "Services" mega panel — every document the barangay issues, what it costs,
+ * and what to bring.
+ *
+ * NO SAMPLE DATA HERE EITHER. Fees, processing times and requirement lists are
+ * set by ordinance; a plausible-looking fee sends somebody across a strait
+ * with the wrong money, and a plausible-looking requirement list sends them
+ * back for a document nobody asked for. `services.ts` says this in as many
+ * words. Unknown values therefore render as the audited placeholder, and the
+ * panel is useful anyway: it says which documents exist and where to read the
+ * detail, which is most of what a visitor came for.
+ */
+import Icon from '../Icon.astro'
+import { SERVICES } from '@/lib/content/active'
+import { isPlaceholder } from '@/lib/content/placeholder'
+import { prefix, label, note, type MenuLink } from '@/lib/content/menu'
+import { getDictionary, type Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = prefix(locale)
+const t = getDictionary(locale)
+
+/** Four in the list, the rest behind "all services" — a panel is a shortcut,
+    not a second copy of the index page. */
+const listed = SERVICES.slice(0, 4)
+const remaining = Math.max(0, SERVICES.length - listed.length)
+
+const BEFORE_YOU_TRAVEL: readonly MenuLink[] = [
+  {
+    href: '/ligtas',
+    labelFil: 'Tingnan ang lagay ng dagat',
+    labelEn: 'Check the sea first',
+    icon: 'wave-moderate',
+    noteFil: 'Walang biyahe, walang lakad',
+    noteEn: 'No boat, no trip',
+  },
+  {
+    href: '/kontak',
+    labelFil: 'Oras ng opisina',
+    labelEn: 'Office hours',
+    icon: 'clock',
+    noteFil: 'Bago tumawid',
+    noteEn: 'Before you cross',
+  },
+  {
+    href: '/porma',
+    labelFil: 'I-download ang porma',
+    labelEn: 'Download the form',
+    icon: 'download',
+    noteFil: 'I-print habang may signal',
+    noteEn: 'Print while you have signal',
+  },
+]
+
+const HELP: readonly MenuLink[] = [
+  {
+    href: '/faq',
+    labelFil: 'Madalas itanong',
+    labelEn: 'Frequently asked',
+    icon: 'info',
+  },
+  {
+    href: '/opisyal',
+    labelFil: 'Sino ang lalapitan',
+    labelEn: 'Who to ask',
+    icon: 'phone',
+  },
+  {
+    href: '/negosyo',
+    labelFil: 'Para sa negosyo',
+    labelEn: 'For businesses',
+    icon: 'rice-sack',
+  },
+  {
+    href: '/transparency',
+    labelFil: 'Transparency',
+    labelEn: 'Transparency',
+    icon: 'checklist',
+  },
+]
+---
+
+{/* ── Columns 1–2: the documents ─────────────────────────────── */}
+<section class="mega__col mega__col--wide">
+  <h2 class="mega__heading">{t.home.commonDocuments}</h2>
+
+  <ul class="mega-cards mega-cards--two">
+    {
+      listed.map((s) => (
+        <li>
+          <a class="mega-card" href={`${p}/serbisyo/${s.slug}`}>
+            <span class="mega-card__icon">
+              <Icon name="document" size={18} />
+            </span>
+            <span class="mega-card__body">
+              <span class="mega-row__title">{fil ? s.nameFil : s.nameEn}</span>
+              <span class="mega__meta">
+                {/* Fee and time are both usually unknown. Rather than print
+                    two audit markers per card in a nav panel, the card says
+                    the detail lives on the page — where the marker, and the
+                    name of who can supply it, is shown in full. */}
+                {isPlaceholder(s.fee) || isPlaceholder(s.processingTime)
+                  ? fil
+                    ? 'Bayad at tagal — nasa pahina'
+                    : 'Fee and processing time on the page'
+                  : `${s.fee} · ${s.processingTime}`}
+              </span>
+            </span>
+            <span class="mega-tile__arrow" aria-hidden="true">
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <a class="mega__viewall" href={`${p}/serbisyo`}>
+    {
+      remaining > 0
+        ? fil
+          ? `Lahat ng serbisyo (${remaining} pa)`
+          : `All services (${remaining} more)`
+        : fil
+          ? 'Lahat ng serbisyo'
+          : 'All services'
+    }
+    <Icon name="chevron-right" size={16} />
+  </a>
+</section>
+
+{/* ── Column 3: before you travel ────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{fil ? 'Bago tumawid' : 'Before you travel'}</h2>
+
+  {/*
+    This column is the point of the panel. Every service here needs a boat
+    trip, so the sea and the office hours are part of the transaction — not
+    a separate topic filed under "Safety".
+  */}
+  <ul class="mega-cards">
+    {
+      BEFORE_YOU_TRAVEL.map((item) => (
+        <li>
+          <a class="mega-card" href={`${p}${item.href}`}>
+            <span class="mega-card__icon">
+              <Icon name={item.icon} size={18} />
+            </span>
+            <span class="mega-card__body">
+              <span class="mega-row__title">{label(locale, item)}</span>
+              <span class="mega__meta">{note(locale, item)}</span>
+            </span>
+            <span class="mega-tile__arrow" aria-hidden="true">
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+{/* ── Column 4: help ─────────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{fil ? 'Tulong' : 'Help'}</h2>
+  <ul class="mega-tiles">
+    {
+      HELP.map((item) => (
+        <li>
+          <a class="mega-tile" href={`${p}${item.href}`}>
+            <Icon name={item.icon} size={20} />
+            <span>{label(locale, item)}</span>
+            <span class="mega-tile__arrow" aria-hidden="true">
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /design-system
+Disallow: /offline
+
+Sitemap: https://barangaytumbod.gov.ph/sitemap-index.xml

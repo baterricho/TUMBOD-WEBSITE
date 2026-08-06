@@ -1,0 +1,1190 @@
+/**
+ * Mega panels — Today, Services, News, Safety, Contact.
+ *
+ * All five primary navigation items open one. They are CLICK-activated: there
+ * is no hover handler anywhere in this file or in SiteHeader's script, and no
+ * disclosure caret in the markup.
+ *
+ * Three rules carried over from the rest of the redesign, none retired:
+ *   1. It works with NO JavaScript. The disclosure is <details>; every effect
+ *      here is decoration on top of a panel that already opens and closes.
+ *   2. Motion respects `prefers-reduced-motion`.
+ *   3. Text meets AA against a flat, opaque surface. Contrast is never
+ *      carried by translucency — see the note on `.mega__sheet`.
+ */
+
+/* ── The disclosure ─────────────────────────────────────────────── */
+
+/*
+ * `position: static` MATTERS. The panel is positioned against
+ * `.siteheader__nav` (see below), which is full-width; making the disclosure
+ * itself a containing block would anchor the panel to the nav ITEM instead.
+ * It did, and the result was a 1368px sheet centred on the word "Ligtas" —
+ * the fourth column hung 94px off the right of the screen.
+ */
+.mega {
+  position: static;
+  display: flex;
+}
+
+/* The panel's containing block: full width, so "centred" means centred on the
+   page rather than on whichever word was clicked. */
+.siteheader__nav {
+  position: relative;
+}
+
+/*
+ * NO DISCLOSURE MARKER. `list-style: none` kills it in Firefox and Chromium;
+ * `::-webkit-details-marker` is still needed for Safari, which draws its
+ * triangle regardless. There is no caret glyph in the markup either — the open
+ * panel and the underline say the item is expandable.
+ */
+.mega__summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.mega__summary::-webkit-details-marker {
+  display: none;
+}
+
+/*
+ * "Where am I" and "what is open" get the same green rule, drawn by
+ * `.mainnav__link::after`. The open item is also slightly heavier — colour
+ * alone must never be the only signal (§2.4), and on a light header a 3px
+ * green line is easy to lose at a glance.
+ */
+.mega[open] > .mega__summary::after,
+.mega__summary[data-current='page']::after {
+  width: calc(100% - var(--space-4));
+}
+
+.mega[open] > .mega__summary,
+.mega__summary[data-current='page'] {
+  font-weight: 600;
+}
+
+/*
+ * The weight change would reflow the whole nav row as panels open and close.
+ * Reserving the bold width up front pins every label at its widest, so nothing
+ * moves — the classic bold-on-active layout jump.
+ */
+.mega__summary > span[data-label] {
+  display: inline-block;
+}
+
+.mega__summary > span[data-label]::after {
+  content: attr(data-label);
+  display: block;
+  height: 0;
+  overflow: hidden;
+  font-weight: 600;
+  visibility: hidden;
+}
+
+/* ── The panel ──────────────────────────────────────────────────
+   Escapes the header's 1200px measure and centres itself on the VIEWPORT,
+   which is what makes it full-width rather than nav-item-width. */
+
+/*
+ * `white-space: normal` is LOAD-BEARING. The panel lives inside `.mainnav`,
+ * which sets `white-space: nowrap` to stop the five nav labels breaking mid-
+ * word — and that inherits. Every paragraph in every column ran as one
+ * unbroken line straight across the other three columns until this reset.
+ */
+/*
+ * FULL PAGE, not a floating card.
+ *
+ * `position: fixed` and the full viewport below the header: opening a menu
+ * takes over the screen the way a desktop application's menu does, and the
+ * page behind it stops competing for attention. `absolute` positioning could
+ * not do this — it scrolled away with the document and was clipped by the
+ * header's own stacking context.
+ *
+ * `--header-h` is measured by the script in SiteHeader and set on :root, so
+ * the overlay starts exactly under the nav at every width and with the demo
+ * banner present or absent. The 116px fallback is the measured height at
+ * desktop, used for the single frame before the script runs.
+ */
+.mega__panel {
+  white-space: normal;
+  position: fixed;
+  inset: var(--header-h, 116px) 0 0;
+  z-index: 60;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  padding: var(--space-5) var(--space-4) var(--space-8);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Wash over the page behind, so the overlay reads as a layer rather than as
+     a very tall dropdown. */
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mega__panel {
+    background: var(--surface);
+  }
+}
+
+.mega__sheet {
+  width: 100%;
+  max-width: 1450px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-6);
+  padding: var(--space-6);
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  /*
+   * OPAQUE, and this one is not negotiable.
+   *
+   * The panel was translucent glass with a 28px backdrop blur, matching the
+   * header. Over a page it works. Over the HERO it does not: at 97% the hero's
+   * 72px headline ghosted straight through the menu — 3% of white against
+   * near-black is ~7/255, faint per-pixel but unmistakable across letterforms
+   * that size, and it reads as a rendering fault rather than as an effect.
+   * Dropping to 98% only halved it.
+   *
+   * There is no alpha that both blurs visibly and hides a 72px headline: the
+   * two are the same property. Glass on this site therefore stays where it has
+   * something quiet behind it — the header, the hero's map controls, the
+   * chevrons — and the menu that has to be READ gets a solid surface. This is
+   * the same call polish.css already documents for the header's no-blur
+   * fallback: contrast never depends on translucency.
+   */
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  color: var(--ink);
+  /* The OVERLAY scrolls now, not the sheet. Capping the sheet's height here
+     as well produced two nested scrollers and a trapped inner one. */
+}
+
+/*
+ * Fade + scale, 220ms. Gated on `[open]`, so with CSS animation blocked the
+ * panel is already in its final state — never invisible.
+ *
+ * The scale starts at 0.985, not 0.95. A panel this wide scaling from 0.95
+ * sweeps ~70px of horizontal travel and reads as a lurch; just under 1 gives
+ * the sheet the sense of coming forward without anything visibly sliding.
+ * `transform-origin: top` hangs it from the nav item it belongs to.
+ */
+.mega[open] .mega__sheet {
+  animation: mega-in 220ms var(--ease-standard);
+  transform-origin: top center;
+}
+
+@keyframes mega-in {
+  from {
+    opacity: 0;
+    scale: 0.985;
+    translate: 0 -8px;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+/* Cards stagger in behind the panel. Same gate, same reasoning. */
+.mega[open] .mega__col {
+  animation: mega-col-in 300ms var(--ease-standard) backwards;
+}
+
+.mega[open] .mega__col:nth-child(2) { animation-delay: 40ms; }
+.mega[open] .mega__col:nth-child(3) { animation-delay: 80ms; }
+.mega[open] .mega__col:nth-child(4) { animation-delay: 120ms; }
+.mega[open] .mega__col:nth-child(5) { animation-delay: 160ms; }
+
+@keyframes mega-col-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mega__caret,
+  .mega[open] .mega__sheet,
+  .mega[open] .mega__col {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ── Column scaffolding ─────────────────────────────────────────── */
+
+.mega__col {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Flex, not block: a column heading can carry a SAMPLE DATA chip beside it,
+   and the chip must sit on the baseline rather than push the rule down. */
+.mega__heading {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  padding-block-end: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+/* A second-level label inside a column — "Other agencies", "Evacuation
+   centres". Same anatomy as the heading, no rule under it. */
+.mega__subhead {
+  margin: var(--space-2) 0 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* A column that spans two of the four tracks — the services list needs the
+   width to run two documents abreast. */
+.mega__col--wide {
+  grid-column: span 2;
+}
+
+.mega__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-2xs);
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.mega__empty {
+  margin: 0;
+  padding: var(--space-4);
+  border-radius: var(--r-inner);
+  border: 1px dashed var(--line-strong);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.mega-list {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Pushed to the bottom of its column so the "view all" links line up across
+   all four regardless of how much content sits above them. */
+.mega__viewall {
+  align-self: end;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--nav-indicator);
+  text-decoration: none;
+}
+
+.mega__viewall:hover,
+.mega__viewall:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+/* ── Featured story ─────────────────────────────────────────────── */
+
+.mega-feature {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--r-card);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 200ms var(--ease-standard),
+    box-shadow 200ms var(--ease-standard),
+    border-color 200ms var(--ease-standard);
+}
+
+.mega-feature:hover,
+.mega-feature:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--nav-indicator);
+  box-shadow: var(--shadow-lg);
+}
+
+.mega-feature__media {
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--r-inner);
+  background: var(--palette-sound-deep);
+  display: grid;
+  place-items: center;
+}
+
+.mega-feature__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: scale 350ms var(--ease-standard);
+}
+
+.mega-feature:hover .mega-feature__media img {
+  scale: 1.06;
+}
+
+.mega-feature__noimg {
+  font-size: var(--text-2xs);
+  color: rgb(255 255 255 / 0.75);
+}
+
+.mega-feature__body {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.mega-feature__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+.mega-feature__excerpt {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+/* ── Badges ─────────────────────────────────────────────────────── */
+
+.mega-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--nav-indicator) 14%, transparent);
+  color: var(--nav-indicator);
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.mega-badge--sm {
+  padding-block: 0;
+}
+
+/* ── Call to action ─────────────────────────────────────────────── */
+
+.mega-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding-inline: var(--space-4);
+  border-radius: var(--r-inner);
+  background: var(--nav-indicator);
+  color: var(--palette-white);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.mega-cta--block {
+  width: 100%;
+}
+
+.mega-feature:hover .mega-cta,
+.mega-cta:hover,
+.mega-cta:focus-visible {
+  background: color-mix(in srgb, var(--nav-indicator) 84%, black);
+}
+
+/* ── News rows ──────────────────────────────────────────────────── */
+
+.mega-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2);
+  border-radius: var(--r-inner);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 180ms var(--ease-standard);
+}
+
+.mega-row:hover,
+.mega-row:focus-visible {
+  background: var(--surface-sunken, var(--surface));
+}
+
+.mega-row__thumb {
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--palette-shoal);
+  display: grid;
+  place-items: center;
+  color: var(--ink-muted);
+}
+
+.mega-row__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: scale 300ms var(--ease-standard);
+}
+
+.mega-row:hover .mega-row__thumb img {
+  scale: 1.1;
+}
+
+.mega-row__body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mega-row__title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.mega-row:hover .mega-row__title,
+.mega-row:focus-visible .mega-row__title {
+  color: var(--nav-indicator);
+}
+
+/* ── Events ─────────────────────────────────────────────────────── */
+
+.mega-event {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--r-inner);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 180ms var(--ease-standard),
+    border-color 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard);
+}
+
+.mega-event:hover,
+.mega-event:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--nav-indicator);
+  box-shadow: var(--shadow-md);
+}
+
+.mega-event__date {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding-block: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--nav-indicator) 12%, transparent);
+  color: var(--nav-indicator);
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+.mega-event__month {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+}
+
+.mega-event__day {
+  font-size: var(--text-xl);
+}
+
+.mega-event__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* ── Tiles ──────────────────────────────────────────────────────── */
+
+.mega-tiles {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mega-tile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding-inline: var(--space-3);
+  border-radius: var(--r-inner);
+  border: 1px solid transparent;
+  background: var(--palette-shoal);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition:
+    border-color 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard),
+    background-color 180ms var(--ease-standard);
+}
+
+.mega-tile:hover,
+.mega-tile:focus-visible {
+  border-color: var(--nav-indicator);
+  box-shadow: var(--shadow-md);
+}
+
+.mega-tile__arrow {
+  display: inline-flex;
+  opacity: 0.55;
+  transition: translate 180ms var(--ease-standard);
+}
+
+.mega-tile:hover .mega-tile__arrow,
+.mega-tile:focus-visible .mega-tile__arrow {
+  translate: 4px 0;
+  opacity: 1;
+}
+
+/* The only red tile in any panel, and it goes to the hotline directory. */
+.mega-tile--emergency {
+  background: color-mix(in srgb, var(--alert-emergency) 12%, transparent);
+  color: var(--alert-emergency-on-surface, var(--error-ink));
+}
+
+.mega-tile--emergency:hover,
+.mega-tile--emergency:focus-visible {
+  border-color: var(--alert-emergency);
+}
+
+/* ── Cards ──────────────────────────────────────────────────────
+   The icon + title + one-line description pattern, used by every panel for
+   its "quick access" style lists. */
+
+.mega-cards {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Two abreast where a column has the width for it. */
+.mega-cards--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mega-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-inner);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 300ms var(--ease-standard),
+    border-color 300ms var(--ease-standard),
+    box-shadow 300ms var(--ease-standard);
+}
+
+.mega-card:hover,
+.mega-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--nav-indicator);
+  box-shadow: var(--shadow-md);
+}
+
+.mega-card__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-lg);
+  background: var(--palette-shoal);
+  color: var(--ink);
+}
+
+.mega-card:hover .mega-card__icon,
+.mega-card:focus-visible .mega-card__icon {
+  background: color-mix(in srgb, var(--nav-indicator) 16%, transparent);
+  color: var(--nav-indicator);
+}
+
+.mega-card__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mega-card {
+    transition: none;
+  }
+  .mega-card:hover,
+  .mega-card:focus-visible {
+    transform: none;
+  }
+}
+
+/* ── Status blocks ──────────────────────────────────────────────
+   The boat and the office, in the Today panel. Sea state has its own
+   treatment below because it is the only one with a four-step scale. */
+
+.mega-state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-card);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.mega-state__value {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+/* Running and open are the reef green; cancelled and closed are the emergency
+   red; uncertain and limited are the bangka orange. Never colour alone — the
+   word is always there beside it. */
+.mega-state--running,
+.mega-state--open {
+  border-color: color-mix(in srgb, var(--nav-indicator) 50%, transparent);
+  background: color-mix(in srgb, var(--nav-indicator) 10%, transparent);
+}
+
+.mega-state--uncertain,
+.mega-state--limited {
+  border-color: color-mix(in srgb, var(--palette-bangka-orange) 55%, transparent);
+  background: color-mix(in srgb, var(--palette-bangka-yellow) 16%, transparent);
+}
+
+.mega-state--cancelled,
+.mega-state--closed {
+  border-color: color-mix(in srgb, var(--alert-emergency) 45%, transparent);
+  background: color-mix(in srgb, var(--alert-emergency) 9%, transparent);
+}
+
+/* ── Hotline cards ──────────────────────────────────────────────── */
+
+.mega-hotline {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-inner);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  transition: box-shadow 180ms var(--ease-standard);
+}
+
+.mega-hotline:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.mega-hotline__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background: var(--palette-shoal);
+  color: var(--ink);
+}
+
+.mega-hotline__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mega-hotline__number {
+  font-size: var(--text-sm);
+}
+
+/* PhoneNumber right-aligns itself in demo mode; inside a card it belongs on
+   the left with everything else in the column. */
+.mega-hotline__number > span {
+  align-items: flex-start !important;
+}
+
+/* Sample contacts are visibly a different kind of thing from confirmed ones:
+   dashed border, no call button, and the number is text. */
+.mega-hotline--sample {
+  border-style: dashed;
+  background: transparent;
+}
+
+.mega-call {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--alert-emergency);
+  color: var(--alert-emergency-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mega-call:hover,
+.mega-call:focus-visible {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--alert-emergency) 26%, transparent);
+}
+
+/* ── Conditions ─────────────────────────────────────────────────── */
+
+/*
+ * Ink is paired with its fill, never assumed. Moderate and rough are the
+ * bangka yellow and orange, which carry DARK text — painting white on them
+ * would put the sea state, the one thing this column exists to say, at 1.8:1.
+ * The `-ink` tokens are measured; see tokens.css.
+ */
+.mega-weather {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--r-card);
+  background: var(--sea-calm);
+  color: var(--sea-calm-ink);
+}
+
+.mega-weather--moderate {
+  background: var(--sea-moderate);
+  color: var(--sea-moderate-ink);
+}
+
+.mega-weather--rough {
+  background: var(--sea-rough);
+  color: var(--sea-rough-ink);
+}
+
+.mega-weather--dangerous {
+  background: var(--sea-dangerous);
+  color: var(--sea-dangerous-ink);
+}
+
+.mega-weather__temp {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.mega-weather__state {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-caps);
+}
+
+.mega-metrics {
+  display: grid;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mega-metrics > li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background-color 160ms var(--ease-standard);
+}
+
+.mega-metrics > li:hover {
+  background: var(--palette-shoal);
+}
+
+.mega-metric__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-2xs);
+  color: var(--ink-muted);
+}
+
+.mega-metric__value {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  text-align: right;
+}
+
+.mega-metric__value--sm {
+  font-size: var(--text-2xs);
+  color: var(--ink-muted);
+  max-width: 60%;
+}
+
+/* ── Procedures ─────────────────────────────────────────────────── */
+
+.mega-proc {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-inner);
+  /* The accent appears on hover as a left border, so the box is reserved from
+     the start — otherwise every row shifts 3px sideways under the pointer. */
+  border-left: 3px solid transparent;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 180ms var(--ease-standard),
+    background-color 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard);
+}
+
+.mega-proc:hover,
+.mega-proc:focus-visible {
+  border-left-color: var(--nav-indicator);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.mega-proc__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* ── Map preview ────────────────────────────────────────────────── */
+
+.mega-map {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--palette-sound-deep) 0%, #0e3a47 100%);
+  text-decoration: none;
+  transition:
+    box-shadow 200ms var(--ease-standard),
+    border-color 200ms var(--ease-standard);
+}
+
+.mega-map:hover,
+.mega-map:focus-visible {
+  border-color: var(--nav-indicator);
+  box-shadow: var(--shadow-lg);
+}
+
+.mega-map__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transition: scale 400ms var(--ease-standard);
+}
+
+.mega-map:hover .mega-map__svg {
+  scale: 1.05;
+}
+
+.mega-map__pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--palette-white);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.9);
+}
+
+.mega-map__pin svg {
+  color: var(--palette-reef);
+}
+
+.mega-map__open {
+  position: absolute;
+  inset-inline: var(--space-2);
+  bottom: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  border-radius: var(--r-inner);
+  background: rgb(6 22 26 / 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  color: var(--palette-white);
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+}
+
+/* ── Alert status ───────────────────────────────────────────────── */
+
+.mega-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--r-inner);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.mega-status__dot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--nav-indicator);
+}
+
+.mega-status--warning .mega-status__dot { background: var(--palette-bangka-orange); }
+.mega-status--emergency .mega-status__dot { background: var(--alert-emergency); }
+
+.mega-status__label {
+  display: block;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.mega-status__value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+}
+
+/* ── Social ─────────────────────────────────────────────────────── */
+
+.mega-social {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mega-social__tile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding-inline: var(--space-3);
+  border-radius: var(--r-inner);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition:
+    transform 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard),
+    border-color 180ms var(--ease-standard);
+}
+
+/* Brand colour on the icon only. Tinting the whole tile would put white text
+   on #1877f2 at 3.6:1, which is a fail, for decoration. */
+a.mega-social__tile svg:first-child {
+  color: var(--brand, var(--ink));
+}
+
+a.mega-social__tile:hover,
+a.mega-social__tile:focus-visible {
+  transform: scale(1.03);
+  border-color: var(--brand, var(--nav-indicator));
+  box-shadow: var(--shadow-md);
+}
+
+/* A sample account. Not a link — there is nothing verified behind it — so it
+   is dashed and carries no hover affordance. The brand colour stays on the
+   icon so the tile still reads as the network it names. */
+.mega-social__tile--sample {
+  border-style: dashed;
+  background: transparent;
+}
+
+.mega-social__tile--sample svg:first-child {
+  color: var(--brand, var(--ink-muted));
+  opacity: 0.75;
+}
+
+/* The tiles carry a title over a subtitle now, so the middle cell stacks. */
+.mega-social__tile > span:not([class]) {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* ── Bottom bars ────────────────────────────────────────────────── */
+
+.mega-hotlinebar {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding-inline: var(--space-4);
+  border-radius: var(--r-inner);
+  background: var(--alert-emergency);
+  color: var(--alert-emergency-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  text-decoration: none;
+  transition: box-shadow 180ms var(--ease-standard);
+}
+
+.mega-hotlinebar:hover,
+.mega-hotlinebar:focus-visible {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--alert-emergency) 28%, transparent);
+}
+
+/* The contact panel's bar is not an emergency, so it is not red. Red on this
+   site means one thing. */
+.mega-hotlinebar--calm {
+  background: var(--nav-indicator);
+  color: var(--palette-white);
+}
+
+.mega-hotlinebar--calm:hover,
+.mega-hotlinebar--calm:focus-visible {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--nav-indicator) 28%, transparent);
+}
+
+/* ── Facts list ─────────────────────────────────────────────────── */
+
+.mega-fact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.mega-fact > svg {
+  margin-block-start: 2px;
+  color: var(--ink-muted);
+}
+
+.mega-fact > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mega-list--facts {
+  gap: 0;
+}
+
+/* ── Narrow ─────────────────────────────────────────────────────
+   Below 60rem the primary nav is already a scrolling row and there is no
+   room for a four-column sheet. The panel becomes a normal stacked
+   disclosure inside the header — same markup, same links, no positioning. */
+
+@media (max-width: 60rem) {
+  /*
+   * STILL ABSOLUTE. Making the panel `position: static` here dropped a full
+   * sheet of content into `.siteheader__navbar`, which at this width is a
+   * horizontally scrolling flex row — the five nav items were pushed out of
+   * the viewport entirely and the header rendered as a blank white slab.
+   *
+   * Absolute positioning also escapes that row's `overflow-x: auto`: the
+   * containing block is `.siteheader__nav`, which sits OUTSIDE the scroller,
+   * and an ancestor only clips descendants whose containing block it is.
+   */
+  /* Already full-screen from the base rule. Only the padding and the column
+     count change — an overlay that covers the phone is the right shape here,
+     and it is what the nav row's `overflow-x: auto` could never contain. */
+  .mega__panel {
+    padding: var(--space-4) var(--space-3) var(--space-8);
+    background: var(--surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .mega__sheet {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+    padding: var(--space-4);
+    border-radius: var(--r-card);
+  }
+}
+
+/* Tablet: two columns rather than four squeezed or one long scroll. */
+@media (min-width: 60rem) and (max-width: 80rem) {
+  .mega__sheet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── Utility ────────────────────────────────────────────────────── */
+
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

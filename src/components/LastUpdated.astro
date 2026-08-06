@@ -1,0 +1,52 @@
+---
+/**
+ * Provenance stamp. Relative AND absolute, always with the timezone.
+ *
+ * Persona P6 checks this site from Dubai at 3am during a typhoon. Silent
+ * staleness on a disaster-adjacent module is a P0 defect (BUILD-PROMPT.md
+ * §12.5) — past six hours this warns, past a day it says so plainly and points
+ * at the hotline.
+ */
+import {
+  formatAbsolute,
+  formatRelativeEn,
+  formatRelativeFil,
+  isoAttr,
+  stalenessOf,
+} from '@/lib/time'
+import { getDictionary, type Locale } from '@/lib/i18n'
+
+interface Props {
+  at: Date
+  now: Date
+  locale: Locale
+  source?: string
+  warnOnStale?: boolean
+}
+
+const { at, now, locale, source, warnOnStale = false } = Astro.props
+const t = getDictionary(locale)
+const relative = locale === 'fil' ? formatRelativeFil(at, now) : formatRelativeEn(at, now)
+const staleness = stalenessOf(at, now)
+const showWarning = warnOnStale && staleness !== 'fresh'
+---
+
+<div style="font-size:var(--text-xs);color:var(--ink-muted)">
+  <span>
+    {t.common.updatedAt}{' '}
+    <time datetime={isoAttr(at)} title={formatAbsolute(at, locale)}>{relative}</time>
+    {source && ` · ${source}`}
+  </span>
+  {
+    showWarning && (
+      <p
+        role="status"
+        style={`margin-top:var(--space-1);font-weight:600;color:${
+          staleness === 'stale' ? 'var(--error-ink)' : 'var(--ink)'
+        }`}
+      >
+        {staleness === 'stale' ? t.common.staleFail : t.common.staleWarning}
+      </p>
+    )
+  }
+</div>

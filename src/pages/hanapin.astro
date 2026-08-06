@@ -1,0 +1,184 @@
+---
+/**
+ * Site search.
+ *
+ * Progressive enhancement, in the strict sense: with JavaScript disabled this
+ * page is still a complete, usable directory of everything on the site. The
+ * search field is an ENHANCEMENT that filters that list — it does not replace
+ * it. A resident who cannot run JS still gets to the hotline directory.
+ *
+ * The index is fetched only on first keystroke, so the page costs nothing
+ * extra to open (IA.md §3).
+ */
+import Base from '@/layouts/Base.astro'
+import Section from '@/components/Section.astro'
+import Icon from '@/components/Icon.astro'
+import { getDictionary, DEFAULT_LOCALE } from '@/lib/i18n'
+import { SERVICE_DETAILS, HOTLINES } from '@/lib/content/active'
+
+const locale = DEFAULT_LOCALE
+const t = getDictionary(locale)
+
+const groups = [
+  {
+    heading: t.nav.safety,
+    links: [
+      { href: '/ligtas/hotline', label: t.nav.emergencyLabel },
+      { href: '/ligtas', label: t.safety.title },
+    ],
+  },
+  {
+    heading: t.services.title,
+    links: SERVICE_DETAILS.map((s) => ({ href: `/serbisyo/${s.slug}`, label: s.nameFil })),
+  },
+  {
+    heading: t.nav.more,
+    links: [
+      { href: '/opisyal', label: t.nav.officials },
+      { href: '/transparency', label: t.nav.transparency },
+      { href: '/balita', label: t.nav.news },
+      { href: '/tungkol', label: t.nav.about },
+      { href: '/kontak', label: t.nav.contact },
+    ],
+  },
+]
+---
+
+<Base
+  locale={locale}
+  pathname="/hanapin"
+  title={t.home.search}
+  description="Hanapin ang kailangan mo sa website ng Barangay Tumbod."
+>
+  <Section divider={false}>
+    <h1 class="page-title">{t.home.search}</h1>
+
+    <form
+      role="search"
+      style="margin-top:var(--space-4);max-width:var(--measure)"
+      onsubmit="return false"
+    >
+      <label for="q" style="display:block;font-weight:600;margin-bottom:var(--space-2)">
+        Ano ang hinahanap mo?
+      </label>
+      <input
+        id="q"
+        name="q"
+        type="search"
+        autocomplete="off"
+        placeholder="hal. clearance, bagyo, kagawad"
+        style="width:100%;min-height:48px;font-size:var(--text-base);padding:var(--space-3);border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface-raised);color:var(--ink)"
+      />
+      <p id="q-status" role="status" class="small muted" style="margin-top:var(--space-2)"></p>
+    </form>
+  </Section>
+
+  {/* Results appear here when JS is available. */}
+  <Section title="Resulta" titleId="results" divider={false}>
+    <ul id="results" class="list-reset" hidden></ul>
+  </Section>
+
+  {/* The full directory. Always present, always complete, never hidden by JS. */}
+  <Section title="Lahat ng pahina" titleId="all-pages">
+    {
+      groups.map((group) => (
+        <div style="margin-bottom:var(--space-5)">
+          <h3 style="font-size:var(--text-base);font-weight:600">{group.heading}</h3>
+          <ul class="list-reset" style="margin-top:var(--space-2)">
+            {group.links.map((link) => (
+              <li style="min-height:44px;display:flex;align-items:center">
+                <a href={link.href}>{link.label}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+    <p class="small muted">
+      <Icon name="phone" size={16} />
+      {HOTLINES.length} numerong pang-emergency sa <a href="/ligtas/hotline">direktoryo</a>.
+    </p>
+  </Section>
+
+  <script is:inline>
+    ;(function () {
+      var input = document.getElementById('q')
+      var out = document.getElementById('results')
+      var status = document.getElementById('q-status')
+      if (!input || !out) return
+
+      var index = null
+      var loading = false
+
+      function load() {
+        if (index || loading) return Promise.resolve()
+        loading = true
+        // Fetched on first keystroke only — costs nothing to open the page.
+        return fetch('/search-index.json')
+          .then(function (r) { return r.json() })
+          .then(function (data) { index = data })
+          .catch(function () { index = [] })
+      }
+
+      function norm(s) {
+        return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      }
+
+      function render(q) {
+        var terms = norm(q).split(/\s+/).filter(Boolean)
+        if (!terms.length || !index) {
+          out.hidden = true
+          out.innerHTML = ''
+          if (status) status.textContent = ''
+          return
+        }
+        var hits = index
+          .map(function (e) {
+            var hay = norm(e.t + ' ' + e.d + ' ' + e.k)
+            var score = 0
+            for (var i = 0; i < terms.length; i++) {
+              if (hay.indexOf(terms[i]) === -1) return null
+              if (norm(e.t).indexOf(terms[i]) !== -1) score += 2
+              else score += 1
+            }
+            return { e: e, score: score }
+          })
+          .filter(Boolean)
+          .sort(function (a, b) { return b.score - a.score })
+          .slice(0, 12)
+
+        out.innerHTML = ''
+        hits.forEach(function (h) {
+          var li = document.createElement('li')
+          li.style.cssText = 'border-bottom:1px solid var(--line)'
+          var a = document.createElement('a')
+          a.href = h.e.u
+          a.style.cssText = 'display:block;padding-block:var(--space-3);min-height:56px'
+          a.textContent = h.e.t
+          var p = document.createElement('span')
+          p.className = 'small muted'
+          p.style.cssText = 'display:block'
+          p.textContent = h.e.d
+          a.appendChild(p)
+          li.appendChild(a)
+          out.appendChild(li)
+        })
+        out.hidden = hits.length === 0
+        if (status) {
+          status.textContent = hits.length
+            ? hits.length + ' resulta'
+            : 'Walang nahanap. Subukan ang listahan sa ibaba.'
+        }
+      }
+
+      var timer
+      input.addEventListener('input', function () {
+        clearTimeout(timer)
+        var q = input.value
+        timer = setTimeout(function () {
+          load().then(function () { render(q) })
+        }, 150)
+      })
+    })()
+  </script>
+</Base>

@@ -1,0 +1,265 @@
+---
+/**
+ * Base layout — skip link, header, main landmark, footer.
+ *
+ * Landmarks are real: one <header>, one <main id="main">, one <footer>, and
+ * the skip link is the first focusable element on every page
+ * (BUILD-PROMPT.md §10.8).
+ */
+import '@/styles/globals.css'
+import SiteHeader from '@/components/SiteHeader.astro'
+import SiteFooter from '@/components/SiteFooter.astro'
+import DemoBanner from '@/components/DemoBanner.astro'
+import LiveContent from '@/components/LiveContent.astro'
+import { getDictionary, htmlLang, alternateHref, type Locale } from '@/lib/i18n'
+import { SITE } from '@/lib/content/site'
+
+interface Props {
+  locale: Locale
+  pathname: string
+  title: string
+  description: string
+  noindex?: boolean
+}
+
+const { locale, pathname, title, description, noindex = false } = Astro.props
+const t = getDictionary(locale)
+const other: Locale = locale === 'fil' ? 'en' : 'fil'
+
+const fullTitle = pathname === '/' || pathname === '/en'
+  ? `${SITE.name} — ${SITE.municipality}, ${SITE.province}`
+  : `${title} · ${SITE.name}`
+
+/**
+ * LocalGovernmentOffice JSON-LD. Only VERIFIED facts appear here — no address
+ * or telephone, because we do not have them and structured data is exactly
+ * where an invented value would propagate furthest (BUILD-PROMPT.md §0.2).
+ */
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalGovernmentOffice',
+  name: SITE.name,
+  areaServed: { '@type': 'AdministrativeArea', name: `${SITE.name}, ${SITE.municipality}, ${SITE.province}` },
+  parentOrganization: { '@type': 'GovernmentOrganization', name: `Municipality of ${SITE.municipality}` },
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: SITE.coordinates.lat,
+    longitude: SITE.coordinates.lng,
+  },
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: SITE.municipality,
+    addressRegion: SITE.province,
+    addressCountry: 'PH',
+  },
+}
+---
+
+<!doctype html>
+<html lang={htmlLang(locale)} data-env={import.meta.env.DEV ? 'dev' : undefined}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="canonical" href={new URL(pathname, Astro.site)} />
+    <link rel="alternate" hreflang={other === 'fil' ? 'fil' : 'en'} href={new URL(alternateHref(pathname, other), Astro.site)} />
+    <link rel="alternate" hreflang="x-default" href={new URL(locale === 'fil' ? pathname : alternateHref(pathname, 'fil'), Astro.site)} />
+    <meta name="theme-color" content="#eff1ec" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c1614" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:locale" content={locale === 'fil' ? 'fil_PH' : 'en_PH'} />
+    {/* Preload the body regular ONLY. Every other face loads on demand
+        (PERF-PLAN.md §3) — preloading all five would spend the whole font
+        budget before the first paragraph renders. */}
+    <link
+      rel="preload"
+      href="/fonts/source-sans-3-latin-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />
+
+    {/*
+      The one orchestrated moment plays ONCE per session. This runs in <head>,
+      before first paint, so a repeat navigation shows the chart in its final
+      state with no flash of the animation starting and being cancelled.
+      ~180 bytes.
+    */}
+    <script is:inline>
+      try {
+        if (sessionStorage.getItem('tumbod:motion') === 'seen') {
+          document.documentElement.setAttribute('data-motion', 'seen')
+        } else {
+          sessionStorage.setItem('tumbod:motion', 'seen')
+        }
+      } catch (e) {
+        /* storage blocked — the animation simply plays each time */
+      }
+    </script>
+
+    {/*
+      Scroll-reveal gate (DECISION-redesign.md). ~190 bytes, in <head> so the
+      class lands before first paint and nothing flashes in then out.
+
+      This attribute is what ACTIVATES the reveal styles. It is set only when
+      JS runs AND the user has not asked for reduced motion — so with JS off,
+      or with motion reduced, `[data-reveal]` content is simply visible and no
+      animation exists to fail. The content is never hidden by default.
+    */}
+    <script is:inline>
+      try {
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.documentElement.setAttribute('data-reveal-ready', '')
+        }
+      } catch (e) {
+        /* no matchMedia — content stays visible, which is the safe direction */
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">{t.nav.skipToContent}</a>
+    <DemoBanner locale={locale} />
+    <slot name="banner" />
+    <SiteHeader locale={locale} pathname={pathname} />
+    {/* Full width by design: the sea band and boat strip bleed edge to edge,
+        and each Section constrains its own content instead. */}
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <SiteFooter locale={locale} />
+
+    {/*
+      Replaces any `[data-live]` list with what the barangay has actually
+      published, once the page is already usable. Runs last, changes nothing if
+      the database is unreachable, and does nothing at all with JS disabled.
+    */}
+    <LiveContent locale={locale} />
+
+    {/*
+      Offline indicator — a calm band, never a modal, never a browser error
+      page (UX-STRATEGY.md §4.6). Hidden by default and revealed only when the
+      browser reports offline, so it costs nothing visually when connected.
+    */}
+    <div
+      id="offline-band"
+      role="status"
+      hidden
+      style="position:fixed;left:0;right:0;bottom:0;z-index:60;background-color:var(--surface-inverse);color:var(--ink-inverse);padding:var(--space-2) var(--space-4);font-size:var(--text-sm);text-align:center"
+    >
+      {t.common.offline} <span id="offline-time"></span>
+    </div>
+
+    {/*
+      The site's ONLY global client script. ~0.6 KB: registers the service
+      worker and toggles the offline band. Everything else on every page is
+      complete and usable without it.
+    */}
+    <script is:inline>
+      ;(function () {
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {})
+          })
+        }
+        var band = document.getElementById('offline-band')
+        var stamp = document.getElementById('offline-time')
+
+        function show(isOffline) {
+          if (!band) return
+          if (!isOffline) {
+            band.hidden = true
+            try {
+              localStorage.setItem('tumbod:lastOnline', new Date().toISOString())
+            } catch (e) {}
+            return
+          }
+          var last = null
+          try {
+            last = localStorage.getItem('tumbod:lastOnline')
+          } catch (e) {}
+          if (stamp && last) {
+            stamp.textContent = new Date(last).toLocaleString('fil-PH', {
+              timeZone: 'Asia/Manila',
+              dateStyle: 'short',
+              timeStyle: 'short',
+            })
+          }
+          band.hidden = false
+        }
+
+        /*
+         * navigator.onLine is NOT trustworthy on its own: it reports true when
+         * a device is joined to a local wifi point whose backhaul is dead —
+         * a realistic state on this island. So `true` is treated as "maybe"
+         * and confirmed with a tiny no-store probe; `false` is conclusive.
+         */
+        function sync() {
+          if (!navigator.onLine) {
+            show(true)
+            return
+          }
+          var timer = setTimeout(function () {
+            show(true)
+          }, 4000)
+          fetch('/ping.txt', { cache: 'no-store', method: 'GET' })
+            .then(function (r) {
+              clearTimeout(timer)
+              show(!r || !r.ok)
+            })
+            .catch(function () {
+              clearTimeout(timer)
+              show(true)
+            })
+        }
+
+        /*
+         * Scroll reveal. Runs only if the <head> gate set the attribute, so
+         * this is a no-op under reduced motion. IntersectionObserver rather
+         * than a scroll handler: no layout thrash, and it unobserves on first
+         * reveal so nothing accumulates.
+         */
+        if (document.documentElement.hasAttribute('data-reveal-ready') && 'IntersectionObserver' in window) {
+          var targets = document.querySelectorAll('[data-reveal="pending"]')
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (entry) {
+                if (!entry.isIntersecting) return
+                entry.target.setAttribute('data-reveal', 'shown')
+                io.unobserve(entry.target)
+              })
+            },
+            { rootMargin: '0px 0px -10% 0px' },
+          )
+          targets.forEach(function (el) {
+            io.observe(el)
+          })
+        } else {
+          /* No observer support: reveal everything immediately rather than
+             leaving content in the pending (hidden) state. */
+          document.querySelectorAll('[data-reveal="pending"]').forEach(function (el) {
+            el.setAttribute('data-reveal', 'shown')
+          })
+        }
+
+        window.addEventListener('online', sync)
+        window.addEventListener('offline', function () { show(true) })
+        // `pageshow` covers bfcache restores — a real scenario here: a tab
+        // reopened days later, possibly with no signal (BUILD-PROMPT.md §2).
+        window.addEventListener('pageshow', sync)
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'visible') sync()
+        })
+        sync()
+      })()
+    </script>
+  </body>
+</html>

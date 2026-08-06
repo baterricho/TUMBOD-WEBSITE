@@ -1,0 +1,248 @@
+---
+/**
+ * News mega panel — featured story, latest list, upcoming events, quick access.
+ *
+ * WHERE THE CONTENT COMES FROM. If the barangay has published anything, this
+ * panel shows THAT: `ANNOUNCEMENTS` and `CALENDAR` from `active.ts` win over
+ * everything else. Only when both are empty — which is the state today — does
+ * it fall back to `sample.ts`, and then the column is topped with a visible
+ * SAMPLE DATA chip and every headline carries "(sample)".
+ *
+ * That ordering is the whole design. The panel is populated so the layout can
+ * be reviewed and handed over, and it becomes real automatically the moment
+ * content exists, with no code change and no flag to remember to flip.
+ */
+import Icon from '../Icon.astro'
+import SampleChip from '../SampleChip.astro'
+import { ANNOUNCEMENTS, CALENDAR } from '@/lib/content/active'
+import { isPlaceholder } from '@/lib/content/placeholder'
+import { SAMPLE_FEATURED, SAMPLE_STORIES, SAMPLE_EVENTS } from '@/lib/content/sample'
+import { NEWS_QUICK, prefix, label, note } from '@/lib/content/menu'
+import { formatAbsolute } from '@/lib/time'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = prefix(locale)
+
+const CATEGORY: Record<string, { fil: string; en: string }> = {
+  anunsyo: { fil: 'Anunsyo', en: 'Notice' },
+  kalusugan: { fil: 'Kalusugan', en: 'Health' },
+  ayuda: { fil: 'Ayuda', en: 'Aid' },
+  babala: { fil: 'Babala', en: 'Warning' },
+  ordinansa: { fil: 'Ordinansa', en: 'Ordinance' },
+  kaganapan: { fil: 'Kaganapan', en: 'Event' },
+}
+
+const text = (v: unknown) => (isPlaceholder(v) ? null : (v as string))
+
+/**
+ * Normalised to one shape so the template does not branch on provenance in
+ * six places. `sample` is what drives the chip.
+ */
+/*
+ * `body`/`image` are `string | undefined` rather than optional. The project
+ * runs `exactOptionalPropertyTypes`, under which `body?: string` refuses an
+ * explicit `undefined` — and every one of these objects assigns both keys
+ * unconditionally so the two branches stay the same shape.
+ */
+interface Card {
+  title: string
+  body: string | undefined
+  date: string
+  category: string
+  image: string | undefined
+}
+
+const realStories: Card[] = ANNOUNCEMENTS.map((a) => ({
+  title: text(fil ? a.titleFil : a.titleEn) ?? (fil ? 'Walang pamagat' : 'Untitled'),
+  body: text(a.excerptFil) ?? undefined,
+  date: formatAbsolute(a.publishedAt, locale),
+  category: (fil ? CATEGORY[a.category]?.fil : CATEGORY[a.category]?.en) ?? '',
+  image: undefined,
+}))
+
+const usingSampleStories = realStories.length === 0
+
+const featured: Card = usingSampleStories
+  ? {
+      title: fil ? SAMPLE_FEATURED.titleFil : SAMPLE_FEATURED.titleEn,
+      body: fil ? SAMPLE_FEATURED.bodyFil : SAMPLE_FEATURED.bodyEn,
+      date: SAMPLE_FEATURED.date,
+      category: fil ? SAMPLE_FEATURED.categoryFil : SAMPLE_FEATURED.categoryEn,
+      image: SAMPLE_FEATURED.image,
+    }
+  : realStories[0]!
+
+const latest: Card[] = usingSampleStories
+  ? SAMPLE_STORIES.map((s) => ({
+      title: fil ? s.titleFil : s.titleEn,
+      body: undefined,
+      date: s.date,
+      category: fil ? s.categoryFil : s.categoryEn,
+      image: s.image,
+    }))
+  : realStories.slice(1, 6)
+
+const usingSampleEvents = CALENDAR.length === 0
+const events = usingSampleEvents
+  ? SAMPLE_EVENTS.map((e) => ({
+      month: e.month,
+      day: e.day,
+      title: fil ? e.titleFil : e.titleEn,
+      place: fil ? e.placeFil : e.placeEn,
+    }))
+  : CALENDAR.slice(0, 4).map((e) => ({
+      month: e.month,
+      day: e.day,
+      title: e.title,
+      place: e.location,
+    }))
+---
+
+{/* ── Column 1: featured ─────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">
+    {fil ? 'Pangunahing balita' : 'Featured story'}
+    {usingSampleStories && <SampleChip locale={locale} />}
+  </h2>
+
+  <a class="mega-feature" href={`${p}/balita`}>
+    <span class="mega-feature__media">
+      {
+        featured.image ? (
+          <img src={featured.image} alt="" width="320" height="180" loading="lazy" decoding="async" />
+        ) : (
+          <span class="mega-feature__noimg">{fil ? 'Walang larawan' : 'No photograph'}</span>
+        )
+      }
+    </span>
+    <span class="mega-feature__body">
+      {featured.category && <span class="mega-badge">{featured.category}</span>}
+      <span class="mega-feature__title">{featured.title}</span>
+      {featured.body && <span class="mega-feature__excerpt">{featured.body}</span>}
+      <span class="mega__meta">{featured.date}</span>
+      <span class="mega-cta">
+        {fil ? 'Basahin ang buong balita' : 'Read full story'}
+        <Icon name="chevron-right" size={16} />
+      </span>
+    </span>
+  </a>
+</section>
+
+{/* ── Column 2: latest ───────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">
+    {fil ? 'Pinakabagong balita' : 'Latest news'}
+    {usingSampleStories && <SampleChip locale={locale} />}
+  </h2>
+
+  {/* Upgraded in place by LiveContent once the database answers. The rows
+      below are the fallback and stay put if it does not. */}
+  <ul
+    class="mega-list"
+    data-live="announcements"
+    data-live-tpl="news"
+    data-live-query="select=*&is_published=eq.true&order=published_at.desc&limit=5&offset=1"
+  >
+    {
+      latest.map((s) => (
+        <li>
+          <a class="mega-row" href={`${p}/balita`}>
+            <span class="mega-row__thumb">
+              {s.image ? (
+                <img src={s.image} alt="" width="56" height="56" loading="lazy" decoding="async" />
+              ) : (
+                <Icon name="megaphone" size={20} />
+              )}
+            </span>
+            <span class="mega-row__body">
+              <span class="mega-row__title">{s.title}</span>
+              <span class="mega__meta">
+                {s.date}
+                {s.category && <span class="mega-badge mega-badge--sm">{s.category}</span>}
+              </span>
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <a class="mega__viewall" href={`${p}/balita`}>
+    {fil ? 'Lahat ng balita' : 'View all news'}
+    <Icon name="chevron-right" size={16} />
+  </a>
+</section>
+
+{/* ── Column 3: events ───────────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">
+    {fil ? 'Mga darating na kaganapan' : 'Upcoming events'}
+    {usingSampleEvents && <SampleChip locale={locale} />}
+  </h2>
+
+  <ul
+    class="mega-list"
+    data-live="events"
+    data-live-tpl="events"
+    data-live-query="select=*&is_published=eq.true&order=starts_at.asc&limit=4"
+  >
+    {
+      events.map((e) => (
+        <li>
+          <a class="mega-event" href={`${p}/balita`}>
+            {/* `aria-hidden`: "AGO 15" read as two separate strings is noise.
+                The full date follows in the visually-hidden run. */}
+            <span class="mega-event__date" aria-hidden="true">
+              <span class="mega-event__month">{e.month}</span>
+              <span class="mega-event__day">{e.day}</span>
+            </span>
+            <span class="mega-event__body">
+              <span class="mega-row__title">{e.title}</span>
+              <span class="mega__meta">
+                <Icon name="pin" size={14} />
+                {e.place}
+              </span>
+              <span class="u-visually-hidden">{`${e.month} ${e.day}`}</span>
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <a class="mega__viewall" href={`${p}/balita`}>
+    {fil ? 'Lahat ng kaganapan' : 'View all events'}
+    <Icon name="chevron-right" size={16} />
+  </a>
+</section>
+
+{/* ── Column 4: quick access ─────────────────────────────────── */}
+<section class="mega__col">
+  <h2 class="mega__heading">{fil ? 'Mabilisang daan' : 'Quick access'}</h2>
+  <ul class="mega-cards">
+    {
+      NEWS_QUICK.map((item) => (
+        <li>
+          <a class="mega-card" href={`${p}${item.href}`}>
+            <span class="mega-card__icon">
+              <Icon name={item.icon} size={18} />
+            </span>
+            <span class="mega-card__body">
+              <span class="mega-row__title">{label(locale, item)}</span>
+              <span class="mega__meta">{note(locale, item)}</span>
+            </span>
+            <span class="mega-tile__arrow" aria-hidden="true">
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>

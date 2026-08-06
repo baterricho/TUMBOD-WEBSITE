@@ -1,0 +1,356 @@
+---
+/**
+ * Site header — sticky, with the emergency affordance always present at every
+ * breakpoint and in the same relative position on every page
+ * (WCAG 2.2 §3.2.6 Consistent Help).
+ *
+ * DECLARED DEVIATION: BUILD-PROMPT.md §19 describes the emergency control as a
+ * button opening a sheet. It is a plain link to /ligtas/hotline here because:
+ *   - a sheet needs client JS, and this control must work when nothing else
+ *     does — with JS disabled and with no network;
+ *   - /ligtas/* is precache tier 1, so the target is guaranteed offline;
+ *   - it costs 0 KB.
+ * Same tap count, strictly more reliable.
+ *
+ * REDESIGN (DECISION-redesign.md): the site grew from 9 routes to 17, which is
+ * more than a horizontal scroller can carry honestly. The nav is now:
+ *   - the five most-used destinations, always visible;
+ *   - everything else behind a disclosure that uses <details>, so it opens and
+ *     closes with NO JavaScript and stays keyboard-operable for free.
+ * A JS-driven drawer would have been the conventional choice and would have
+ * failed the no-JS project (ARCHITECTURE.md §2).
+ */
+import Icon from './Icon.astro'
+import MegaMenu from './MegaMenu.astro'
+import MegaToday from './mega/MegaToday.astro'
+import MegaServices from './mega/MegaServices.astro'
+import MegaNews from './mega/MegaNews.astro'
+import MegaSafety from './mega/MegaSafety.astro'
+import MegaContact from './mega/MegaContact.astro'
+import { getDictionary, alternateHref, type Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+  pathname: string
+}
+
+const { locale, pathname } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+const other: Locale = fil ? 'en' : 'fil'
+const p = fil ? '' : '/en'
+const homeHref = fil ? '/' : '/en'
+
+/**
+ * Primary — the five destinations UX-STRATEGY.md §2 ranks highest for
+ * residents, now centred and carrying icons.
+ *
+ * The icon is `aria-hidden`: it sits ABOVE a permanent text label, never
+ * instead of one. An icon-only nav would be unreadable for the audience this
+ * site is for, and §8.4's rule that icons never appear alone where meaning
+ * matters has not been retired.
+ */
+/**
+ * ALL FIVE open a mega panel. None of them is a link any more.
+ *
+ * Every one of the five is a SECTION rather than a page — Today carries the
+ * sea, the boat and the office; Services carries five documents and what to
+ * bring; News carries stories and events; Safety carries numbers, guides and
+ * conditions; Contact carries the hall, the map and the accounts. The panel is
+ * what gets someone to the specific thing without loading a landing page
+ * first, which on a metered island connection is the entire point.
+ *
+ * `isInSection` marks the item when the current page belongs to it, so "where
+ * am I" survives a visit to /balita or /ligtas/hotline.
+ */
+const isInSection = (root: string) =>
+  pathname === `${p}${root}` || pathname.startsWith(`${p}${root}/`)
+
+/** Home is exact — every path starts with `/`. */
+const isHome = pathname === homeHref
+
+/** Secondary — grouped, so the disclosure is scannable rather than a list of
+    seventeen links. */
+const groups = [
+  {
+    heading: fil ? 'Ang Barangay' : 'The Barangay',
+    items: [
+      { href: `${p}/tungkol`, label: fil ? 'Tungkol' : 'About' },
+      { href: `${p}/kasaysayan`, label: fil ? 'Kasaysayan' : 'History' },
+      { href: `${p}/bisyon`, label: fil ? 'Bisyon at Misyon' : 'Vision and Mission' },
+      { href: `${p}/opisyal`, label: t.nav.officials },
+    ],
+  },
+  {
+    heading: fil ? 'Pamamahala' : 'Governance',
+    items: [
+      { href: `${p}/transparency`, label: t.nav.transparency },
+      { href: `${p}/proyekto`, label: fil ? 'Mga Proyekto' : 'Projects' },
+      { href: `${p}/porma`, label: t.nav.forms },
+      { href: `${p}/faq`, label: fil ? 'Madalas Itanong' : 'FAQ' },
+    ],
+  },
+  {
+    heading: fil ? 'Komunidad' : 'Community',
+    items: [
+      { href: `${p}/turismo`, label: fil ? 'Turismo' : 'Tourism' },
+      { href: `${p}/negosyo`, label: fil ? 'Mga Negosyo' : 'Businesses' },
+      { href: `${p}/larawan`, label: fil ? 'Mga Larawan' : 'Gallery' },
+      { href: `${p}/hanapin`, label: fil ? 'Hanapin' : 'Search' },
+    ],
+  },
+]
+
+/** Marks the current page for `aria-current` — WCAG 2.4.8 Location. */
+const isCurrent = (href: string) => pathname === href
+---
+
+{/* Styling moved out of inline `style` and into `.siteheader`. It had to:
+    an inline background-color beats any stylesheet rule, so the frosted
+    header in polish.css was silently doing nothing. Inline styles are a
+    dead end for anything a theme or a media query needs to change. */}
+<header class="siteheader">
+  <div class="siteheader__bar">
+    <a class="brand" href={homeHref}>
+      {/* Seal placeholder, never a generated crest. The full-size version and
+          the reasoning live in Hero.astro. */}
+      <span class="brand__seal" aria-hidden="true">BT</span>
+      <span class="brand__text">
+        <span class="brand__name">{t.meta.siteName}</span>
+        <span class="brand__place">{t.meta.municipality}</span>
+      </span>
+    </a>
+
+    <div style="margin-left:auto;display:flex;align-items:center;gap:var(--space-2)">
+      <a
+        href={alternateHref(pathname, other)}
+        hreflang={other === 'fil' ? 'fil' : 'en'}
+        lang={other === 'fil' ? 'fil' : 'en'}
+        style="font-size:var(--text-sm);min-height:44px;display:inline-flex;align-items:center;padding:0 var(--space-2)"
+      >{t.nav.switchToEnglish}</a>
+
+      {/* Always visible. Always this red. Never scrolls away. */}
+      <a
+        href={`${p}/ligtas/hotline`}
+        style="display:inline-flex;align-items:center;gap:var(--space-2);min-height:48px;padding-inline:var(--space-3);background-color:var(--alert-emergency);color:var(--alert-emergency-ink);border-radius:var(--radius-md);font-family:var(--font-display);letter-spacing:var(--tracking-caps);text-transform:uppercase;font-size:var(--text-sm);text-decoration:none"
+      >
+        <Icon name="phone" size={20} />
+        {t.nav.emergency}
+      </a>
+    </div>
+  </div>
+
+  <nav aria-label={t.nav.menu} class="siteheader__nav">
+    <div class="siteheader__navbar">
+      {/* 44px minimum on every nav target (A11Y-PLAN.md §3). These were 22px
+          and were caught by the touch-target test — small nav links are hard
+          to hit on a cracked screen with wet hands, which is the real context. */}
+      <ul class="mainnav">
+        <li>
+          <MegaMenu
+            id="today"
+            label={t.nav.home}
+            icon="calendar"
+            current={isHome}
+            panelLabel={t.nav.home}
+          >
+            <MegaToday locale={locale} />
+          </MegaMenu>
+        </li>
+
+        <li>
+          <MegaMenu
+            id="services"
+            label={t.nav.services}
+            icon="document"
+            current={isInSection('/serbisyo')}
+            panelLabel={t.nav.services}
+          >
+            <MegaServices locale={locale} />
+          </MegaMenu>
+        </li>
+
+        <li>
+          <MegaMenu
+            id="news"
+            label={t.nav.news}
+            icon="megaphone"
+            current={isInSection('/balita')}
+            panelLabel={t.nav.news}
+          >
+            <MegaNews locale={locale} />
+          </MegaMenu>
+        </li>
+
+        <li>
+          <MegaMenu
+            id="safety"
+            label={t.nav.safety}
+            icon="shield"
+            current={isInSection('/ligtas')}
+            panelLabel={t.nav.safety}
+          >
+            <MegaSafety locale={locale} />
+          </MegaMenu>
+        </li>
+
+        <li>
+          <MegaMenu
+            id="contact"
+            label={t.nav.contact}
+            icon="mail"
+            current={isInSection('/kontak')}
+            panelLabel={t.nav.contact}
+          >
+            <MegaContact locale={locale} />
+          </MegaMenu>
+        </li>
+      </ul>
+
+      {/* No JavaScript. <details> is the disclosure. */}
+      <details class="navmore" style="margin-left:auto;position:relative">
+        <summary
+          style="display:flex;align-items:center;gap:var(--space-2);min-height:44px;white-space:nowrap;font-size:var(--text-sm);cursor:pointer;list-style:none"
+        >
+          {t.nav.more}
+          <span aria-hidden="true">▾</span>
+        </summary>
+        <div class="navmore__panel">
+          {
+            groups.map((g) => (
+              <div>
+                <p class="navmore__heading">{g.heading}</p>
+                <ul class="list-reset">
+                  {g.items.map((item) => (
+                    <li>
+                      <a
+                        href={item.href}
+                        aria-current={isCurrent(item.href) ? 'page' : undefined}
+                        class="navmore__link"
+                      >
+                        {item.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          }
+        </div>
+      </details>
+    </div>
+  </nav>
+</header>
+
+<script is:inline>
+  /*
+   * MEGA-PANEL BEHAVIOUR. Everything below is an enhancement.
+   *
+   * The panels are <details> elements, so the platform already gives us the
+   * core interaction for free and gives it to us correctly: click to open,
+   * click the open item to close, Enter/Space from the keyboard, and an
+   * expanded/collapsed state announced to assistive tech. With this script
+   * blocked, every panel still opens and closes — you can just have two open
+   * at once.
+   *
+   * THERE IS NO HOVER HANDLER, deliberately. Hover-open fires on the first tap
+   * of a touchscreen and opens and closes in one gesture; it triggers by
+   * accident when a pointer crosses the bar on its way elsewhere; and it gives
+   * switch-access and head-pointer users no way in. Click is the same
+   * interaction on every input device.
+   *
+   * What the script adds:
+   *   1. only one panel open at a time;
+   *   2. Escape closes and returns focus to the nav item, which is where the
+   *      user's attention was — closing a panel and dropping focus to <body>
+   *      strands a keyboard user at the top of the document;
+   *   3. clicking anywhere outside closes;
+   *   4. tabbing out of the last link in a panel closes it, so a keyboard
+   *      user is never dragging an open panel down the page behind them.
+   */
+  ;(function () {
+    var menus = [].slice.call(document.querySelectorAll('[data-mega]'))
+    if (!menus.length) return
+
+    var header = document.querySelector('.siteheader')
+
+    /*
+     * The panels are full-screen overlays pinned below the header, so they
+     * need to know how tall it is. It is not a constant: the nav row wraps at
+     * narrow widths and the demo banner adds ~90px when present. Measured and
+     * published as a custom property, remeasured on resize.
+     */
+    var measure = function () {
+      if (!header) return
+      var h = Math.round(header.getBoundingClientRect().bottom)
+      document.documentElement.style.setProperty('--header-h', h + 'px')
+    }
+    measure()
+    window.addEventListener('resize', measure)
+
+    /*
+     * While a panel covers the screen, the page behind it must not scroll —
+     * otherwise flicking the overlay scrolls the article underneath and the
+     * reader loses their place. `overflow: hidden` on <html> rather than a
+     * fixed-position body, which would jump the scroll position to the top.
+     */
+    var lock = function () {
+      var open = menus.some(function (m) { return m.open })
+      document.documentElement.style.overflow = open ? 'hidden' : ''
+    }
+
+    var closeAll = function (except) {
+      menus.forEach(function (m) {
+        if (m !== except) m.removeAttribute('open')
+      })
+    }
+
+    menus.forEach(function (m) {
+      var summary = m.querySelector('summary')
+
+      // `toggle` rather than a click handler on the summary: it fires however
+      // the state changed, so the "one at a time" rule cannot be bypassed.
+      m.addEventListener('toggle', function () {
+        if (m.open) {
+          measure()
+          closeAll(m)
+        }
+        lock()
+      })
+
+      m.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Escape' || !m.open) return
+        // Stop the key reaching anything else that closes on Escape.
+        ev.stopPropagation()
+        m.removeAttribute('open')
+        lock()
+        if (summary) summary.focus()
+      })
+
+      /*
+       * `focusout` gives us the element focus is moving TO in
+       * `relatedTarget`. If it is outside this menu, the panel has been tabbed
+       * past and should close. Guarded on `relatedTarget` being non-null —
+       * clicking into the page chrome or switching windows reports null, and
+       * closing then would fight the user.
+       */
+      m.addEventListener('focusout', function (ev) {
+        if (!m.open || !ev.relatedTarget) return
+        if (!m.contains(ev.relatedTarget)) {
+          m.removeAttribute('open')
+          lock()
+        }
+      })
+    })
+
+    document.addEventListener('click', function (ev) {
+      var inside = menus.some(function (m) {
+        return m.contains(ev.target)
+      })
+      if (!inside) {
+        closeAll(null)
+        lock()
+      }
+    })
+  })()
+</script>

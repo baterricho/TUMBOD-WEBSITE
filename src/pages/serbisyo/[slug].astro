@@ -1,0 +1,23 @@
+---
+import type { GetStaticPaths } from 'astro'
+import Base from '@/layouts/Base.astro'
+import ServiceDetailView from '@/views/ServiceDetailView.astro'
+import { SERVICE_DETAILS } from '@/lib/content/active'
+
+export const getStaticPaths = (() =>
+  SERVICE_DETAILS.map((service) => ({
+    params: { slug: service.slug },
+    props: { service },
+  }))) satisfies GetStaticPaths
+
+const { service } = Astro.props
+---
+
+<Base
+  locale="fil"
+  pathname={`/serbisyo/${service.slug}`}
+  title={service.nameFil}
+  description={service.descriptionFil}
+>
+  <ServiceDetailView service={service} locale="fil" />
+</Base>

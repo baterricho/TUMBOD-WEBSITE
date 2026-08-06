@@ -1,0 +1,175 @@
+---
+/**
+ * About body, locale-aware.
+ *
+ * Demographics are readable prose with inline figures, NOT a stat-card wall
+ * (§13.6, §35). Every figure carries its source and year.
+ *
+ * Only VERIFIED facts appear. Elevation is deliberately absent; the
+ * barangays-around-the-Sound count is absent because sources conflict; the "no
+ * land border" claim is absent because only 5 of 31 barangays were checked
+ * (RESEARCH.md §2.3–2.4, §3.1).
+ */
+import Section from '@/components/Section.astro'
+import Placeholder from '@/components/Placeholder.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { SITE } from '@/lib/content/site'
+import { isPlaceholder } from '@/lib/content/placeholder'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+const prose = 'max-width:var(--measure);display:grid;gap:var(--space-4)'
+const pop = SITE.population2020.toLocaleString('en-PH')
+const pa = SITE.protectedArea.areaHectares.toLocaleString('en-PH')
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{t.nav.about}</h1>
+</Section>
+
+<Section title={fil ? 'Ang pulo' : 'The island'} titleId="island">
+  <div style={prose}>
+    {
+      fil ? (
+        <>
+          <p>
+            Ang Barangay Tumbod ay hindi nasa isang pulo — <strong>ito ang pulo</strong>. Ang
+            Tuluran, na tinatawag ding Tumbod, ay may sukat na <span class="figure">6.4</span> ×
+            <span class="figure"> 3.2</span> kilometro at nakaharang sa bukana ng Malampaya Sound.
+          </p>
+          <p>
+            Dahil dito, ang barangay namin ang <em>pintuan</em> ng Sound. Ang bawat bangkang papasok
+            o palabas sa isa sa pinakamayamang pangisdaan ng bansa ay dumadaan sa isa sa dalawang
+            daanang-tubig sa magkabilang gilid namin:
+          </p>
+        </>
+      ) : (
+        <>
+          <p>
+            Barangay Tumbod is not <em>on</em> an island — <strong>it is the island</strong>.
+            Tuluran, also called Tumbod, measures <span class="figure">6.4</span> ×
+            <span class="figure"> 3.2</span> kilometres and lies across the mouth of Malampaya Sound.
+          </p>
+          <p>
+            That makes our barangay the <em>gate</em> of the Sound. Every boat entering or leaving
+            one of the country’s richest fishing grounds passes through one of the two channels on
+            either side of us:
+          </p>
+        </>
+      )
+    }
+    <ul style="padding-inline-start:var(--space-5)">
+      <li>
+        <span class="is-water">Blockade Strait</span> — <span class="figure">1.1</span> km,{' '}
+        {fil ? 'nasa kanluran' : 'to the west'}.
+      </li>
+      <li>
+        <span class="is-water">Endeavor Strait</span> — <span class="figure">0.2</span> km{' '}
+        {fil ? 'lamang, nasa silangan' : 'only, to the east'}.
+      </li>
+    </ul>
+    <p>
+      {
+        fil
+          ? 'Walang kalsadang papunta rito. Bangka ang lahat ng biyahe.'
+          : 'There is no road here. Every trip is by boat.'
+      }
+    </p>
+  </div>
+</Section>
+
+<Section title={fil ? 'Populasyon' : 'Population'} titleId="population">
+  <div style={prose}>
+    <p>
+      {fil ? 'May ' : 'There are '}
+      <span class="figure">{pop}</span>
+      {
+        fil
+          ? ' katao sa Tumbod ayon sa senso ng PSA noong 2020 — '
+          : ' of us in Tumbod per the PSA 2020 census — '
+      }
+      <span class="figure">{SITE.populationShareOfTaytay}%</span>
+      {fil ? ' ng buong Taytay.' : ' of all Taytay.'}
+    </p>
+    <p>
+      {fil ? 'Noong 2015, ' : 'In 2015 there were '}
+      <span class="figure">1,489</span>
+      {fil ? ' kami sa ' : ' of us across '}
+      <span class="figure">{SITE.households2015}</span>
+      {fil ? ' na sambahayan — mga ' : ' households — about '}
+      <span class="figure">{SITE.averageHouseholdSize2015}</span>
+      {fil ? ' katao bawat bahay. ' : ' people per house. '}
+      {
+        fil
+          ? 'Ang pinakamaraming pangkat ng edad noon ay ang 5 hanggang 9 na taong gulang, '
+          : 'The largest age band was 5 to 9 years old, '
+      }
+      <span class="figure">208</span>
+      {fil ? ' bata o ' : ' children, or '}
+      <span class="figure">13.97%</span>
+      {
+        fil
+          ? ' ng populasyon. Bata ang barangay na ito.'
+          : ' of the population. This is a young barangay.'
+      }
+    </p>
+    <p style="font-size:var(--text-sm);color:var(--ink-muted)">
+      {t.common.source}: Philippine Statistics Authority, 2015 &amp; 2020 Census of Population and
+      Housing.
+    </p>
+  </div>
+</Section>
+
+<Section title="Malampaya Sound" titleId="malampaya">
+  <div style={prose}>
+    <p>
+      {fil ? 'Nasa loob kami ng ' : 'We sit inside the '}
+      <strong>{SITE.protectedArea.name}</strong> ({SITE.protectedArea.abbreviation}),
+      {fil ? ' idineklara sa ilalim ng ' : ' declared under '}
+      {SITE.protectedArea.proclamation}.
+      {fil ? ' Sakop nito ang ' : ' It covers '}
+      <span class="figure">{pa}</span>
+      {
+        fil
+          ? ' ektarya ng lupa at tubig sa Taytay at San Vicente.'
+          : ' hectares of land and water across Taytay and San Vicente.'
+      }
+    </p>
+    <p>
+      {
+        fil
+          ? 'Ang Sound ay isa sa pinakamayamang pangisdaan sa Pilipinas, at tanging dito matatagpuan ang Irrawaddy dolphin sa buong bansa. Halos 70% ng mga taong nakatira sa loob ng protektadong lugar ay umaasa sa pangingisda.'
+          : 'The Sound is one of the richest fishing grounds in the Philippines, and the only known habitat of the Irrawaddy dolphin in the country. Around 70% of people living inside the protected area depend on fishing.'
+      }
+    </p>
+    <p>
+      {
+        fil
+          ? 'Ang bahura sa Tumbod at Liminangcong ay sinuri para sa konserbasyon — kabuuang 4,001.17 ektarya. Ang biomass ng isda sa bahura ng Tumbod ay 41.94 MT/km², mas mababa kaysa sa Liminangcong na 59.94 MT/km².'
+          : 'The reefs of Tumbod and Liminangcong have been assessed for conservation — 4,001.17 hectares in total. Reef fish biomass at Tumbod is 41.94 MT/km², lower than Liminangcong’s 59.94 MT/km².'
+      }
+    </p>
+    <p style="font-size:var(--text-sm);color:var(--ink-muted)">
+      {t.common.source}: DENR-BMB; Sustainable Coral Reef Ecosystem Management in Bacuit Bay, El
+      Nido and Outer Malampaya Sound, Taytay, Palawan.
+    </p>
+  </div>
+</Section>
+
+<Section title={fil ? 'Kasaysayan' : 'History'} titleId="history">
+  <div style={prose}>
+    <p>
+      {
+        fil
+          ? 'Kulang pa ang naitalang kasaysayan ng barangay sa website na ito. Hindi namin ito pupunan ng hula.'
+          : 'The barangay’s recorded history is not yet on this website. We will not fill it with guesses.'
+      }
+    </p>
+    {isPlaceholder(SITE.foundedYear) && <Placeholder value={SITE.foundedYear} display="block" />}
+  </div>
+</Section>

@@ -1,0 +1,90 @@
+---
+/**
+ * Contact body, locale-aware.
+ *
+ * A static chart rather than an embedded tile map: tiles would blow the byte
+ * budget and add a third-party request, both forbidden (§22.3). Coordinates are
+ * selectable text so they can be pasted into any map app.
+ */
+import Section from '@/components/Section.astro'
+import Icon from '@/components/Icon.astro'
+import Placeholder from '@/components/Placeholder.astro'
+import PhoneNumber from '@/components/PhoneNumber.astro'
+import LocationMap from '@/components/LocationMap.astro'
+import LivingChartHeader from '@/components/LivingChartHeader.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { SITE } from '@/lib/content/site'
+import { HOTLINES } from '@/lib/content/active'
+import { isPlaceholder, needsData } from '@/lib/content/placeholder'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+
+const BOAT_ROUTES = needsData(
+  fil
+    ? 'mga ruta ng bangka papuntang Tumbod: saan galing, sino ang bangkero, anong oras, magkano, gaano katagal'
+    : 'boat routes to Tumbod: origin, operator, departure time, fare, duration',
+  'Barangay / boat operators',
+  true,
+)
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{t.nav.contact}</h1>
+</Section>
+
+<LivingChartHeader locale={locale} />
+
+<Section title={fil ? 'Saan kami' : 'Where we are'} titleId="location">
+  <div style="max-width:var(--measure);display:grid;gap:var(--space-3)">
+    <p>
+      Barangay Tumbod, {fil ? 'pulo ng Tuluran' : 'Tuluran Island'}, {SITE.municipality},{' '}
+      {SITE.province}, {SITE.region}.
+    </p>
+    <p style="display:flex;align-items:center;gap:var(--space-2)">
+      <Icon name="pin" size={20} />
+      <span class="figure">{SITE.coordinates.lat} N, {SITE.coordinates.lng} E</span>
+    </p>
+    <p>
+      {t.footer.address}:{' '}
+      {isPlaceholder(SITE.address) ? <Placeholder value={SITE.address} /> : SITE.address}
+    </p>
+    <p>
+      {t.footer.officeHours}:{' '}
+      {isPlaceholder(SITE.officeHours) ? <Placeholder value={SITE.officeHours} /> : SITE.officeHours}
+    </p>
+  </div>
+</Section>
+
+<Section title={fil ? 'Paano marating ang Tumbod' : 'How to reach Tumbod'} titleId="travel">
+  <div style="max-width:var(--measure);display:grid;gap:var(--space-3)">
+    <Placeholder value={BOAT_ROUTES} display="block" />
+    <p class="is-water">{t.safety.coastGuardRule}</p>
+  </div>
+</Section>
+
+<Section title={t.nav.emergencyLabel} titleId="numbers">
+  <ul style="list-style:none;padding:0;margin:0">
+    {
+      HOTLINES.slice(0, 3).map((line) => (
+        <li style="min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);border-bottom:1px solid var(--line);flex-wrap:wrap">
+          <span>{fil ? line.labelFil : line.labelEn}</span>
+          {/* Was a hand-rolled `tel:` link, which silently bypassed the
+              demo-mode guard — a demo build would have rendered fake numbers as
+              dialable here, the one outcome PhoneNumber.astro exists to
+              prevent. Always go through the component. */}
+          <PhoneNumber number={line.number} locale={locale} />
+        </li>
+      ))
+    }
+  </ul>
+  <p style="margin-top:var(--space-3)"><a href={`${p}/ligtas/hotline`}>{t.home.fullDirectory} →</a></p>
+</Section>
+
+<LocationMap locale={locale} />

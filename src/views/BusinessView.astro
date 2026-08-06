@@ -1,0 +1,79 @@
+---
+/**
+ * Local businesses — a neutral listing, in alphabetical order.
+ *
+ * NOT a directory of recommendations, and deliberately not sortable by any
+ * quality signal. A barangay ranking or rating businesses in its own village
+ * is a governance problem, not a UX one. Inclusion is a fact ("this exists
+ * here"), never an endorsement, and the page says so.
+ */
+import Section from '@/components/Section.astro'
+import { BUSINESSES } from '@/lib/content/active'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+
+// Alphabetical, so ordering carries no judgement.
+const listed = [...BUSINESSES].sort((a, b) => a.name.localeCompare(b.name, 'fil'))
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{fil ? 'Mga Negosyo sa Barangay' : 'Local Businesses'}</h1>
+  <p class="section-lede" style="margin-top:var(--space-3)">
+    {
+      fil
+        ? 'Listahan ng mga negosyong nakarehistro sa barangay, nakaayos ayon sa alpabeto.'
+        : 'Businesses registered with the barangay, listed alphabetically.'
+    }
+  </p>
+  <p class="small muted" style="margin-top:var(--space-2);max-width:var(--measure)">
+    {
+      fil
+        ? 'Hindi ito rekomendasyon. Ang nakalista rito ay nangangahulugang mayroon nito sa barangay — walang inirerekomenda o pinipili ang barangay.'
+        : 'This is not a recommendation. Being listed means the business exists here — the barangay does not endorse or rank any of them.'
+    }
+  </p>
+</Section>
+
+<Section>
+  {
+    listed.length === 0 ? (
+      <div class="card" style="max-width:var(--measure)">
+        <p>{fil ? 'Wala pang listahan ng mga negosyo dito.' : 'No business listing has been published yet.'}</p>
+        <p class="small muted" style="margin-top:var(--space-2)">
+          {fil
+            ? 'Kailangan ito mula sa talaan ng Business Clearance ng barangay, at kailangan ang pahintulot ng bawat may-ari bago ilathala ang pangalan nila.'
+            : 'This must come from the barangay’s Business Clearance records, and each owner’s permission is needed before their name is published.'}
+        </p>
+      </div>
+    ) : (
+      <ul class="grid-cards grid-cards--tight">
+        {listed.map((b) => (
+          <li>
+            {/* Not links: the barangay lists that these exist, it does not
+                host a page for each, and a card that cannot be opened must
+                not look like one. */}
+            <article class="fcard">
+              <h2 class="fcard__title">{b.name}</h2>
+              <p class="fcard__facts">
+                <span class="fcard__fact">
+                  <span class="fcard__factlabel">{fil ? 'Uri' : 'Kind'}</span>
+                  <span>{fil ? b.kindFil : b.kindEn}</span>
+                </span>
+                <span class="fcard__fact">
+                  <span class="fcard__factlabel">{fil ? 'Purok' : 'Purok'}</span>
+                  <span>{b.purok}</span>
+                </span>
+              </p>
+            </article>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</Section>

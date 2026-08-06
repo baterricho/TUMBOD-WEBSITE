@@ -1,0 +1,95 @@
+# CI — Barangay Tumbod
+#
+# Every check here is a BLOCKER, not a warning (BUILD-PROMPT.md §31).
+#
+# The two that matter most and are unusual:
+#   - the byte-budget check, because persona P1 pays for those bytes out of a
+#     ₱50 prepaid load;
+#   - the placeholder audit, which stops the site going public with an absent
+#     or invented emergency hotline number.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Build, typecheck, budgets
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Type check (strict, no `any`)
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Performance budgets
+        run: npm run measure
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      # Critical paths, WCAG 2.2 AA (zero axe violations), offline behaviour
+      # and no-JS rendering. All blockers.
+      - name: Tests
+        run: npm test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Placeholder audit
+        # Allowed to pass while the barangay is still supplying content.
+        # REMOVE `continue-on-error` BEFORE THE SITE GOES PUBLIC — that is what
+        # turns this into a real launch gate.
+        continue-on-error: true
+        run: npm run check:placeholders
+
+      # Fails if demo content leaked into a normal build. The failure this
+      # prevents is a resident finding a fabricated hotline number.
+      - name: Demo-data leak check
+        run: npm run check:demo
+
+      - name: No third-party requests on public routes
+        run: |
+          if grep -rEl 'https?://(fonts\.googleapis|fonts\.gstatic|cdn\.|www\.google|connect\.facebook|platform\.twitter)' dist --include='*.html'; then
+            echo "FAIL: a public route references a third-party origin."
+            exit 1
+          fi
+          echo "PASS: no third-party origins referenced."
+
+      # Lighthouse works in CI (Linux). It cannot run on Windows dev machines —
+      # chrome-launcher throws EPERM on teardown — which is why tests/perf.spec.ts
+      # measures the same vitals via CDP. See PERF-PLAN.md §1d.
+      - name: Lighthouse CI
+        run: npx lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Security audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7

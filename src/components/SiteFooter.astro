@@ -1,0 +1,96 @@
+---
+/**
+ * Footer — the full sitemap, not four links.
+ *
+ * Footers are how low-literacy and screen-reader users navigate
+ * (DESIGN-SYSTEM.md §8). Also carries data provenance and the ODbL
+ * attribution the chart requires.
+ */
+import Placeholder from './Placeholder.astro'
+import { SITE } from '@/lib/content/site'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { isPlaceholder } from '@/lib/content/placeholder'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const p = locale === 'fil' ? '' : '/en'
+
+const groups = [
+  {
+    heading: t.nav.services,
+    links: [
+      { href: `${p}/serbisyo`, label: t.services.title },
+      { href: `${p}/form`, label: t.nav.forms },
+      { href: `${p}/kalendaryo`, label: t.nav.calendar },
+    ],
+  },
+  {
+    heading: t.nav.safety,
+    links: [
+      { href: `${p}/ligtas`, label: t.safety.title },
+      { href: `${p}/ligtas/hotline`, label: t.nav.emergencyLabel },
+      { href: `${p}/ligtas/likasan`, label: t.safety.whereToEvacuate },
+      { href: `${p}/ligtas/bdrrmc`, label: t.safety.bdrrmc },
+    ],
+  },
+  {
+    heading: t.nav.about,
+    links: [
+      { href: `${p}/tungkol`, label: t.nav.about },
+      { href: `${p}/opisyal`, label: t.nav.officials },
+      { href: `${p}/transparency`, label: t.nav.transparency },
+      { href: `${p}/kontak`, label: t.nav.contact },
+    ],
+  },
+]
+---
+
+<footer style="margin-top:var(--space-7);border-top:1px solid var(--chart-rule);background-color:var(--surface-sunken);padding-block:var(--space-6);padding-inline:var(--space-4)">
+  <div style="max-width:1200px;margin-inline:auto">
+    <nav aria-label={t.footer.sitemap}>
+      <div style="display:grid;gap:var(--space-5);grid-template-columns:repeat(auto-fit,minmax(min(12rem,100%),1fr))">
+        {
+          groups.map((group) => (
+            <div>
+              <h2 style="font-size:var(--text-sm);letter-spacing:var(--tracking-caps);text-transform:uppercase;color:var(--ink-muted)">
+                {group.heading}
+              </h2>
+              <ul style="list-style:none;padding:0;margin-top:var(--space-2)">
+                {/* 44px, not 24px. WCAG 2.2 §2.5.8 sets 24 as the floor; this
+                    project mandates 44 (A11Y-PLAN.md §3) and the footer is
+                    real navigation for screen-reader and low-literacy users. */}
+                {group.links.map((link) => (
+                  <li style="min-height:44px;display:flex;align-items:center">
+                    <a href={link.href}>{link.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+    </nav>
+
+    <div style="margin-top:var(--space-6);padding-top:var(--space-4);border-top:1px solid var(--line);font-size:var(--text-xs);color:var(--ink-muted);display:grid;gap:var(--space-2)">
+      <p><strong>{SITE.name}</strong> · {SITE.municipality}, {SITE.province} · {SITE.region}</p>
+      <p>
+        {t.footer.address}:{' '}
+        {isPlaceholder(SITE.address) ? <Placeholder value={SITE.address} /> : SITE.address}
+      </p>
+      <p>
+        {t.footer.officeHours}:{' '}
+        {isPlaceholder(SITE.officeHours) ? <Placeholder value={SITE.officeHours} /> : SITE.officeHours}
+      </p>
+      <p>{t.footer.dataNote}</p>
+      <p>{t.footer.chartAttribution}</p>
+      <p>
+        <a href={`${p}/privacy`}>{t.footer.privacy}</a> ·
+        <a href={`${p}/accessibility`}>{t.footer.accessibility}</a>
+      </p>
+    </div>
+  </div>
+</footer>

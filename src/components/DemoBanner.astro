@@ -1,0 +1,48 @@
+---
+/**
+ * Demo-mode banner. Renders on every page when PUBLIC_DEMO_MODE=true.
+ *
+ * Undismissable and above the header, for the same reason the emergency banner
+ * is: someone must not be able to scroll past it, screenshot the page, and
+ * pass the contents off as real barangay information.
+ *
+ * In particular it says plainly that the phone numbers do not work — because
+ * the one genuinely dangerous outcome of a demo build is a person trying a
+ * hotline number during an emergency.
+ */
+import { IS_DEMO } from '@/lib/content/active'
+import Icon from './Icon.astro'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+---
+
+{
+  IS_DEMO && (
+    <div
+      role="alert"
+      style="background:#6b21a8;color:#fff;padding:var(--space-3) var(--space-4);text-align:center"
+    >
+      <p style="max-width:1200px;margin-inline:auto;display:flex;align-items:center;justify-content:center;gap:var(--space-2);flex-wrap:wrap;font-weight:600">
+        <Icon name="warning" size={20} />
+        {
+          fil
+            ? 'DEMO — HINDI TOTOO ANG MGA IMPORMASYON DITO'
+            : 'DEMO — THE INFORMATION ON THIS SITE IS NOT REAL'
+        }
+      </p>
+      <p style="max-width:1200px;margin-inline:auto;font-size:var(--text-sm);margin-top:var(--space-1)">
+        {
+          fil
+            ? 'Halimbawa lamang ang lahat ng pangalan, numero, bayad, at petsa. Hindi gumagana ang mga numero ng telepono. Huwag itong gamitin sa totoong emergency.'
+            : 'Every name, number, fee and date here is a sample. The phone numbers do not work. Do not rely on this in a real emergency.'
+        }
+      </p>
+    </div>
+  )
+}

@@ -1,0 +1,905 @@
+---
+/**
+ * Hero carousel (DECISION-redesign.md).
+ *
+ * SLIDE 1 IS A REAL MAP. Esri satellite imagery with the actual Tumbod
+ * coastline drawn on it, from OpenStreetMap relation 9732739 — 349 points,
+ * `boundary.ts`. Tuluran Island IS Barangay Tumbod (RESEARCH.md §1), which is
+ * what makes it legitimate to outline the island and label it as the barangay.
+ *
+ * THE CAROUSEL WORKS WITH NO JAVASCRIPT. It is a scroll-snap strip: slides are
+ * a horizontally scrollable row, the thumbnails are ordinary in-page anchors,
+ * and swiping works natively. The chevrons are an ENHANCEMENT — they are
+ * hidden until script confirms it can drive them, so there is never a dead
+ * control (the same rule as the map button on /kontak).
+ *
+ * THE MAP IS NOT LOADED EAGERLY. Leaflet plus satellite tiles on every
+ * homepage visit would put third-party requests and several hundred KB on the
+ * most-visited page of an offline-first site — the exact cost /kontak's
+ * opt-in map exists to avoid. So slide 1 paints instantly as a POSTER drawn
+ * from the same real coastline in inline SVG (0 KB, works offline, works with
+ * no JS), and upgrades itself to live satellite once the browser is idle.
+ * If the upgrade never happens, the slide is still a correct map of Tumbod.
+ *
+ * NO STOCK PHOTOGRAPHY. The reference design shows photographs of the
+ * barangay. None exist with consent (DISCOVERY-QUESTIONS.md B2), so the
+ * remaining slides are labelled slots naming what belongs in them. A stock
+ * tropical beach here would be a photograph of somewhere that is not Tumbod,
+ * on Tumbod's own front page.
+ */
+import Icon from './Icon.astro'
+import { SITE } from '@/lib/content/site'
+import { CHART_GEOMETRY } from '@/features/chart/geometry'
+import { TUMBOD_BOUNDS, TUMBOD_BOUNDARY } from '@/features/chart/boundary'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+
+/**
+ * THE SEAL PLACEHOLDERS ARE GONE FROM THE HERO. Two dashed circles reading
+ * "Taytay Seal" and "Barangay Tumbod Official Logo" sat above the welcome line;
+ * the reference design has nothing there, and a pair of dashed placeholders is
+ * the first thing a visitor saw on the front page. The DEBT is unchanged and
+ * still tracked in CONTENT-TODO.md — the barangay has not supplied either mark.
+ * The header's `.brand__seal` remains the site's identity slot, so when a real
+ * seal arrives there is exactly one place to put it.
+ */
+
+/** Narrowed once, so the template does not repeat the predicate. */
+type PhotoSlide = Extract<(typeof SLIDES)[number], { kind: 'photo' }>
+
+/**
+ * Slides after the map. Each names the photograph that belongs in it, so the
+ * carousel doubles as the shot list in CONTENT-TODO.md.
+ */
+/**
+ * VIDEO PROVENANCE — UNCONFIRMED.
+ *
+ * `public/media/tumbod-hero.mp4` was supplied by the site owner. It shows a
+ * coastal stilt-house village with outrigger bangkas at golden hour. Two
+ * things about it are NOT established and must be before launch:
+ *
+ *   1. **Is it Barangay Tumbod?** Nothing in the file proves it. The caption
+ *      below therefore describes what is visible and does not assert a place
+ *      (§0.2). If it is somewhere else, it is a picture of another village on
+ *      Tumbod's own front page.
+ *   2. **Are the rights and consent in order?** The original filename matched
+ *      a Facebook CDN download pattern. Consent for a Facebook post is not
+ *      consent for a permanent, indexed government website — the same rule
+ *      that governs the officials' photographs (DISCOVERY-QUESTIONS.md B2),
+ *      and identifiable homes and boats appear in the footage.
+ *
+ * Both are recorded in CONTENT-TODO.md.
+ *
+ * WEIGHT: 5.5 MB, 1280×720, 29.9 s, ~1.5 Mbps. That is heavier than the Slow
+ * 4G profile this site is measured against, so it is `preload="none"` and
+ * loads only when its slide is reached — and does not autoplay at all on a
+ * metered or slow connection. See the script below.
+ */
+/**
+ * PHOTOGRAPHS — supplied by the site owner, 2026-08-06. The same two questions
+ * that hang over the video hang over these (see CONTENT-TODO.md):
+ *   1. Are they Barangay Tumbod? Nothing in the files establishes it, so each
+ *      `alt` describes what is VISIBLE and names no place (§0.2).
+ *   2. Rights and consent — the filenames matched Facebook CDN downloads, and
+ *      the pantalan shot contains identifiable boats and houses.
+ *
+ * The `alt` text is written for someone who cannot see the image and is
+ * deciding whether the place is reachable today — not as a caption. That is
+ * why it mentions the outrigger and the shallow water rather than saying
+ * "beautiful view".
+ */
+const SLIDES = [
+  { id: 'hero-map', kind: 'map', labelFil: 'Mapa ng barangay', labelEn: 'Barangay map' },
+  { id: 'hero-video', kind: 'video', labelFil: 'Video ng baybayin', labelEn: 'Shoreline video' },
+  {
+    id: 'hero-falls',
+    kind: 'photo',
+    src: '/media/tumbod-falls.jpg',
+    thumb: '/media/tumbod-falls-thumb.jpg',
+    w: 960,
+    h: 539,
+    labelFil: 'Talon sa baybayin',
+    labelEn: 'Shoreline falls',
+    altFil:
+      'Talon na bumubuhos mula sa matarik na bangin patungo sa isang malinaw na look. May bangkang de-katig na nakatigil sa mababaw na bahagi.',
+    altEn:
+      'A waterfall dropping from a steep cliff into a clear cove. An outrigger boat sits in the shallows.',
+  },
+  {
+    id: 'hero-cove-1',
+    kind: 'photo',
+    src: '/media/tumbod-cove-1.jpg',
+    thumb: '/media/tumbod-cove-1-thumb.jpg',
+    w: 960,
+    h: 539,
+    labelFil: 'Look mula sa itaas',
+    labelEn: 'Cove from above',
+    altFil:
+      'Tanaw mula sa himpapawid ng isang look — mababaw at malinaw ang tubig sa gilid, malalim at asul sa labas. Isang bangkang de-katig ang nasa gitna.',
+    altEn:
+      'Aerial view of a cove — shallow clear water at the edge, deep blue beyond. A single outrigger boat sits in the middle.',
+  },
+  {
+    id: 'hero-cove-2',
+    kind: 'photo',
+    src: '/media/tumbod-cove-2.jpg',
+    thumb: '/media/tumbod-cove-2-thumb.jpg',
+    w: 960,
+    h: 539,
+    labelFil: 'Bahura at bangka',
+    labelEn: 'Reef and boat',
+    altFil:
+      'Tanaw mula sa itaas ng bahurang nakikita sa ilalim ng tubig, may bangkang de-katig na nakadaong malapit sa mabatong pampang.',
+    altEn:
+      'Overhead view of a reef visible through the water, with an outrigger boat moored near a rocky shore.',
+  },
+  {
+    id: 'hero-pantalan',
+    kind: 'photo',
+    src: '/media/tumbod-pantalan.jpg',
+    thumb: '/media/tumbod-pantalan-thumb.jpg',
+    // Portrait. Declaring this 960×540 like the others reserved the wrong
+    // shape and would have shifted layout once it decoded.
+    w: 1080,
+    h: 1920,
+    labelFil: 'Ang pantalan',
+    labelEn: 'The landing',
+    altFil:
+      'Kongkretong pantalan na may dilaw na gilid, palamuting bandera at lobo. Nakadaong ang maraming bangka sa magkabilang panig; may bundok at bahayan sa likuran.',
+    altEn:
+      'A concrete pier with yellow edging, decorative flags and balloons. Many outrigger boats are moored on both sides, with hills and houses behind.',
+  },
+] as const
+
+const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
+---
+
+<section class="hero" aria-labelledby="hero-title">
+  {/* ── Media strip ─────────────────────────────────────────── */}
+  <div class="hero__media">
+    {/*
+      `tabindex="0"` because this is a scrollable region whose slides contain
+      nothing focusable — axe `scrollable-region-focusable`. Without it a
+      keyboard user can see the strip but cannot scroll it at all. With it,
+      arrow keys work natively. It takes a role and a name so it is announced
+      as a group rather than an unlabelled box.
+    */}
+    <div
+      class="hero__track"
+      id="hero-track"
+      tabindex="0"
+      role="group"
+      aria-label={fil ? 'Mga larawan ng barangay' : 'Barangay images'}
+    >
+      <div class="hero__slide" id="hero-map">
+        {/* Poster: real coastline, inline, 0 KB extra, offline-safe. */}
+        <div class="hero__poster" id="hero-poster">
+          <svg
+            viewBox={CHART_GEOMETRY.viewBox}
+            preserveAspectRatio="xMidYMid slice"
+            aria-hidden="true"
+            class="hero__postersvg"
+          >
+            {CHART_GEOMETRY.contours.map((d) => <path d={d} class="hero__contour" />)}
+            <path d={CHART_GEOMETRY.islandPath} class="hero__island" />
+          </svg>
+        </div>
+        {/* Live satellite mounts here after idle. */}
+        <div class="hero__map" id="hero-map-mount" aria-hidden="true"></div>
+      </div>
+
+      {/* Video slide. `preload="none"` so 5.5 MB is never fetched until this
+          slide is actually reached; the poster (26 KB) stands in until then. */}
+      <div class="hero__slide hero__slide--video" id="hero-video">
+        <video
+          id="hero-video-el"
+          class="hero__video"
+          poster="/media/tumbod-hero-poster.jpg"
+          preload="none"
+          muted
+          loop
+          playsinline
+          disablepictureinpicture
+          aria-label={
+            fil
+              ? 'Video mula sa himpapawid ng baybaying pamayanan at mga bangka'
+              : 'Aerial video of a coastal settlement and outrigger boats'
+          }
+        >
+          <source src="/media/tumbod-hero.mp4" type="video/mp4" />
+        </video>
+      </div>
+
+      {/* Divs, not list items. `role="group"` on the track (needed to give the
+          focusable scroll region a name) replaces a <ul>'s implicit list role,
+          which leaves any <li> children orphaned — axe `listitem`. These are
+          carousel panels, not a list, so the semantics were wrong anyway. */}
+      {/*
+        Each slide shows its 20 KB thumbnail as a background immediately — it
+        is already downloaded for the strip below — so a slide is never blank,
+        and the full photograph fades in over it.
+      */}
+      {
+        PHOTOS.map((s) => (
+          <div
+            class="hero__slide hero__slide--photo"
+            id={s.id}
+            style={`background-image:url(${s.thumb})`}
+          >
+            {/*
+              `data-src`, NOT `src`.
+
+              `loading="lazy"` did not defer these. Inside a horizontal
+              scroll container Chromium fetched all three eagerly — 387 KB
+              competing with the satellite tiles, which pushed the homepage
+              LCP element (a map tile) from ~1.6 s to 3.7 s and blew the
+              budget. The observer below sets `src` when a slide is actually
+              approached, which is deterministic rather than a heuristic.
+
+              Explicit width/height still reserve the correct box, so CLS
+              stays at 0.000.
+            */}
+            <img
+              class="hero__photo"
+              data-src={s.src}
+              alt={fil ? s.altFil : s.altEn}
+              width={s.w}
+              height={s.h}
+              decoding="async"
+            />
+            {/* No script, no observer — so load it the ordinary way. */}
+            <noscript>
+              <img
+                class="hero__photo hero__photo--noscript"
+                src={s.src}
+                alt={fil ? s.altFil : s.altEn}
+                width={s.w}
+                height={s.h}
+              />
+            </noscript>
+          </div>
+        ))
+      }
+    </div>
+
+  </div>
+
+  <div class="hero__scrim" aria-hidden="true"></div>
+
+  {/*
+    The map label lives OUTSIDE the strip for the same stacking reason as the
+    chevrons — inside a slide it renders beneath the scrim and reads as a
+    smudge. It is shown only while the map slide is the active one, which the
+    carousel's observer toggles.
+
+    It is pinned to the ISLAND, not to a corner: the script keeps it over the
+    boundary's centroid as the map zooms, so the name always labels the thing
+    it names. Until the live map arrives it sits where the poster's island is.
+  */}
+  <p class="hero__mapbadge" id="hero-mapbadge">
+    <span class="hero__mapbadge-name">Barangay Tumbod</span>
+    <Icon name="pin" size={22} />
+  </p>
+
+  {/*
+    MAP CONTROLS — `hidden` until the live map exists.
+
+    Every one of these drives Leaflet. With no JS, no network or a blocked CDN
+    the slide is still the inline poster, and a zoom button with nothing to
+    zoom is exactly the dead control the map button on /kontak exists to avoid.
+    So the script unhides them, and only after `whenReady`.
+  */}
+  <div class="hero__mapchrome" id="hero-mapchrome" hidden>
+    <details class="hero__basemap" id="hero-basemap">
+      <summary class="hero__glassbtn">
+        <Icon name="layers" size={18} />
+        <span id="hero-basemap-label">{fil ? 'Satelayt' : 'Satellite'}</span>
+        <Icon name="chevron-down" size={16} />
+      </summary>
+      <div class="hero__basemap-panel" role="group" aria-label={fil ? 'Uri ng mapa' : 'Map type'}>
+        <button type="button" data-basemap="satellite" aria-pressed="true">
+          {fil ? 'Satelayt' : 'Satellite'}
+        </button>
+        <button type="button" data-basemap="street" aria-pressed="false">
+          {fil ? 'Kalsada' : 'Street'}
+        </button>
+      </div>
+    </details>
+
+    <div class="hero__zoom">
+      <button
+        class="hero__glassbtn hero__glassbtn--icon"
+        type="button"
+        id="hero-zoom-in"
+        aria-label={fil ? 'I-zoom papasok' : 'Zoom in'}
+      >
+        <Icon name="plus" size={18} />
+      </button>
+      <button
+        class="hero__glassbtn hero__glassbtn--icon"
+        type="button"
+        id="hero-zoom-out"
+        aria-label={fil ? 'I-zoom palabas' : 'Zoom out'}
+      >
+        <Icon name="minus" size={18} />
+      </button>
+      <button
+        class="hero__glassbtn hero__glassbtn--icon"
+        type="button"
+        id="hero-recenter"
+        aria-label={fil ? 'Ibalik sa gitna ang barangay' : 'Recentre on the barangay'}
+      >
+        <Icon name="locate" size={18} />
+      </button>
+    </div>
+  </div>
+
+  {/*
+    WCAG 2.2.2: anything that moves for more than five seconds needs a way to
+    stop it. This lives OUTSIDE the media strip for the same stacking reason as
+    the chevrons — inside a slide it sat beneath `.hero__inner`, which swallowed
+    every click, so the pause control could not be operated at all. Shown only
+    while the video slide is active.
+  */}
+  <button class="hero__videobtn" id="hero-video-btn" type="button" hidden>
+    <span id="hero-video-btn-label">{fil ? 'I-play ang video' : 'Play video'}</span>
+  </button>
+
+  {/*
+    Chevrons are SIBLINGS of the media strip, not children of it.
+    `.hero__media` establishes its own stacking context, so a button inside it
+    can never rise above the scrim that covers it — it would render dimmed and
+    sit underneath an overlay that swallows the click. Enhancement only:
+    hidden until script proves it can scroll the strip.
+  */}
+  <button class="hero__chev hero__chev--prev" id="hero-prev" type="button" hidden>
+    <Icon name="chevron-left" size={26} title={fil ? 'Nakaraang larawan' : 'Previous image'} />
+  </button>
+  <button class="hero__chev hero__chev--next" id="hero-next" type="button" hidden>
+    <Icon name="chevron-right" size={26} title={fil ? 'Susunod na larawan' : 'Next image'} />
+  </button>
+
+  {/* ── Copy ────────────────────────────────────────────────── */}
+  <div class="hero__inner">
+    <p class="hero__eyebrow">{fil ? 'Maligayang pagdating sa' : 'Welcome to'}</p>
+
+    <h1 class="hero__title" id="hero-title">Barangay Tumbod</h1>
+
+    <p class="hero__lede">
+      {
+        fil
+          ? 'Isang barangay sa Pulo ng Tuluran — napapaligiran ng dagat sa bawat panig. Narito ang kailangan ninyong malaman ngayong araw.'
+          : 'A barangay on Tuluran Island — surrounded by sea on every side. Here is what you need to know today.'
+      }
+    </p>
+
+    <div class="hero__cta">
+      <a class="btn btn--primary" href={`${p}/serbisyo`}>
+        <Icon name="document" size={20} />
+        {fil ? 'Mga serbisyo at requirements' : 'Services and requirements'}
+      </a>
+      <a class="btn btn--ghost" href={`${p}/ligtas`}>
+        <Icon name="anchor" size={20} />
+        {fil ? 'Lagay ng dagat at biyahe' : 'Sea conditions and boat trips'}
+      </a>
+    </div>
+
+    <p class="hero__place">
+      <Icon name="pin" size={16} />
+      {SITE.municipality}, {SITE.province}, Philippines
+    </p>
+
+  </div>
+
+  {/*
+    ── Filmstrip ──────────────────────────────────────────────────
+    A SIBLING of the copy column, not a child of it. In the reference the
+    thumbnails run the full width of the hero beneath the headline; inside
+    `.hero__inner` they were capped at the 34rem copy measure and only four of
+    the six were reachable without scrolling.
+  */}
+  <div class="hero__filmstrip">
+    {/* Thumbnails are ANCHORS, so they navigate the strip with no JS. */}
+    <ul class="hero__thumbs" aria-label={fil ? 'Pumili ng larawan' : 'Choose an image'}>
+      {
+        SLIDES.map((s, i) => (
+          <li>
+            {/* A SMALL derivative, not the full photograph. A CSS background
+                on a visible element is never lazy, so pointing these at the
+                originals downloaded all four (~540 KB) the moment the page
+                opened and quietly defeated `loading="lazy"` on the slides.
+                The derivatives total 72 KB. See scripts/build-thumbs.mjs. */}
+            <a
+              href={`#${s.id}`}
+              class={`hero__thumb${i === 0 ? ' is-active' : ''}${
+                s.kind === 'video' || s.kind === 'photo' ? ' hero__thumb--image' : ''
+              }`}
+              data-thumb={s.id}
+              style={
+                s.kind === 'video'
+                  ? 'background-image:url(/media/tumbod-hero-poster.jpg)'
+                  : s.kind === 'photo'
+                    ? `background-image:url(${s.thumb})`
+                    : undefined
+              }
+            >
+              {/* The map thumbnail shows the map, drawn from the same real
+                  coastline — the reference has satellite imagery in slot one,
+                  and a flat teal rectangle beside five photographs read as a
+                  broken image. Inline SVG, so it costs nothing. */}
+              {s.kind === 'map' && (
+                <svg
+                  viewBox={CHART_GEOMETRY.viewBox}
+                  preserveAspectRatio="xMidYMid slice"
+                  aria-hidden="true"
+                  class="hero__thumbsvg"
+                >
+                  <path d={CHART_GEOMETRY.islandPath} class="hero__island" />
+                </svg>
+              )}
+              {/* Visually hidden: the reference strip is unlettered, and the
+                  images say what they are. The anchor still needs a name. */}
+              <span class="hero__thumblabel">{fil ? s.labelFil : s.labelEn}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    {/*
+      Pagination. `aria-hidden` and untabbable ON PURPOSE: it is a second copy
+      of the thumbnail list directly above it, and shipping six more tab stops
+      that go to the same six places is noise for a keyboard or screen-reader
+      user. It stays clickable for a pointer, which is all it is for.
+    */}
+    <ul class="hero__dots" aria-hidden="true">
+      {
+        SLIDES.map((s, i) => (
+          <li>
+            <a
+              href={`#${s.id}`}
+              tabindex="-1"
+              class={`hero__dot${i === 0 ? ' is-active' : ''}`}
+              data-thumb={s.id}
+            />
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<script
+  is:inline
+  define:vars={{
+    bounds: TUMBOD_BOUNDS,
+    ring: TUMBOD_BOUNDARY,
+    fil,
+  }}
+>
+  ;(function () {
+    var track = document.getElementById('hero-track')
+    var prev = document.getElementById('hero-prev')
+    var next = document.getElementById('hero-next')
+
+    /* ── Video ────────────────────────────────────────────────
+       5.5 MB. On this island that is somebody's load, so the rules are:
+
+         - nothing downloads until the slide is reached (`preload="none"`
+           plus an explicit `load()` here, never before);
+         - it does NOT autoplay on a metered or slow connection, or when the
+           reader has asked for reduced motion — in those cases the poster
+           stays and the button says "play";
+         - it always has a real pause control (WCAG 2.2.2), and it stops the
+           moment the slide leaves the screen.
+    */
+    var video = document.getElementById('hero-video-el')
+    var vbtn = document.getElementById('hero-video-btn')
+    var vlabel = document.getElementById('hero-video-btn-label')
+    var loaded = false
+
+    var conn = navigator.connection || {}
+    var slowNetwork =
+      conn.saveData === true ||
+      conn.effectiveType === '2g' ||
+      conn.effectiveType === 'slow-2g'
+    var reduceMotion = false
+    try {
+      reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+    } catch (e) {}
+
+    var mayAutoplay = !slowNetwork && !reduceMotion
+
+    function setLabel(playing) {
+      if (!vlabel || !vbtn) return
+      vlabel.textContent = playing
+        ? fil ? 'I-pause ang video' : 'Pause video'
+        : fil ? 'I-play ang video' : 'Play video'
+      vbtn.setAttribute('aria-pressed', playing ? 'true' : 'false')
+    }
+
+    function playVideo() {
+      if (!video) return
+      if (!loaded) {
+        video.load()
+        loaded = true
+      }
+      var r = video.play()
+      if (r && r.catch) r.catch(function () { setLabel(false) })
+      setLabel(true)
+    }
+
+    function pauseVideo() {
+      if (!video || video.paused) return
+      video.pause()
+      setLabel(false)
+    }
+
+    function onVideoSlide() {
+      if (mayAutoplay) playVideo()
+    }
+
+    if (video && vbtn) {
+      vbtn.hidden = false
+      setLabel(false)
+      vbtn.addEventListener('click', function () {
+        if (video.paused) playVideo()
+        else pauseVideo()
+      })
+      // A backgrounded tab must not keep streaming.
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible') pauseVideo()
+      })
+    }
+
+    /* ── Carousel ─────────────────────────────────────────────
+       The strip already scrolls and snaps without any of this. All the script
+       adds is the two chevrons and keeping the thumbnails in sync. */
+    if (track && prev && next) {
+      prev.hidden = false
+      next.hidden = false
+
+      var page = function (dir) {
+        track.scrollBy({ left: dir * track.clientWidth, behavior: 'smooth' })
+      }
+      prev.addEventListener('click', function () { page(-1) })
+      next.addEventListener('click', function () { page(1) })
+
+      var thumbs = [].slice.call(document.querySelectorAll('[data-thumb]'))
+      var slides = [].slice.call(track.children)
+
+      /*
+       * Deferred photograph loading. A slide's image is fetched when the slide
+       * is one screen away, not before — so arriving at the homepage costs the
+       * thumbnails only, and the satellite tiles are not competing with
+       * 387 KB of JPEG for the connection.
+       */
+      var lazyIo = null
+      if ('IntersectionObserver' in window) {
+        lazyIo = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (!e.isIntersecting) return
+              var img = e.target.querySelector('img[data-src]')
+              if (img) {
+                img.src = img.getAttribute('data-src')
+                img.removeAttribute('data-src')
+                img.addEventListener('load', function () {
+                  img.classList.add('is-loaded')
+                })
+              }
+              lazyIo.unobserve(e.target)
+            })
+          },
+          { root: track, rootMargin: '100% 0px' },
+        )
+        slides.forEach(function (s) {
+          if (s.querySelector('img[data-src]')) lazyIo.observe(s)
+        })
+      } else {
+        // No observer: load them all rather than show empty slides.
+        document.querySelectorAll('img[data-src]').forEach(function (img) {
+          img.src = img.getAttribute('data-src')
+          img.classList.add('is-loaded')
+        })
+      }
+
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (!e.isIntersecting) return
+              thumbs.forEach(function (t) {
+                t.classList.toggle('is-active', t.getAttribute('data-thumb') === e.target.id)
+              })
+              var i = slides.indexOf(e.target)
+              prev.disabled = i <= 0
+              next.disabled = i >= slides.length - 1
+
+              // The pin label and the map controls belong to the map slide
+              // only — neither means anything over a photograph.
+              var onMap = e.target.id === 'hero-map'
+              var badge = document.getElementById('hero-mapbadge')
+              if (badge) badge.classList.toggle('is-visible', onMap)
+              var chrome = document.getElementById('hero-mapchrome')
+              if (chrome) chrome.classList.toggle('is-visible', onMap)
+
+              // Video plays only while its own slide is on screen, and never
+              // keeps running in the background burning data.
+              var onVideo = e.target.id === 'hero-video'
+              if (vbtn) vbtn.classList.toggle('is-visible', onVideo)
+              if (onVideo) onVideoSlide()
+              else pauseVideo()
+            })
+          },
+          { root: track, threshold: 0.6 },
+        )
+        slides.forEach(function (s) { io.observe(s) })
+      }
+
+      // Thumb clicks scroll the strip rather than jumping the whole page,
+      // which is what a bare #anchor would do inside a scroll container.
+      thumbs.forEach(function (t) {
+        t.addEventListener('click', function (ev) {
+          var target = document.getElementById(t.getAttribute('data-thumb'))
+          if (!target) return
+          ev.preventDefault()
+          track.scrollTo({ left: target.offsetLeft - track.offsetLeft, behavior: 'smooth' })
+        })
+      })
+    }
+
+    /* ── Satellite upgrade ────────────────────────────────────
+       Deferred to idle so it never competes with first paint. The poster
+       underneath is already a correct map, so if this never runs — no JS, no
+       network, blocked CDN — nothing is lost but the imagery. */
+    var mount = document.getElementById('hero-map-mount')
+    var poster = document.getElementById('hero-poster')
+    if (!mount || !navigator.onLine) return
+
+    var start = function () {
+      var css = document.createElement('link')
+      css.rel = 'stylesheet'
+      css.href = '/vendor/leaflet/leaflet.css'
+      document.head.appendChild(css)
+
+      var js = document.createElement('script')
+      js.src = '/vendor/leaflet/leaflet.js'
+      js.onload = function () {
+        var L = window.L
+        if (!L) return
+
+        var map = L.map(mount, {
+          zoomControl: false,
+          attributionControl: true,
+          scrollWheelZoom: false,
+          dragging: false,
+          doubleClickZoom: false,
+          touchZoom: false,
+          keyboard: false,
+        })
+
+        /*
+         * Leaflet's attribution control ships a "Leaflet" prefix LINK. Inside
+         * an `aria-hidden` container that is an axe `aria-hidden-focus`
+         * violation — a keyboard user tabs into something screen readers are
+         * told does not exist.
+         *
+         * Removing the tab stop afterwards was racy: axe could audit before
+         * the timeout fired. Turning the prefix off means the anchor is never
+         * created, which is deterministic. The tile CREDITS remain — they are
+         * plain text, which is what the ODbL and the Esri terms require — and
+         * the fully linked attribution lives on the interactive map at
+         * /kontak.
+         */
+        map.attributionControl.setPrefix(false)
+
+        /*
+         * Two basemaps behind the "Satellite" selector. Both are Esri, so the
+         * switch does not drag a second provider (and a second set of terms)
+         * onto the page. Satellite is what the design leads with; street is
+         * there because an outline over imagery does not tell you where the
+         * road and the landing are, and that is what most people came for.
+         */
+        var BASEMAPS = {
+          satellite: {
+            url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            attribution: 'Imagery © Esri · Boundary © OpenStreetMap (ODbL)',
+          },
+          street: {
+            url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+            attribution: 'Map © Esri · Boundary © OpenStreetMap (ODbL)',
+          },
+        }
+
+        var baseLayer = null
+        var setBasemap = function (key) {
+          var def = BASEMAPS[key] || BASEMAPS.satellite
+          if (baseLayer) map.removeLayer(baseLayer)
+          baseLayer = L.tileLayer(def.url, { maxZoom: 18, attribution: def.attribution })
+          // Under the boundary, never over it.
+          baseLayer.addTo(map)
+          baseLayer.bringToBack()
+        }
+        setBasemap('satellite')
+
+        // The highlight: real coastline, drawn twice — a soft outer glow and a
+        // crisp inner line, so the outline reads against both dark water and
+        // bright reef.
+        L.polygon(ring, {
+          color: '#7ee787',
+          weight: 6,
+          opacity: 0.25,
+          fill: false,
+          interactive: false,
+        }).addTo(map)
+
+        L.polygon(ring, {
+          color: '#7ee787',
+          weight: 2,
+          opacity: 1,
+          fillColor: '#7ee787',
+          fillOpacity: 0.08,
+          interactive: false,
+        }).addTo(map)
+
+        /*
+         * FRAMING. Three things cover parts of this map and the island must
+         * clear all of them: the copy column and its scrim down the left, the
+         * filmstrip across the bottom, and the control cluster on the right.
+         * Fitting to the raw container centres the island behind the headline.
+         */
+        var wide = window.innerWidth >= 960
+        var copyColumn = wide ? Math.round(window.innerWidth * 0.4) : 0
+        var strip = wide ? 190 : 150
+
+        var ISLAND = [
+          [bounds.south, bounds.west],
+          [bounds.north, bounds.east],
+        ]
+
+        var frame = function (animate) {
+          map.fitBounds(ISLAND, {
+            paddingTopLeft: [copyColumn + 32, 56],
+            paddingBottomRight: [wide ? 110 : 32, strip],
+            animate: !!animate,
+          })
+        }
+        frame(false)
+
+        /*
+         * Bounded either side of the fitted view: far enough out to see the
+         * barangay in its stretch of the Sound, far enough in to pick out the
+         * landing. One step BELOW the fit, not the fit itself — anchoring the
+         * floor at the opening view shipped a zoom-out button that was greyed
+         * out before anyone touched it.
+         */
+        var fitZoom = map.getZoom()
+        map.setMinZoom(fitZoom - 1)
+        map.setMaxZoom(Math.min(18, fitZoom + 4))
+
+        /* ── Controls ──────────────────────────────────────────
+           Unhidden only now — the map they drive exists. */
+        var chrome = document.getElementById('hero-mapchrome')
+        var zin = document.getElementById('hero-zoom-in')
+        var zout = document.getElementById('hero-zoom-out')
+        var recentre = document.getElementById('hero-recenter')
+        var basemapEl = document.getElementById('hero-basemap')
+        var basemapLabel = document.getElementById('hero-basemap-label')
+
+        var syncZoom = function () {
+          var z = map.getZoom()
+          if (zin) zin.disabled = z >= map.getMaxZoom()
+          if (zout) zout.disabled = z <= map.getMinZoom()
+        }
+
+        if (zin) zin.addEventListener('click', function () { map.zoomIn() })
+        if (zout) zout.addEventListener('click', function () { map.zoomOut() })
+        if (recentre) recentre.addEventListener('click', function () { frame(true) })
+
+        if (basemapEl) {
+          basemapEl.querySelectorAll('[data-basemap]').forEach(function (b) {
+            b.addEventListener('click', function () {
+              var key = b.getAttribute('data-basemap')
+              setBasemap(key)
+              if (basemapLabel) basemapLabel.textContent = b.textContent.trim()
+              basemapEl.querySelectorAll('[data-basemap]').forEach(function (o) {
+                o.setAttribute('aria-pressed', o === b ? 'true' : 'false')
+              })
+              basemapEl.removeAttribute('open')
+            })
+          })
+          // Click-away, so the panel does not sit open over the imagery.
+          document.addEventListener('click', function (ev) {
+            if (basemapEl.hasAttribute('open') && !basemapEl.contains(ev.target)) {
+              basemapEl.removeAttribute('open')
+            }
+          })
+        }
+
+        /*
+         * THE NAME GOES ON THE ISLAND, not in a corner. Reprojected on every
+         * move so it keeps labelling the thing it names as the map zooms.
+         */
+        var badge = document.getElementById('hero-mapbadge')
+        var centre = [(bounds.south + bounds.north) / 2, (bounds.west + bounds.east) / 2]
+        var placeBadge = function () {
+          if (!badge) return
+          var pt = map.latLngToContainerPoint(centre)
+          badge.style.left = pt.x + 'px'
+          badge.style.top = pt.y + 'px'
+          badge.style.translate = '-50% -50%'
+        }
+        map.on('move zoom moveend zoomend', function () {
+          placeBadge()
+          syncZoom()
+        })
+
+        /*
+         * Leaflet injects its own attribution links. The mount is
+         * `aria-hidden` (this map is decoration behind a headline — the real
+         * interactive one is on /kontak), and a focusable element inside an
+         * aria-hidden container is an axe `aria-hidden-focus` violation: a
+         * keyboard user tabs into something a screen reader says is not there.
+         *
+         * The attribution TEXT stays visible, which is what the ODbL and Esri
+         * terms require; only its tab stop is removed.
+         */
+        var deFocus = function () {
+          mount.querySelectorAll('a, button, [tabindex]').forEach(function (el) {
+            el.setAttribute('tabindex', '-1')
+          })
+        }
+
+        // Cross-fade: the poster stays until imagery has actually painted, so
+        // there is never a grey box where the map should be.
+        map.whenReady(function () {
+          setTimeout(function () {
+            deFocus()
+            mount.classList.add('is-ready')
+            if (poster) poster.classList.add('is-hidden')
+            placeBadge()
+            syncZoom()
+            if (chrome) {
+              chrome.hidden = false
+              // Only over the map — the controls mean nothing on a photograph.
+              var active = document.querySelector('[data-thumb].is-active')
+              chrome.classList.toggle(
+                'is-visible',
+                !active || active.getAttribute('data-thumb') === 'hero-map',
+              )
+            }
+          }, 400)
+        })
+
+        // The frame is width-dependent (copy column, filmstrip), so it has to
+        // be recomputed when the window changes shape.
+        var resizeTimer
+        window.addEventListener('resize', function () {
+          clearTimeout(resizeTimer)
+          resizeTimer = setTimeout(function () {
+            wide = window.innerWidth >= 960
+            copyColumn = wide ? Math.round(window.innerWidth * 0.4) : 0
+            strip = wide ? 190 : 150
+            map.setMinZoom(0)
+            frame(false)
+            map.setMinZoom(map.getZoom() - 1)
+            placeBadge()
+            syncZoom()
+          }, 200)
+        })
+      }
+      document.head.appendChild(js)
+    }
+
+    if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 3000 })
+    else setTimeout(start, 1200)
+  })()
+</script>

@@ -1,0 +1,221 @@
+---
+/**
+ * Upgrades server-rendered content from the database, in place.
+ *
+ * Drop this once per page. It looks for elements carrying `data-live` and, for
+ * each one, fetches the named table and re-renders the list from a template
+ * chosen by `data-live-tpl`.
+ *
+ * WHY IT IS ONE COMPONENT AND NOT ONE PER PAGE. Every list on this site is the
+ * same shape — a heading, some rows, a "view all" link — and the difference
+ * between the news list and the events list is which four fields it prints.
+ * Six near-identical scripts would drift.
+ *
+ * THE SERVER-RENDERED MARKUP IS THE FALLBACK, and it is never removed until
+ * replacement content is actually in hand. If the fetch fails, is empty, or
+ * the visitor is offline, the page keeps exactly what it was built with.
+ *
+ * NO-JS: nothing here runs, and the page is already correct.
+ */
+import { liveConfig } from '@/lib/cms/live'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+---
+
+<script is:inline define:vars={{ cfg: liveConfig, fil: locale === 'fil' }}>
+  ;(function () {
+    if (!cfg.url || !cfg.key) return
+
+    var nodes = [].slice.call(document.querySelectorAll('[data-live]'))
+    if (!nodes.length) return
+
+    function get(table, query) {
+      return fetch(cfg.url + '/rest/v1/' + table + '?' + query, {
+        headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key },
+      })
+        .then(function (r) {
+          return r.ok ? r.json() : null
+        })
+        .catch(function () {
+          return null
+        })
+    }
+
+    /* `textContent`, never `innerHTML`. Everything below was typed into the
+       admin by a person, and a barangay announcement is not a trusted
+       template — a stored `<script>` would otherwise run on every visitor. */
+    function txt(tag, cls, value) {
+      var n = document.createElement(tag)
+      if (cls) n.className = cls
+      n.textContent = value == null ? '' : String(value)
+      return n
+    }
+
+    function fmtDate(iso) {
+      try {
+        return new Date(iso).toLocaleDateString(fil ? 'fil-PH' : 'en-PH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      } catch (e) {
+        return ''
+      }
+    }
+
+    var TEMPLATES = {
+      /* News rows — matches `.mega-row` in mega.css so the live version is
+         indistinguishable from the built one. */
+      news: function (row) {
+        var a = document.createElement('a')
+        a.className = 'mega-row'
+        a.href = (fil ? '' : '/en') + '/balita'
+
+        var thumb = document.createElement('span')
+        thumb.className = 'mega-row__thumb'
+        if (row.image_url) {
+          var img = document.createElement('img')
+          img.src = row.image_url
+          img.alt = ''
+          img.width = 56
+          img.height = 56
+          img.loading = 'lazy'
+          thumb.appendChild(img)
+        }
+
+        var body = document.createElement('span')
+        body.className = 'mega-row__body'
+        body.appendChild(txt('span', 'mega-row__title', fil ? row.title_fil : row.title_en))
+        body.appendChild(txt('span', 'mega__meta', fmtDate(row.published_at)))
+
+        a.appendChild(thumb)
+        a.appendChild(body)
+
+        var li = document.createElement('li')
+        li.appendChild(a)
+        return li
+      },
+
+      /* Event cards — matches `.mega-event`. */
+      events: function (row) {
+        var d = new Date(row.starts_at)
+        var months = fil
+          ? ['ENE', 'PEB', 'MAR', 'ABR', 'MAY', 'HUN', 'HUL', 'AGO', 'SET', 'OKT', 'NOB', 'DIS']
+          : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+        var a = document.createElement('a')
+        a.className = 'mega-event'
+        a.href = (fil ? '' : '/en') + '/balita'
+
+        var date = document.createElement('span')
+        date.className = 'mega-event__date'
+        date.setAttribute('aria-hidden', 'true')
+        date.appendChild(txt('span', 'mega-event__month', months[d.getMonth()]))
+        date.appendChild(txt('span', 'mega-event__day', String(d.getDate())))
+
+        var body = document.createElement('span')
+        body.className = 'mega-event__body'
+        body.appendChild(txt('span', 'mega-row__title', fil ? row.title_fil : row.title_en))
+        var place = fil ? row.location_fil : row.location_en
+        if (place) body.appendChild(txt('span', 'mega__meta', place))
+        if (row.time_label) body.appendChild(txt('span', 'mega__meta', row.time_label))
+
+        a.appendChild(date)
+        a.appendChild(body)
+
+        var li = document.createElement('li')
+        li.appendChild(a)
+        return li
+      },
+    }
+
+    /*
+     * NOTHING IS FETCHED ON PAGE LOAD. This is not an optimisation, it is the
+     * architectural guarantee in ARCHITECTURE.md §22.3, enforced by
+     * `critical-paths.spec.ts` test 10: /ligtas and /ligtas/hotline are
+     * precache tier 1, are opened during typhoons on 2G or with no signal, and
+     * may not make a single request to a host we do not control. The mega
+     * panels are in the header of EVERY page, so hydrating them eagerly put a
+     * Supabase request on the disaster pages — precisely the failure the rule
+     * exists to prevent, and the test caught it.
+     *
+     * So a live region is fetched only when its panel is actually OPENED. A
+     * reader who never touches the menu never makes the request; a reader who
+     * does gets current content. Once per panel — `hydrated` makes reopening
+     * free.
+     */
+    var hydrated = new WeakSet()
+
+    function hydrate(node) {
+      if (hydrated.has(node)) return
+      hydrated.add(node)
+
+      var table = node.getAttribute('data-live')
+      var tpl = TEMPLATES[node.getAttribute('data-live-tpl') || table]
+      var query = node.getAttribute('data-live-query') || 'select=*'
+      if (!tpl) return
+
+      get(table, query).then(function (rows) {
+        // No rows is NOT a reason to blank the page. An empty table means the
+        // barangay has published nothing, and the sample content already on
+        // the page is the better answer.
+        if (!rows || !rows.length) return
+
+        var frag = document.createDocumentFragment()
+        rows.forEach(function (r) {
+          frag.appendChild(tpl(r))
+        })
+        node.textContent = ''
+        node.appendChild(frag)
+
+        // The column heading carries a "Sample data" chip. Live rows are not
+        // sample rows, so it goes.
+        var col = node.closest('.mega__col')
+        var chip = col && col.querySelector('.samplechip')
+        if (chip && !rows.some(function (r) { return r.is_sample })) chip.remove()
+      })
+    }
+
+    /* Panels hydrate on open. `toggle` fires however the state changed, so a
+       keyboard Enter and a pointer click are both covered. */
+    nodes.forEach(function (node) {
+      var panel = node.closest('details[data-mega]')
+      if (panel) {
+        panel.addEventListener('toggle', function () {
+          if (panel.open) hydrate(node)
+        })
+        return
+      }
+
+      /*
+       * A live region OUTSIDE a menu — a list on an ordinary page. It cannot
+       * wait for a panel that will never open, so it hydrates when it scrolls
+       * into view. Emergency routes are excluded outright rather than trusted
+       * to have no such regions: /ligtas keeps the absolute guarantee, and a
+       * list added there later must not silently break it.
+       */
+      if (location.pathname.indexOf('/ligtas') !== -1) return
+
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (!e.isIntersecting) return
+              io.unobserve(e.target)
+              hydrate(e.target)
+            })
+          },
+          { rootMargin: '200px' },
+        )
+        io.observe(node)
+      } else {
+        hydrate(node)
+      }
+    })
+  })()
+</script>

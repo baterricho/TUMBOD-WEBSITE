@@ -1,0 +1,134 @@
+---
+/**
+ * THE LIVING CHART HEADER — the signature element (BUILD-PROMPT.md §11).
+ *
+ * A nautical chart is not a stylistic choice applied to this place. It is the
+ * correct projection of it: Tuluran Island IS Barangay Tumbod, a barrier
+ * island across the mouth of Malampaya Sound, and the two straits either side
+ * — Blockade (1.1 km, west) and Endeavor (0.2 km, east) — are the barangay's
+ * edges. Every vessel entering one of the country's richest fishing grounds
+ * passes on one side or the other.
+ *
+ * A road-map header would be a category error; there are no roads. A hero
+ * photograph would show one beach and hide the geography that defines the
+ * barangay's entire existence.
+ *
+ * Chart convention borrowed and used site-wide: LAND UPRIGHT, WATER ITALIC.
+ *
+ * role="img" with a Filipino label, AND every value repeated as text in the
+ * adjacent <dl> — a screen-reader user gets words, not a described picture.
+ * If the two ever drift apart that is a P0 bug (A11Y-PLAN.md §9).
+ */
+import { CHART_GEOMETRY } from '@/features/chart/geometry'
+import { SITE } from '@/lib/content/site'
+import { getDictionary, type Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const g = CHART_GEOMETRY
+
+const label =
+  locale === 'fil'
+    ? 'Mapa ng pulo ng Tuluran (Tumbod) sa bukana ng Malampaya Sound, na may Blockade Strait sa kanluran at Endeavor Strait sa silangan.'
+    : 'Chart of Tuluran (Tumbod) Island at the mouth of Malampaya Sound, with Blockade Strait to the west and Endeavor Strait to the east.'
+
+const bands = [...g.contours].map((d, i) => ({ d, band: i + 1 })).reverse()
+---
+
+<div style="position:relative;background-color:var(--surface-sunken);border-bottom:1px solid var(--chart-rule)">
+  <svg
+    viewBox={g.viewBox}
+    role="img"
+    aria-label={label}
+    preserveAspectRatio="xMidYMid slice"
+    style="width:100%;height:clamp(140px, 18vw, 190px);display:block"
+  >
+    {/* Depth bands, deepest first so shallows sit on top. Fully opaque in the
+        bolder direction — the chart is a graphic element, not a watermark. */}
+    {
+      bands.map(({ d, band }, i) => (
+        <path
+          class="chart-band"
+          style={`animation-delay:${i * 70}ms`}
+          d={d}
+          fill={`var(--chart-contour-${band})`}
+          stroke="var(--chart-rule)"
+          stroke-width="0.5"
+        />
+      ))
+    }
+
+    <path
+      class="chart-land"
+      d={g.islandPath}
+      fill="var(--chart-land)"
+      stroke="var(--ink)"
+      stroke-width="1.6"
+    />
+
+    {/*
+      Label positions follow the REAL bounding box: in the 640×160 viewBox the
+      island occupies x 282–358, y 12–148, centred on x=320. It runs
+      north–south, which the earlier schematic had wrong. Orientation is never
+      rotated to suit the layout.
+    */}
+
+    {/* The pin. A real chart mark, not a decorative wave. */}
+    <g class="chart-pin" transform="translate(320, 88)">
+      <circle r="5" fill="var(--alert-emergency)"></circle>
+      <circle r="10" fill="none" stroke="var(--alert-emergency)" stroke-width="1.6"></circle>
+    </g>
+
+    {/* Land labels — upright, per chart convention. Sized to fit INSIDE the
+        island's narrow waist (58 viewBox units); at larger sizes they spilled
+        onto the coastline and the depth bands. */}
+    <text
+      class="chart-label" x="320" y="70" text-anchor="middle" fill="var(--ink)" font-size="8"
+      font-family="var(--font-display)" font-weight="600" letter-spacing="0.7">TUMBOD</text>
+    <text
+      class="chart-label" x="320" y="108" text-anchor="middle" fill="var(--ink-muted)" font-size="5.5"
+      font-family="var(--font-body)">Tuluran I.</text>
+
+    {/* Water labels — italic, per chart convention. Both straits named, sitting
+        in the open water the widened viewBox exists to show. */}
+    <text
+      class="chart-label" x="170" y="80" text-anchor="middle" fill="var(--ink-muted)" font-size="8"
+      font-style="italic" font-family="var(--font-body)">Blockade Strait</text>
+    <text
+      class="chart-label" x="470" y="80" text-anchor="middle" fill="var(--ink-muted)" font-size="8"
+      font-style="italic" font-family="var(--font-body)">Endeavor Strait</text>
+  </svg>
+
+  {/* Legend — where a real chart carries its scale bar and attribution. */}
+  <p style="position:absolute;bottom:var(--space-1);right:var(--space-2);font-size:var(--text-2xs);color:var(--ink-muted);margin:0;max-width:100%">
+    {
+      g.isSchematic ? (
+        <span data-placeholder="true" data-launch-blocking="true">
+          [[NEEDS DATA: tunay na hugis ng baybayin mula sa OpenStreetMap — source: OSM extract]]
+        </span>
+      ) : (
+        g.attribution
+      )
+    }
+  </p>
+
+  {/* Authoritative for assistive tech; the SVG above is illustration. */}
+  <dl class="sr-only">
+    <dt>{locale === 'fil' ? 'Pulo' : 'Island'}</dt>
+    <dd>{SITE.island} ({SITE.islandAlsoCalled}), {SITE.islandWidthKm} km × {SITE.islandHeightKm} km</dd>
+    {
+      SITE.straits.map((s) => (
+        <>
+          <dt>{s.name}</dt>
+          <dd>{s.widthKm} km, {s.side}</dd>
+        </>
+      ))
+    }
+    <dt>{t.footer.chartAttribution}</dt>
+    <dd>{g.attribution}</dd>
+  </dl>
+</div>

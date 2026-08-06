@@ -1,0 +1,63 @@
+---
+/**
+ * A primary-navigation item that opens a floating mega panel ON CLICK.
+ *
+ * CLICK, NEVER HOVER. The previous version opened on hover for pointer users.
+ * It is gone: hover menus fire on the first tap of a touchscreen and open and
+ * close in the same gesture, they open by accident when the pointer crosses
+ * the bar on the way somewhere else, and they give a switch-access or
+ * head-pointer user no way in at all. Click is the same interaction on every
+ * input device, which is what "behaves like a desktop application" means.
+ *
+ * NO DISCLOSURE ARROW. Nothing in the nav says "there is a caret here"; the
+ * open panel and the underline say it instead.
+ *
+ * STILL NO JAVASCRIPT REQUIRED. The disclosure is `<details>`/`<summary>` — a
+ * native click-activated toggle that is keyboard-operable and announced as
+ * expanded/collapsed for free. The script in SiteHeader adds only the four
+ * behaviours the platform does not give us: closing siblings, closing on
+ * outside click, closing on Escape, and closing when focus leaves. Without it
+ * every panel still opens and closes on click; you can just have two open.
+ *
+ * WHY THE NAV ITEM IS NOT ALSO A LINK. `<summary>` cannot hold an anchor
+ * without one of the two activations swallowing the other, and on touch you
+ * cannot tell which you are about to get. Every panel therefore opens with a
+ * prominent link to its section index, first in the panel's tab order — Enter
+ * to open, Tab once to reach the page.
+ *
+ * ARIA: `<details>` exposes its own expanded state through the summary. No
+ * hand-written `aria-expanded` — it desynchronises from the `open` attribute
+ * the moment anything else toggles it.
+ */
+import Icon from './Icon.astro'
+import type { IconName } from './Icon.astro'
+
+interface Props {
+  /** Stable id — the script uses it to close siblings. */
+  id: string
+  label: string
+  icon: IconName
+  /** Marks the item when the current page belongs to this section. */
+  current?: boolean
+  /** Announced name for the panel region. */
+  panelLabel: string
+}
+
+const { id, label, icon, current = false, panelLabel } = Astro.props
+---
+
+<details class="mega" id={`mega-${id}`} data-mega>
+  <summary class="mainnav__link mega__summary" data-current={current ? 'page' : undefined}>
+    <Icon name={icon} size={24} />
+    {/* `data-label` feeds a hidden bold copy in CSS, so the label's box is
+        already the width it will need when the item goes semibold on open.
+        Without it every panel opening shoved the rest of the nav sideways. */}
+    <span data-label={label}>{label}</span>
+  </summary>
+
+  <div class="mega__panel" role="group" aria-label={panelLabel}>
+    <div class="mega__sheet">
+      <slot />
+    </div>
+  </div>
+</details>

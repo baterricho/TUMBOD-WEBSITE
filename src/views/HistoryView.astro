@@ -1,0 +1,67 @@
+---
+/**
+ * History — timeline (DECISION-redesign.md).
+ *
+ * The real founding year of Barangay Tumbod is NOT known, and the demo
+ * timeline below is fiction. That matters more here than on most pages: a
+ * founding date, once published on an official site, gets cited back by
+ * schools, news and other government pages, and becomes very hard to correct.
+ * Outside demo mode this page says so plainly rather than guessing.
+ */
+import Section from '@/components/Section.astro'
+import { HISTORY } from '@/lib/content/active'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{fil ? 'Kasaysayan' : 'History'}</h1>
+  <p class="section-lede" style="margin-top:var(--space-3)">
+    {
+      fil
+        ? 'Paano nabuo ang Barangay Tumbod, mula sa unang mga pamilyang mangingisda hanggang ngayon.'
+        : 'How Barangay Tumbod came to be, from the first fishing families to the present.'
+    }
+  </p>
+</Section>
+
+<Section>
+  {
+    HISTORY.length === 0 ? (
+      <div class="card" style="max-width:var(--measure)">
+        <p>
+          {fil
+            ? 'Hindi pa naitatala ang kasaysayan ng barangay sa website na ito.'
+            : 'The barangay’s history has not yet been recorded on this website.'}
+        </p>
+        <p class="small muted" style="margin-top:var(--space-2)">
+          {fil
+            ? 'Hindi namin ito huhulaan. Ang taon ng pagkakatatag, kapag nailathala sa opisyal na website, ay sinisipi ng ibang paaralan at ahensya — mahirap na itong itama pagkatapos. Kailangan ito mula sa talaan ng barangay.'
+            : 'We will not guess it. A founding year, once published on an official site, gets cited by schools and agencies and becomes very hard to correct. It must come from barangay records.'}
+        </p>
+      </div>
+    ) : (
+      <ol class="timeline">
+        {HISTORY.map((h) => (
+          <li class="timeline__item" data-reveal="pending">
+            <span class="timeline__year">{h.year}</span>
+            <div class="timeline__body">
+              <p style="font-family:var(--font-display);font-size:var(--text-lg)">
+                {fil ? h.titleFil : h.titleEn}
+              </p>
+              <p class="muted" style="margin-top:var(--space-1);max-width:var(--measure)">
+                {fil ? h.bodyFil : h.bodyEn}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    )
+  }
+</Section>

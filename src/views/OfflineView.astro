@@ -1,0 +1,65 @@
+---
+/**
+ * Offline fallback body, locale-aware.
+ *
+ * Never a dead end and never an apology (§13.8). Lists what IS available
+ * offline, with working links, so someone who lost signal mid-task still
+ * reaches the hotline directory.
+ */
+import Section from '@/components/Section.astro'
+import Icon from '@/components/Icon.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = getDictionary(locale)
+const fil = locale === 'fil'
+const p = fil ? '' : '/en'
+
+const available = [
+  { href: `${p}/ligtas/hotline`, label: t.nav.emergencyLabel },
+  { href: `${p}/ligtas`, label: t.safety.title },
+  { href: p || '/', label: t.home.title },
+]
+---
+
+<Section divider={false}>
+  <p style="display:flex;align-items:center;gap:var(--space-2);color:var(--ink-muted)">
+    <Icon name="offline" size={20} />
+    {fil ? 'Walang koneksyon ngayon.' : 'No connection right now.'}
+  </p>
+  <h1 style="font-size:var(--text-3xl);margin-top:var(--space-2)">
+    {fil ? 'May magagamit ka pa rin' : 'You can still use these'}
+  </h1>
+  <p style="margin-top:var(--space-3);max-width:var(--measure)">
+    {
+      fil
+        ? 'Ang mga pahinang ito ay naka-save na sa telepono mo. Bubuksan ang mga ito kahit walang signal.'
+        : 'These pages are already saved on your phone. They will open with no signal.'
+    }
+  </p>
+</Section>
+
+<Section>
+  <ul style="list-style:none;padding:0;margin:0">
+    {
+      available.map((item) => (
+        <li style="border-bottom:1px solid var(--line)">
+          <a href={item.href} style="display:flex;align-items:center;min-height:56px">
+            {item.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  <p style="margin-top:var(--space-4);font-size:var(--text-sm);color:var(--ink-muted);max-width:var(--measure)">
+    {
+      fil
+        ? 'Ang mga numerong nakikita mo ay ang huling nakuha. Kung may bagyo o emergency, tumawag pa rin — baka may mas bago nang abiso.'
+        : 'The numbers you see are the last ones saved. During a typhoon or emergency, call anyway — there may be a newer advisory.'
+    }
+  </p>
+</Section>

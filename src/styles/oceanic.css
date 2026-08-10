@@ -1521,3 +1521,104 @@ a.calday:focus-visible::after {
   color: var(--ink-muted);
 }
 .advisory--unknown .advisory__title { color: var(--ink-strong); }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE REFINEMENTS
+
+   Measured on a Pixel 7 (412×1157) across seven routes. Everything below
+   answers something that was counted, not something that looked off.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 60rem) {
+  /*
+   * ── THE STICKY HEADER GIVES BACK 107px ────────────────────────
+   *
+   * It measured 163px on every route — 14% of the viewport, permanently, on a
+   * site whose shortest page is 1.9 screens. The bar is 56px of that; the nav
+   * grid is the rest.
+   *
+   * Only the BAR stays pinned now. That is the half that has to be reachable
+   * at any scroll position — it carries the emergency link, which is the one
+   * control on this site that must never be more than a tap away. The nav row
+   * scrolls away with the page and comes back at the top, which is the normal
+   * behaviour of a nav on a phone.
+   *
+   * The mega panels still position correctly: the script re-measures
+   * `--header-h` on every `toggle`, so whatever the header's bottom edge is at
+   * the moment a panel opens is what the overlay uses.
+   *
+   * The bar needs its own background and border because `.siteheader::before`
+   * (the frosted layer) belongs to the header, which is no longer the sticky
+   * element. Solid, not translucent — text contrast must never depend on blur.
+   */
+  .siteheader {
+    position: static;
+  }
+
+  .siteheader__bar {
+    position: sticky;
+    top: 0;
+    z-index: 51;
+    background-color: var(--surface-raised);
+    border-bottom: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /*
+   * ── TAP TARGETS: THE LINK MUST *BE* THE TARGET ────────────────
+   *
+   * The footer already tried: its `<li>` carries `min-height:44px` and a
+   * comment citing the project's own 44px mandate. But the target a thumb
+   * actually hits is the ANCHOR, and the anchor was 26px tall inside a 44px
+   * row. Same shape of miss on the homepage hotline numbers, which measured
+   * 23px — on the emergency path, for someone dialling in a hurry.
+   *
+   * Nothing caught it because `a11y.spec.ts` only checks targets on
+   * /ligtas/hotline, and these are on the homepage and in the footer.
+   *
+   * Scoped to STANDALONE links. WCAG 2.5.8 exempts links inside a sentence,
+   * and stretching those to 44px would wreck the leading of a paragraph — so
+   * `.prose` and body copy are deliberately untouched.
+   */
+  footer nav li > a,
+  a.figure,
+  .calevents a,
+  .fcard__body a.figure {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    width: 100%;
+  }
+
+  /*
+   * A paragraph whose ONLY child is a link is a call to action, not prose —
+   * "Buong direktoryo →", "Lahat ng anunsyo →". `:only-child` is what makes
+   * this safe to apply broadly: a link inside a real sentence always has text
+   * nodes beside it, so it never matches and its line spacing is untouched.
+   */
+  p > a:only-child {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* Footer legal links sit in a sentence separated by "·", so they stay inline
+     — but they still get the height. `inline-flex`, not `flex`, or the "·"
+     between them lands on its own line. */
+  footer p > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /*
+   * ── THE BRAND SUBTITLE ────────────────────────────────────────
+   * `--text-2xs` is 11px and tokens.css reserves it for "chart labels & legal
+   * ONLY, never body". "TAYTAY, PALAWAN" is neither — it is the second line of
+   * the site's identity, set in caps with letter-spacing, which is the hardest
+   * combination to read at 11px on a cracked screen in sun.
+   */
+  .brand__place {
+    font-size: var(--text-xs);
+  }
+}

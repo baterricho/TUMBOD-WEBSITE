@@ -26,6 +26,16 @@ export type FieldType =
   | 'datetime'
   | 'select'
   | 'image'
+  /**
+   * A foreign key, rendered as a dropdown of live rows from another table.
+   *
+   * Added 2026-08-07 for project evidence photos, which have to belong to a
+   * project. The alternative was making the editor paste a UUID, which is not
+   * a thing to ask of a barangay secretary — and a mistyped one would attach
+   * photographic evidence to the wrong project, which is worse than no
+   * evidence at all.
+   */
+  | 'reference'
 
 export interface Field {
   readonly name: string
@@ -36,6 +46,26 @@ export interface Field {
   readonly help?: string
   /** Shown in the list view as a column. */
   readonly inList?: boolean
+  /** `reference` only: the table to read options from, and the column to
+   *  label them with. The value stored is always that table's `id`. */
+  readonly referenceTable?: string
+  readonly referenceLabel?: string
+  /**
+   * `image` only: the name of the boolean field that must be TRUE before this
+   * image may be saved.
+   *
+   * The database already refuses the combination — `officials` carries
+   * `CHECK ((photo_url IS NULL) OR photo_consent)` — and that constraint is
+   * the real guarantee and stays. This is what lets the FORM say so first, in
+   * Filipino, next to the checkbox, instead of letting the editor pick a
+   * photo, press save, and receive
+   * `new row for relation "officials" violates check constraint
+   * "photo_requires_consent"`.
+   *
+   * A rule the database enforces and the interface does not explain is a rule
+   * the editor experiences as a broken save button.
+   */
+  readonly consentField?: string
 }
 
 export interface Collection {
@@ -235,6 +265,7 @@ export const COLLECTIONS: readonly Collection[] = [
         name: 'photo_url',
         label: 'Larawan',
         type: 'image',
+        consentField: 'photo_consent',
         help: 'Hindi ito matatanggap ng database kung walang pahintulot sa itaas.',
       },
       PUBLISHED,
@@ -255,6 +286,71 @@ export const COLLECTIONS: readonly Collection[] = [
       { name: 'percent', label: 'Porsyento', type: 'number', inList: true },
       { name: 'budget', label: 'Badyet', type: 'text', inList: true },
       { name: 'fund_source', label: 'Pinagkunan ng pondo', type: 'text' },
+      PUBLISHED,
+      SORT,
+    ],
+  },
+  {
+    /*
+     * Evidence photographs for a project.
+     *
+     * A separate collection rather than fields on `projects`, because evidence
+     * is a SEQUENCE — before, during, after — and one image column can only
+     * ever show one moment. See the migration note on `project_photos`.
+     */
+    table: 'project_photos',
+    label: 'Larawan ng Proyekto',
+    labelSingular: 'Larawang patunay',
+    icon: 'image',
+    orderBy: 'sort_order',
+    ascending: true,
+    note: 'Larawang patunay sa mga proyekto — makikita ito ng publiko sa pahinang Mga Proyekto.',
+    fields: [
+      {
+        name: 'project_id',
+        label: 'Aling proyekto',
+        type: 'reference',
+        required: true,
+        referenceTable: 'projects',
+        referenceLabel: 'title_fil',
+        inList: true,
+      },
+      { name: 'image_url', label: 'Larawan', type: 'image', required: true },
+      {
+        name: 'stage',
+        label: 'Yugto',
+        type: 'select',
+        required: true,
+        inList: true,
+        help: 'Ano ang ipinapakita ng larawan — bago simulan, habang ginagawa, o tapos na.',
+        options: [
+          { value: 'bago', label: 'Bago simulan' },
+          { value: 'ginagawa', label: 'Ginagawa pa' },
+          { value: 'tapos', label: 'Tapos na' },
+        ],
+      },
+      {
+        name: 'taken_at',
+        label: 'Petsa ng pagkuha',
+        type: 'date',
+        inList: true,
+        help: 'Kailan KINUHAN ang larawan, hindi kung kailan ito na-upload. Ito ang nagpapatunay kung kailan natapos ang trabaho.',
+      },
+      { name: 'caption_fil', label: 'Kapsyon (Filipino)', type: 'text' },
+      { name: 'caption_en', label: 'Kapsyon (English)', type: 'text' },
+      {
+        name: 'alt_fil',
+        label: 'Paglalarawan para sa hindi nakakakita (Filipino)',
+        type: 'textarea',
+        help: 'Ilarawan ang NAKIKITA. Ito ang naririnig ng bulag na bisita.',
+      },
+      { name: 'alt_en', label: 'Paglalarawan (English)', type: 'textarea' },
+      {
+        name: 'has_consent',
+        label: 'May pahintulot ang mga nasa larawan',
+        type: 'boolean',
+        help: 'Kailangan kung may makikilalang tao sa larawan.',
+      },
       PUBLISHED,
       SORT,
     ],

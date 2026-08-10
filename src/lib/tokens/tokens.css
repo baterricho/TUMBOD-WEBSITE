@@ -10,8 +10,40 @@
  * RULE: components reference tier 2 or 3 ONLY. A raw --palette-* reference
  * inside a component is a lint error (BUILD-PROMPT.md §32).
  *
- * Every colour carries its physical referent. A colour whose justification is
- * "it looked good" does not belong here (§8.2).
+ * ═══════════════════════════════════════════════════════════════════
+ * CIVIC LIGHT THEME — 2026-08-08
+ *
+ * This file previously carried a single dark "Deep Coastal Oceanic" palette.
+ * It now carries a single LIGHT one, to the owner's colour direction: off-white
+ * canvas, pure-white cards, official gold on the header and seal, deep navy
+ * slate for the panels and hero overlay that must stay dark.
+ *
+ * Four things worth knowing before you edit:
+ *
+ * 1. THERE IS STILL EXACTLY ONE THEME. Light, applied unconditionally. No
+ *    `prefers-color-scheme` fork, no `[data-theme]` fork. A half-maintained
+ *    second theme is worse than one theme, and this file has now been through
+ *    two re-themes where the *second* palette was the one that rotted.
+ *
+ * 2. DARK SURFACES DID NOT GO AWAY, they became deliberate. The hero scrim,
+ *    the map beds, the `.tile--doc`/`.tile--list` quick actions and the
+ *    primary button are navy-on-purpose — `--surface-inverse` and its
+ *    `--ink-inverse`. They are the brief's "contrast dark panels", not
+ *    leftovers.
+ *
+ * 3. GOLD IS A FILL AND AN EDGE, NEVER A LABEL. #f59e0b on white measures
+ *    2.15:1 and cannot carry text at any size. Where gold has to *say*
+ *    something it darkens to `--palette-amber-700` (5.02:1). Anything gold and
+ *    readable in this file went through that step; if you add a gold text
+ *    colour without it, you have shipped an unreadable label.
+ *
+ * 4. LINKS ARE OCEAN BLUE, NOT GOLD, for the reason in (3). The gold is the
+ *    government/seal accent; the blue is the interactive one. Two jobs, two
+ *    hues — see `--accent` vs `--interactive` below.
+ *
+ * Every ratio in this file was computed from WCAG relative luminance, not
+ * estimated. Re-measure if you move a surface.
+ * ═══════════════════════════════════════════════════════════════════
  */
 
 /* ─────────────────────────────────────────────────────────────
@@ -19,57 +51,177 @@
    ───────────────────────────────────────────────────────────── */
 
 :root {
-  /* THE CHART — substrate. Cool, desaturated, quiet. */
-  --palette-glare: #eff1ec;         /* bleached sand + noon glare on Malampaya */
-  --palette-paper-raised: #f7f8f4;  /* chart paper held to the light */
   /*
-   * Deepened from #dce6e0, 2026-08-06. The alternating page bands are painted
-   * in this against `--palette-glare`, and at #dce6e0 the two measured 1.12:1 —
-   * far too close to read as a deliberate change of plane. Bands looked like a
-   * rendering artefact rather than structure.
-   *
-   * #d0ded6 is 1.22:1 against glare: still quiet, now legibly a different
-   * surface. Everything set on it keeps comfortable AA —
-   *   --ink        11.99:1
-   *   --ink-muted   6.14:1
-   *   --interactive 5.45:1
+   * THE NEUTRAL RAMP — slate, cool, running from the page canvas at one end to
+   * the dark panels at the other. One ramp for both, on purpose: the navy that
+   * paints the hero is the same family as the grey that writes the body text,
+   * so a dark panel reads as the page turned up rather than a second design.
    */
-  --palette-shoal: #d0ded6;         /* shallow water over seagrass */
-  --palette-mangrove: #12211b;      /* mangrove in shadow — reads black */
-  --palette-mangrove-wet: #3d5145;  /* wet roots exposed at low tide */
-  --palette-sound-deep: #0b3b54;    /* deep water of the Outer Sound */
-
-  /* THE BANGKA — signal. Hardware-store paint. Unfashionable on purpose. */
-  --palette-hull-blue: #2e7fb8;      /* sky blue painted on hulls */
-  --palette-hull-blue-ink: #1f6796;  /* same blue, darkened to carry text */
-  --palette-bangka-yellow: #f5b301;  /* outrigger boom yellow — FILL ONLY */
-  --palette-bangka-orange: #e2711d;  /* hull stripe orange */
-  --palette-bangka-red: #d6382b;     /* hot red hull stripe */
-  --palette-signal-red: #b3160c;     /* RESERVED: emergency + focus ring only */
-  --palette-red-ink: #a82318;        /* bangka red darkened to carry text */
-
-  /* THE REEF — place. The colour the barangay boundary is drawn in on the
-     hero map, promoted to a primitive now that the navigation borrows it to
-     say "you are here". Two values because one cannot do both jobs: the bright
-     one is for dark imagery, the ink one for the paper-coloured header
-     (4.8:1 there, so the 3px rule clears 1.4.11 non-text contrast). */
-  --palette-reef: #7ee787;
-  --palette-reef-ink: #1f7a45;
+  --palette-slate-50: #f8fafc;   /* THE CANVAS */
+  --palette-slate-100: #f1f5f9;  /* alternating bands, icon wells */
+  --palette-slate-200: #e2e8f0;  /* borders and dividers */
+  --palette-slate-300: #cbd5e1;
+  --palette-slate-400: #94a3b8;
+  --palette-slate-500: #64748b;  /* muted labels — 4.60:1 on canvas */
+  --palette-slate-600: #475569;
+  --palette-slate-700: #334155;  /* body text — 10.04:1 on canvas */
+  --palette-slate-800: #1e293b;
+  --palette-slate-900: #0f172a;  /* dark panels, hero overlay */
+  --palette-slate-950: #020617;  /* headings */
 
   --palette-white: #ffffff;
 
-  /* SPACING — base 4px, non-linear at the top */
+  /*
+   * THE SEAL — official gold. The government accent: header rule, seal ring,
+   * section ticks, "you are here", card edges.
+   *
+   * FOUR STOPS BECAUSE GOLD CHANGES JOB WITH LUMINANCE, and picking the wrong
+   * one is the single easiest way to ship an unreadable label off this file:
+   *   400 #fbbf24  gold on a DARK panel (10.7:1 on slate-900) — text-safe there
+   *   500 #f59e0b  the fill. 9.39:1 under near-black ink, 2.15:1 under white.
+   *                NEVER put white or grey text on this.
+   *   600 #d97706  the edge/rule stop. 3.19:1 on white — clears 1.4.11's 3:1
+   *                for a border or a focus ring, still fails for text.
+   *   700 #b45309  the only gold that may carry TEXT on a light surface,
+   *                5.02:1 on white.
+   */
+  --palette-amber-400: #fbbf24;
+  --palette-amber-500: #f59e0b;
+  --palette-amber-600: #d97706;
+  --palette-amber-700: #b45309;
+  --palette-amber-800: #92400e;  /* gold text ON a gold tint — see green-800 */
+
+  /* THE SIGNAL — red. RESERVED: 24/7 disaster hotlines, typhoon warnings and
+     urgent advisories. Nothing else, ever. #dc2626 is the rare hue that works
+     BOTH as a fill under white (4.83:1) and as text on white (4.83:1), which
+     is why the emergency path needs only one red and not the two the dark
+     theme carried. */
+  --palette-red-700: #b91c1c;   /* 6.47:1 — red text on a red tint */
+  --palette-red-600: #dc2626;
+  --palette-red-500: #ef4444;
+  --palette-red-400: #f87171;
+
+  /*
+   * PUBLIC WORKS & ECO-TOURISM — forest emerald. Confirmed, open, completed.
+   * 600 is the FILL (3.30:1 on white — non-text only); 700 is the text stop
+   * (5.09:1). The brief names 600; on a white canvas that is a fill value.
+   *
+   * 800 exists for ONE job: text sitting on a tint of its own hue. A `.chip`
+   * is a 12% wash of its colour with that same colour as the label, and a
+   * 5.09:1 stop drops to 4.08:1 once it is read against its own wash. Every
+   * hue below that appears in a chip therefore carries an 800.
+   */
+  --palette-green-600: #16a34a;
+  --palette-green-700: #15803d;
+  --palette-green-800: #166534;
+
+  /* PORT, SEA & MARINE SANCTUARIES — ocean cyan and sky blue. Sky also does
+     duty as the interactive hue, because gold cannot (see the file header). */
+  --palette-cyan-600: #0891b2;
+  --palette-cyan-700: #0e7490;   /* 5.43:1 — the text stop */
+  --palette-cyan-800: #155e75;   /* 7.09:1 — text on a cyan tint */
+  --palette-sky-600: #0284c7;
+  --palette-sky-700: #0369a1;    /* 5.93:1 — links */
+  --palette-sky-800: #075985;    /* 7.70:1 — hover RAISES contrast */
+
+  /* EDUCATION & YOUTH — royal purple. 5.38:1 on white as shipped, so unlike
+     the green and the cyan this one needs no darker text stop. */
+  --palette-purple-600: #9333ea;
+  --palette-purple-700: #7e22ce;
+
+  /*
+   * FOCUS. Not a content colour — it exists so the keyboard ring can own a hue
+   * no meaning competes for. The value is chosen for one property: it is the
+   * rare stop that clears 3:1 against BOTH the white cards and the navy panels
+   * (5.70:1 and 3.13:1), so one ring works everywhere on the site.
+   */
+  --palette-violet-600: #7c3aed;
+
+  /* THE WARNING LIGHT — the orange between amber and red on the sea-state
+     ladder. Orange is the one hue the brief does not name; a four-step
+     escalation (calm → moderate → rough → dangerous) needs a fourth stop, and
+     jumping amber → red would collapse "rough" into "dangerous". */
+  --palette-orange-500: #f97316;  /* fill, 6.24:1 under near-black */
+  --palette-orange-600: #ea580c;  /* 3.56:1 — dots and edges */
+  --palette-orange-700: #c2410c;  /* 4.83:1 — the text stop */
+  --palette-orange-800: #9a3412;  /* 6.42:1 — text on an orange tint */
+
+  /*
+   * ── LEGACY NAMES, KEPT ALIVE ────────────────────────────────────
+   * Two earlier palettes are still referenced by name from mega.css,
+   * polish.css, redesign.css, Placeholder.astro and SampleChip.astro. These
+   * aliases move all of them onto the civic palette in one edit.
+   *
+   * The teal ramp is GONE, not aliased: nothing points at it any more (the two
+   * buttons that did now use `--action-*`), and aliasing a hue the site no
+   * longer runs would only invite it back.
+   */
+  --palette-emerald-500: var(--palette-green-600);
+  --palette-emerald-400: var(--palette-green-600);
+  --palette-orange-400: var(--palette-orange-600);
+
+  /*
+   * ── COMPATIBILITY ALIASES ──────────────────────────────────────
+   * The old chart-palette names, remapped onto the civic ramp.
+   *
+   * Thirty-five places in hero.css, mega.css, polish.css, redesign.css,
+   * components.css, Placeholder.astro and SampleChip.astro reference these
+   * directly. Remapping the names moved all of them into the new theme in one
+   * edit; hand-editing thirty-five call sites without being able to see the
+   * result would have been the slower and far more error-prone route.
+   *
+   * THE NAMES ARE LIES. `--palette-shoal` is not shallow water over seagrass,
+   * it is slate-100. Do not reach for these in new code — use the semantic
+   * tier. They exist to be deleted once those call sites are migrated.
+   *
+   * ONE RULE GOVERNS THIS BLOCK, and it is the one that broke `.tile--list` in
+   * the 2026-08-05 audit: an alias used as a BACKGROUND must not flip
+   * luminance under a re-theme while the ink paired with it stays put. So the
+   * split below is by ROLE, not by old hue:
+   *   glare / paper-raised / shoal   → LIGHT fills (they carry `--ink`)
+   *   mangrove / mangrove-wet / sound-deep → DARK fills (they carry `--glare`)
+   * Both halves kept their side of the line through this re-theme, which is
+   * why no call site needed touching.
+   */
+  --palette-glare: var(--palette-slate-50);         /* light ink on dark fills */
+  --palette-paper-raised: var(--palette-white);
+  --palette-shoal: var(--palette-slate-100);        /* icon wells, chip fills */
+  --palette-mangrove: var(--palette-slate-900);
+  --palette-mangrove-wet: var(--palette-slate-800);
+  --palette-sound-deep: var(--palette-slate-900);   /* hero + mega media beds */
+  --palette-hull-blue: var(--palette-sky-600);
+  --palette-hull-blue-ink: var(--palette-sky-700);
+  --palette-bangka-yellow: var(--palette-amber-500);
+  --palette-bangka-orange: var(--palette-orange-600);
+  --palette-bangka-red: var(--palette-red-500);
+  --palette-signal-red: var(--palette-red-600);
+  --palette-red-ink: var(--palette-red-600);
+  /* `--palette-reef` lands on gold, not on a blue-green. Its two call sites
+     (the map pin in the hero and in the News panel) are BOTH on navy beds,
+     where amber-400 measures 10.7:1 and reads as the seal colour marking the
+     barangay on its own map. */
+  --palette-reef: var(--palette-amber-400);
+  --palette-reef-ink: var(--palette-amber-700);
+
+  /* SPACING — base 8px grid (4px retained for hairline nudges) */
   --space-1: 4px;   --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
   --space-5: 24px;  --space-6: 32px;  --space-7: 48px;  --space-8: 64px;
   --space-9: 96px;  --space-10: 128px;
 
-  /* RADIUS — deliberately bimodal (DESIGN-SYSTEM.md §4).
-     0 for chart/data surfaces, 4px for touch controls. The contrast is intent;
-     zero-everywhere is itself a flagged anti-pattern. */
+  /*
+   * RADIUS — soft, and no longer bimodal.
+   *
+   * DESIGN-SYSTEM.md §4 argued for 0 on data surfaces and 4px on controls,
+   * because a chart is a printed artefact and a button is not. The chart
+   * metaphor is gone, so the argument that justified sharp corners went with
+   * it. `--radius-none` is kept for the two places that genuinely tile edge to
+   * edge (map canvas, filmstrip frames) where a radius would show a seam.
+   */
   --radius-none: 0;
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;   /* cards, panels, inputs — the brief's 2xl */
+  --radius-xl: 24px;   /* modals, mega panels, hero shell — the brief's 3xl */
   --radius-full: 9999px;
 
   /* MOTION */
@@ -82,8 +234,8 @@
   /* TYPE */
   /* Metric-matched fallbacks sit ahead of the generic stacks so layout holds
      still while the webfont loads (see styles/fonts.css). */
-  --font-display: "Archivo Narrow", "Archivo Narrow Fallback", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Source Sans 3", "Source Sans 3 Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Plus Jakarta Sans Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
 
   --text-2xs: 0.6875rem;  /* 11px — chart labels & legal ONLY, never body */
@@ -98,209 +250,274 @@
 
   --leading-tight: 1.18;
   --leading-body: 1.6;
-  --tracking-display: -0.01em;
+  --tracking-display: -0.02em;  /* tighter than the old -0.01em: Plus Jakarta
+                                   Sans is wider than Archivo Narrow was */
   --tracking-caps: 0.06em;
   --measure: 68ch;
 }
 
 /* ─────────────────────────────────────────────────────────────
-   TIER 2 — SEMANTIC (light)
+   TIER 2 — SEMANTIC
+
+   Unconditional. Every ratio below is stated against the surface the token
+   actually appears on, computed from WCAG relative luminance.
+
+   The four surfaces, for reference:
+     --surface         #f8fafc   luminance 0.9535
+     --surface-raised  #ffffff   luminance 1.0000
+     --surface-sunken  #f1f5f9   luminance 0.9067
+     --surface-inverse #0f172a   luminance 0.0088
    ───────────────────────────────────────────────────────────── */
 
 :root {
-  --surface: var(--palette-glare);
-  --surface-raised: var(--palette-paper-raised);
-  --surface-sunken: var(--palette-shoal);
-  --surface-inverse: var(--palette-sound-deep);
+  color-scheme: light;
 
-  --ink: var(--palette-mangrove);          /* 14.67:1 on surface */
-  --ink-muted: var(--palette-mangrove-wet); /*  7.40:1 on surface */
-  --ink-inverse: var(--palette-glare);
-
-  --line: #c3cfc7;
-  --line-strong: #8aa096;
-
-  --accent: var(--palette-bangka-yellow);  /* FILL ONLY — 1.63:1 as text */
-  --accent-ink: var(--palette-mangrove);   /* 9.01:1 on accent */
-
-  /* "You are here" in the primary navigation. Deliberately NOT --accent:
-     yellow is the action colour, and location is not an action. */
-  --nav-indicator: var(--palette-reef-ink);
+  --surface: var(--palette-slate-50);       /* the page */
+  --surface-raised: var(--palette-white);   /* cards and section surfaces */
+  /*
+   * The alternating page bands. 1.05:1 against --surface — and unlike the dark
+   * theme, where that number was an unavoidable ceiling, here it is a choice:
+   * the canvas is off-white precisely so that a WHITE card lifts off it, and
+   * spending the remaining range on band fills would flatten the cards back
+   * down. The bands are still carried by the hairline rule in oceanic.css.
+   */
+  --surface-sunken: var(--palette-slate-100);
+  /*
+   * THE DARK PANEL. The brief's "contrast dark panels / hero overlay", and the
+   * single most load-bearing token in this file: it is what keeps the hero,
+   * the map beds and the quick-action tiles dark while everything around them
+   * went light. Its ink is stated right beside it and the two move together.
+   */
+  --surface-inverse: var(--palette-slate-900);
 
   /*
-   * LINKS ARE GREEN, NOT BLUE — the site runs three accent hues, not four.
-   *
-   * The hull blue that used to sit here carried no meaning. Gold is the action
-   * colour (CTA fills, section markers), red is emergency and nothing else, and
-   * green already meant "interactive / confirmed / you are here" in the
-   * navigation. A fourth hue for links was one more thing on screen competing
-   * for the same attention without saying anything the others did not.
-   *
-   * NOT `--palette-reef-ink` (#1f7a45) directly, which is what the nav
-   * indicator uses. That measures 4.18:1 on `--surface-sunken`, and body links
-   * appear on the sunken bands — it would have shipped a failing pair on every
-   * alternating section. This is one step darker, and clears AA on all three
-   * light surfaces with room to spare.
-   *
-   * Measured (see the ratios; re-measure if any surface token moves):
-   *   #17603a on --surface 6.66:1 · --surface-raised 7.11:1 · --surface-sunken 5.93:1
-   *   #14522f on --surface 8.11:1 · --surface-raised 8.64:1 · --surface-sunken 7.22:1
+   * Two inks, not one. Headings go to near-black and body text sits a step
+   * lighter — the same hierarchy the dark theme built from white-over-slate,
+   * running the other way. Weight alone is not enough at the sizes this site
+   * sets its section titles.
    */
-  --interactive: #17603a;
-  --interactive-hover: #14522f;
+  --ink-strong: var(--palette-slate-950);  /* 18.44:1 on raised · 17.58:1 on surface */
+  --ink: var(--palette-slate-700);         /* 10.49:1 on raised · 10.04:1 on surface */
   /*
-   * Visited stays DISTINGUISHABLE but leaves the accent system: it is the
-   * muted mangrove ink, so a read link reads as "spent" rather than as a
-   * fourth colour. Collapsing visited into unvisited would have been the
-   * tidier palette and the worse site — on a page of twenty service links,
-   * "which of these have I already opened" is the question being asked.
-   *   #3d5145 on --surface 7.50:1 · --surface-raised 8.00:1 · --surface-sunken 6.68:1
-   */
-  --interactive-visited: #3d5145;
-  --focus-ring: var(--palette-signal-red);
-
-  --error-ink: var(--palette-red-ink);     /* 6.32:1 on surface */
-
-  /* SEA STATE — the escalation is painted in bangka colours.
-     Never colour alone: always colour + Filipino word + icon (§2.4). */
-  --sea-calm: #16697a;      --sea-calm-ink: var(--palette-white);      /* 6.23:1 */
-  --sea-moderate: var(--palette-bangka-yellow);
-  --sea-moderate-ink: var(--palette-mangrove);                          /* 9.01:1 */
-  --sea-rough: var(--palette-bangka-orange);
-  --sea-rough-ink: var(--palette-mangrove);                             /* 5.26:1 */
-  --sea-dangerous: var(--palette-bangka-red);
-  --sea-dangerous-ink: var(--palette-white);                            /* 4.70:1 */
-
-  --status-open: #16697a;
-  --status-closed: #6b7a72;
-  --status-limited: var(--palette-bangka-orange);
-
-  --alert-info: var(--palette-hull-blue-ink);
-  --alert-advisory: var(--palette-bangka-yellow);
-  --alert-warning: var(--palette-bangka-orange);
-  --alert-emergency: var(--palette-signal-red);
-  --alert-emergency-ink: var(--palette-white);                          /* 6.95:1 */
-  /*
-   * Emergency red used AS TEXT on a page surface, rather than as a fill with
-   * white on top. The two pull in opposite directions: a fill must be dark
-   * enough for white text, on-surface text must be light enough to read
-   * against a dark background. One token cannot satisfy both in both themes —
-   * trying to made "TUMAWAG AGAD" fail at 3.47:1 the moment the fill was
-   * darkened to fix the EMERGENCY button.
+   * MUTED IS slate-600, NOT THE BRIEF'S slate-500, and axe is the reason.
    *
-   * In light mode they coincide; in dark mode they must not.
+   * #64748b measures 4.82:1 on white and 4.60:1 on the canvas — both pass — and
+   * 4.34:1 on `--surface-sunken`, which FAILS. The site footer and every
+   * even-numbered section sit on exactly that band, so the brief's own value
+   * would have shipped a footer of failing captions on all 73 pages. It also
+   * failed at 3.17:1 and 3.45:1 inside the amber and orange chip tints, which
+   * are lighter still than they look.
+   *
+   * Muted text is the token most likely to land on an unexpected background,
+   * because "quiet caption" is exactly what gets dropped into tinted boxes. It
+   * therefore gets measured against the WORST surface on the site, not the
+   * page. slate-600 clears every one of them.
    */
-  --alert-emergency-on-surface: var(--palette-signal-red);              /* 6.92:1 on light surface */
+  --ink-muted: var(--palette-slate-600);   /*  7.24:1 raised · 6.92:1 sunken · 5.06:1 on the amber chip tint */
+  --ink-inverse: var(--palette-slate-50);  /* 17.28:1 on --surface-inverse */
 
-  /* CHART CONTOURS — shallow to deep */
-  --chart-contour-1: #dce6e0;
-  --chart-contour-2: #b9cfd4;
-  --chart-contour-3: #8fb4c1;
-  --chart-contour-4: #4e7e95;
-  --chart-contour-5: #0b3b54;
-  --chart-land: #e4e7dd;
-  --chart-rule: #8aa096;
+  /*
+   * --line is a HAIRLINE, 1.23:1 against white. That is deliberate and it is
+   * only legal because it never identifies a control: it separates panels that
+   * are already separated by their fill and their shadow.
+   *
+   * --line-strong is the one that must clear WCAG 1.4.11's 3:1, because form
+   * inputs are bounded by it and nothing else says where the field is. The
+   * obvious pick, slate-400 (#94a3b8), measures 2.42:1 on white and would have
+   * shipped an input you cannot locate — the exact trap the dark theme fell
+   * into from the other side. slate-500 clears it at 4.82:1.
+   */
+  --line: var(--palette-slate-200);        /* 1.23:1 — decorative only */
+  --line-strong: var(--palette-slate-500); /* 4.82:1 on raised · 4.60:1 on surface */
 
+  /*
+   * ACCENT IS THE OFFICIAL GOLD, and it is a FILL and an EDGE — never a label.
+   * `--accent-ink` is near-black rather than white: white on amber-500
+   * measures 2.15:1 and is unreadable, dark ink on it is 9.39:1. Where gold
+   * must carry text, `--accent-strong` (5.02:1) is the token, not this one.
+   */
+  --accent: var(--palette-amber-500);
+  --accent-ink: var(--palette-slate-950);   /* 9.39:1 on accent */
+  --accent-strong: var(--palette-amber-700);/* 5.02:1 on raised — gold as TEXT */
+
+  /* "You are here" in the primary navigation — the brief's active tab state,
+     in the government gold. amber-600 rather than amber-500 because a 3px rule
+     is governed by 1.4.11 and needs 3:1: 500 measures 2.15:1, 600 is 3.19:1. */
+  --nav-indicator: var(--palette-amber-600);
+
+  /*
+   * THE ACTION PAIR — the primary button, in one place because three files
+   * paint it (oceanic.css `.btn--primary`/`.btn--solid`, mega.css
+   * `.mega-cta`) and they drifted apart the last two times they were not
+   * sharing a token.
+   *
+   * DEEP NAVY UNDER WHITE, not gold under near-black, and that is a decision
+   * with history behind it. Gold is the brand colour and the obvious pick, but
+   * this exact button has now been reported unreadable twice when it was a
+   * bright fill under dark ink — see the long note in oceanic.css: colour
+   * forcing extensions, translation layers and forced-colours modes all
+   * lighten text on the assumption the background is dark, and they break
+   * dark-on-bright specifically. White-on-dark is the pattern they leave
+   * alone. So the CTA is navy and the gold rides on its EDGE, where the same
+   * tools cannot make it illegible.
+   *
+   *   #0f172a under white      17.28:1
+   *   #020617 under white      19.29:1  hover RAISES contrast
+   */
+  --action: var(--palette-slate-900);
+  --action-hover: var(--palette-slate-950);
+  --action-ink: var(--palette-white);
+  --action-edge: var(--palette-amber-500);
+  --action-edge-hover: var(--palette-amber-400);
+
+  /*
+   * LINKS ARE OCEAN BLUE. The site runs a fixed set of hues and each means
+   * exactly one thing: gold = official/brand, blue = interactive, green =
+   * confirmed/complete, red = emergency, amber-700 = pending/advisory. A link
+   * that is any other colour is a bug.
+   *
+   * Blue rather than the brand gold for the reason in the file header: gold
+   * that can carry text has to darken to a brown (#b45309), and a page of
+   * brown links reads as damaged rather than official.
+   *   #0369a1 on raised 5.93:1 · surface 5.66:1 · sunken 5.38:1
+   *   #075985 on raised 7.70:1 · surface 7.35:1 · sunken 6.99:1
+   */
+  --interactive: var(--palette-sky-700);
+  --interactive-hover: var(--palette-sky-800);
+  /*
+   * Visited leaves the accent system entirely and lands on the muted ink, so
+   * a read link reads as "spent" rather than as another colour. Collapsing
+   * visited into unvisited would be the tidier palette and the worse site: on
+   * a page of twenty service links, "which of these have I already opened" is
+   * the question actually being asked.
+   *   #64748b on raised 4.82:1 — clears AA, and clearly separable from both
+   *   the blue it was and the #334155 body text around it.
+   */
+  --interactive-visited: var(--palette-slate-500);
+
+  /*
+   * FOCUS RING — VIOLET, and it is the only thing on this site wearing violet.
+   *
+   * It was amber-600, and the reasoning was sound at the time: gold never
+   * appears as an interactive affordance, so a gold ring could not be mistaken
+   * for the thing it surrounds. What that reasoning missed is how many OTHER
+   * jobs gold had already taken. A design review counted six meanings on one
+   * hue — brand, "you are here", focus, moderate sea state, pending, advisory —
+   * on a site whose own token file states the rule "each hue means exactly one
+   * thing". When the sea advisory goes amber, a gold ring beside it is noise.
+   *
+   * Focus is not content. It is a property of the INPUT DEVICE, it can land on
+   * any surface the site has, and it is the one indicator a keyboard user
+   * cannot do without. It has earned a hue nothing else uses.
+   *
+   * WHY violet-600 SPECIFICALLY. `globals.css` pairs the ring with
+   * `outline-offset: 2px`, so the adjacent colour is whatever is behind the
+   * control — and this site has both white cards and navy panels. A single
+   * ring colour therefore has to clear 1.4.11's 3:1 against BOTH ends of the
+   * ramp, which is a narrow band: luminance above 0.126 and below 0.30.
+   *   #7c3aed  L 0.134  →  5.70:1 on white · 5.47:1 on off-white · 3.13:1 on navy
+   * Indigo-600 (#4f46e5) was the first pick and measured 2.84:1 on navy — it
+   * would have been an invisible focus ring on the hero and the dark tiles.
+   *
+   * Violet does not collide with anything shipped: `--sector-youth` is the only
+   * other purple in the file and it currently has zero call sites. If a sector
+   * hue is ever used, move it — not this.
+   */
+  --focus-ring: var(--palette-violet-600);
+
+  --error-ink: var(--palette-red-600);     /* 4.83:1 on raised */
+
+  /*
+   * SEA STATE — the escalation ladder.
+   * Never colour alone: always colour + Filipino word + icon (§2.4).
+   * All four are FILLS. Ink is stated per step because it flips.
+   */
+  --sea-calm: var(--palette-green-600);
+  --sea-calm-ink: var(--palette-slate-950);       /* 6.12:1 */
+  --sea-moderate: var(--palette-amber-500);
+  --sea-moderate-ink: var(--palette-slate-950);   /* 9.39:1 */
+  --sea-rough: var(--palette-orange-500);
+  --sea-rough-ink: var(--palette-slate-950);      /* 6.24:1 */
+  /*
+   * Dangerous is the SAME red and the same white ink as the emergency button,
+   * because it is the same message. If the sea is dangerous and the hotline
+   * banner is up, they should not look like two different severities.
+   */
+  --sea-dangerous: var(--palette-red-600);
+  --sea-dangerous-ink: var(--palette-white);      /* 4.83:1 */
+
+  /*
+   * STATUS AND ALERT HUES — these are TEXT and chip labels, not fills, so
+   * every one is a darkened stop. The brief's green-600 and amber-500 are the
+   * fill values of the same hues; using them here would have shipped 3.30:1
+   * and 2.15:1 labels.
+   *
+   * AND THEY ARE THE 800s, NOT THE 700s, because of where they actually land.
+   * `.chip` in oceanic.css paints a 12% wash of `--chip-hue` and then writes
+   * the label in `--chip-hue` itself — so these are always read against their
+   * own colour, never against white. axe measured the 700s at 4.08–4.27:1 in
+   * exactly that position. A token's contrast has to be computed against the
+   * surface it lands on, and for these six the surface is themselves.
+   */
+  --status-open: var(--palette-green-800);        /* 5.80:1 on its own chip wash */
+  --status-closed: var(--palette-slate-600);      /* 6.28:1 on its own chip wash */
+  --status-limited: var(--palette-amber-800);     /* 6.00:1 on its own chip wash */
+
+  /* Info is the ocean cyan: a neutral notice is exactly what the marine hue is
+     for, and inventing another colour here would say something the notice does
+     not mean. */
+  --alert-info: var(--palette-cyan-800);          /* 7.09:1 on raised */
+  --alert-advisory: var(--palette-amber-800);     /* 6.53:1 on raised */
+  --alert-warning: var(--palette-orange-800);     /* 6.42:1 on raised */
+  /*
+   * THE EMERGENCY SPLIT COLLAPSES ON A LIGHT PAGE, and that is a genuine
+   * simplification rather than a shortcut.
+   *
+   * The dark theme needed two reds because a fill had to be dark enough for
+   * white text while on-surface text had to be light enough for a near-black
+   * page — one token could not do both. On white, #dc2626 does both: 4.83:1
+   * as a fill under white ink, and 4.83:1 as text on the card.
+   *
+   * `--alert-emergency-on-surface` is KEPT rather than deleted because a dozen
+   * call sites use it to mean "red, as a label or an edge, on a card". It now
+   * resolves to the same red; the name still carries the intent, and if the
+   * canvas ever darkens again this is the token that has to move.
+   */
+  --alert-emergency: var(--palette-red-600);
+  --alert-emergency-ink: var(--palette-white);            /* 4.83:1 on the fill */
+  --alert-emergency-on-surface: var(--palette-red-700);   /* 6.47:1 on raised */
+
+  /*
+   * SECTOR HUES — the brief's category accents, for the places that colour a
+   * whole subject area rather than a state. Text stops, all of them.
+   */
+  --sector-infra: var(--palette-green-700);       /* public works, eco-tourism */
+  --sector-marine: var(--palette-cyan-700);       /* port, sea, sanctuaries */
+  --sector-youth: var(--palette-purple-600);      /* education and youth */
+
+  /* CHART CONTOURS — shallow to deep, back to print logic now the canvas is
+     paper again: the ramp DARKENS as the water deepens. */
+  --chart-contour-1: #e0f2fe;
+  --chart-contour-2: #bae6fd;
+  --chart-contour-3: #7dd3fc;
+  --chart-contour-4: #38bdf8;
+  --chart-contour-5: var(--palette-sky-600);
+  --chart-land: var(--palette-slate-100);
+  --chart-rule: var(--palette-slate-500);
+
+  /*
+   * ELEVATION. Shadows work again on a light canvas — there IS something
+   * darker to cast onto — so depth is carried by a soft navy-tinted shadow
+   * rather than by the hairline alone. Tinted with slate-900 rather than pure
+   * black so the shade reads as cool paper depth instead of grey haze.
+   */
   --elev-1: 0 0 0 1px var(--line);
-  --elev-2: 0 0 0 1px var(--line-strong);
-  --elev-3: 0 8px 24px -8px rgb(18 33 27 / 0.28); /* the ONLY shadow token */
-}
+  --elev-2: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.10);
+  --elev-3: 0 10px 30px -12px rgb(15 23 42 / 0.25);
 
-/* ─────────────────────────────────────────────────────────────
-   TIER 2 — SEMANTIC (dark)
-
-   Not an inversion. Night use here is real: brownouts, pre-dawn departures,
-   typhoon nights, an evacuation centre at 2am. Emergency red is LIGHTENED
-   rather than dimmed so it stays unmistakable at minimum screen brightness.
-   ───────────────────────────────────────────────────────────── */
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --surface: #0c1614;
-    --surface-raised: #14211d;
-    --surface-sunken: #081110;
-    --surface-inverse: #eff1ec;
-
-    --ink: #e4eae4;
-    --ink-muted: #9fb0a6;
-    --ink-inverse: #0c1614;
-
-    --line: #2c3a34;
-    --line-strong: #4a5e54;
-
-    /* Same reversal as light mode: links join the reef-green system rather
-       than being a fourth hue. The bright reef green is used here because the
-       ink variant would disappear into a dark surface.
-         #7ee787 on --surface 11.98:1 · --surface-raised 10.80:1 · --surface-sunken 12.45:1
-         #9fe6a8 on --surface 12.59:1 · --surface-raised 11.35:1 · --surface-sunken 13.08:1
-         #a8c4b0 on --surface  9.81:1 · --surface-raised  8.84:1 · --surface-sunken 10.19:1 */
-    --interactive: #7ee787;
-    --interactive-hover: #9fe6a8;
-    --interactive-visited: #a8c4b0;
-    --focus-ring: #ff5a4d;
-    --error-ink: #ff8177;
-
-    /* Lightened from the light-mode red so it stays unmistakable at minimum
-       screen brightness — but NOT as light as #e33f32, which was shipping
-       white text at 4.18:1 and failing AA on the EMERGENCY button of every
-       single page. Measured 4.77:1 against white. The dark-mode axe project
-       added on 2026-08-05 is what caught it. */
-    --alert-emergency: #d4382b;
-    /* Lighter than the fill, because here the red IS the text. 5.14:1 on
-       --surface-raised. */
-    --alert-emergency-on-surface: #ef6154;
-    --alert-info: #6fb3dc;
-
-    /* The bright reef green here: the header is dark, and the ink variant
-       would disappear into it. 8.6:1 on --surface-raised. */
-    --nav-indicator: var(--palette-reef);
-
-    --status-closed: #7d8c84;
-
-    /* Contours invert: a lit chart table, not a dimmed image. */
-    --chart-contour-1: #16302c;
-    --chart-contour-2: #1d4552;
-    --chart-contour-3: #2f6478;
-    --chart-contour-4: #4e8ba3;
-    --chart-contour-5: #8fc4d6;
-    --chart-land: #182521;
-    --chart-rule: #4a5e54;
-
-    --elev-3: 0 8px 24px -8px rgb(0 0 0 / 0.6);
-  }
-}
-
-:root[data-theme="dark"] {
-  --surface: #0c1614;
-  --surface-raised: #14211d;
-  --surface-sunken: #081110;
-  --surface-inverse: #eff1ec;
-  --ink: #e4eae4;
-  --ink-muted: #9fb0a6;
-  --ink-inverse: #0c1614;
-  --line: #2c3a34;
-  --line-strong: #4a5e54;
-  /* See the dark media-query block above — these two must stay in step. */
-  --interactive: #7ee787;
-  --interactive-hover: #9fe6a8;
-  --interactive-visited: #a8c4b0;
-  --focus-ring: #ff5a4d;
-  --error-ink: #ff8177;
-  /* Kept in step with the media-query block above: 4.77:1 against white.
-     #e33f32 measured 4.18:1 and failed AA. */
-  --alert-emergency: #d4382b;
-  --alert-emergency-on-surface: #ef6154;
-  --alert-info: #6fb3dc;
-
-  /* See the dark media-query block above. */
-  --nav-indicator: var(--palette-reef);
-  --status-closed: #7d8c84;
-  --chart-contour-1: #16302c;
-  --chart-contour-2: #1d4552;
-  --chart-contour-3: #2f6478;
-  --chart-contour-4: #4e8ba3;
-  --chart-contour-5: #8fc4d6;
-  --chart-land: #182521;
-  --chart-rule: #4a5e54;
-  --elev-3: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  /* A hover halo, not a shadow. Used only on interactive surfaces, so the glow
+     always means "this responds to you". Weaker than the dark theme's: on
+     white a coloured bloom at 0.30 reads as a smudge. */
+  --glow-interactive: 0 8px 24px -10px rgb(3 105 161 / 0.35);
+  --glow-emergency: 0 8px 24px -10px rgb(220 38 38 / 0.35);
 }

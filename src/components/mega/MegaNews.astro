@@ -14,11 +14,25 @@
  */
 import Icon from '../Icon.astro'
 import SampleChip from '../SampleChip.astro'
-import { ANNOUNCEMENTS, CALENDAR } from '@/lib/content/active'
-import { isPlaceholder } from '@/lib/content/placeholder'
-import { SAMPLE_FEATURED, SAMPLE_STORIES, SAMPLE_EVENTS } from '@/lib/content/sample'
+/*
+ * Content comes from `articles.ts` — database first, samples second — 2026-08-07.
+ *
+ * Two changes rolled into one import:
+ *
+ * 1. THESE ARTICLES HAVE PAGES. Sample headlines used to have no slug, so
+ *    every row pointed at `/balita`: six headlines, one destination, and a
+ *    reader who clicked the third story landed on a list and had to find it
+ *    again. Each row now goes to its own article.
+ *
+ * 2. THE PANEL AND THE PAGE AGREE. The panel previously read `ANNOUNCEMENTS`
+ *    (an empty array outside demo mode) while /balita read something else.
+ *    Both now resolve through the same function, so the header can no longer
+ *    advertise stories the page it links to does not have.
+ */
+import { articleHref } from '@/lib/content/sample-news'
+import { getNews, getUpcomingEvents } from '@/lib/content/articles'
 import { NEWS_QUICK, prefix, label, note } from '@/lib/content/menu'
-import { formatAbsolute } from '@/lib/time'
+import { formatAbsolute, monthAbbrev } from '@/lib/time'
 import type { Locale } from '@/lib/i18n'
 
 interface Props {
@@ -29,26 +43,12 @@ const { locale } = Astro.props
 const fil = locale === 'fil'
 const p = prefix(locale)
 
-const CATEGORY: Record<string, { fil: string; en: string }> = {
-  anunsyo: { fil: 'Anunsyo', en: 'Notice' },
-  kalusugan: { fil: 'Kalusugan', en: 'Health' },
-  ayuda: { fil: 'Ayuda', en: 'Aid' },
-  babala: { fil: 'Babala', en: 'Warning' },
-  ordinansa: { fil: 'Ordinansa', en: 'Ordinance' },
-  kaganapan: { fil: 'Kaganapan', en: 'Event' },
-}
-
-const text = (v: unknown) => (isPlaceholder(v) ? null : (v as string))
-
 /**
- * Normalised to one shape so the template does not branch on provenance in
- * six places. `sample` is what drives the chip.
- */
-/*
- * `body`/`image` are `string | undefined` rather than optional. The project
+ * Normalised to one shape so the template does not branch on provenance.
+ *
+ * `body`/`image` are `string | undefined` rather than optional: the project
  * runs `exactOptionalPropertyTypes`, under which `body?: string` refuses an
- * explicit `undefined` — and every one of these objects assigns both keys
- * unconditionally so the two branches stay the same shape.
+ * explicit `undefined`.
  */
 interface Card {
   title: string
@@ -56,52 +56,42 @@ interface Card {
   date: string
   category: string
   image: string | undefined
+  href: string
 }
 
-const realStories: Card[] = ANNOUNCEMENTS.map((a) => ({
-  title: text(fil ? a.titleFil : a.titleEn) ?? (fil ? 'Walang pamagat' : 'Untitled'),
-  body: text(a.excerptFil) ?? undefined,
-  date: formatAbsolute(a.publishedAt, locale),
-  category: (fil ? CATEGORY[a.category]?.fil : CATEGORY[a.category]?.en) ?? '',
-  image: undefined,
+const news = await getNews()
+const upcoming = await getUpcomingEvents()
+
+const usingSampleStories = news.isSample
+const usingSampleEvents = upcoming.isSample
+
+const [leadArticle, ...restArticles] = news.items
+
+const featured: Card | undefined = leadArticle && {
+  title: fil ? leadArticle.titleFil : leadArticle.titleEn,
+  body: (fil ? leadArticle.leadFil : leadArticle.leadEn) || undefined,
+  date: formatAbsolute(leadArticle.publishedAt, locale),
+  category: fil ? leadArticle.categoryFil : leadArticle.categoryEn,
+  image: leadArticle.image?.thumb,
+  href: articleHref(leadArticle, locale),
+}
+
+const latest: Card[] = restArticles.slice(0, 5).map((s) => ({
+  title: fil ? s.titleFil : s.titleEn,
+  body: undefined,
+  date: formatAbsolute(s.publishedAt, locale),
+  category: fil ? s.categoryFil : s.categoryEn,
+  image: s.image?.thumb,
+  href: articleHref(s, locale),
 }))
 
-const usingSampleStories = realStories.length === 0
-
-const featured: Card = usingSampleStories
-  ? {
-      title: fil ? SAMPLE_FEATURED.titleFil : SAMPLE_FEATURED.titleEn,
-      body: fil ? SAMPLE_FEATURED.bodyFil : SAMPLE_FEATURED.bodyEn,
-      date: SAMPLE_FEATURED.date,
-      category: fil ? SAMPLE_FEATURED.categoryFil : SAMPLE_FEATURED.categoryEn,
-      image: SAMPLE_FEATURED.image,
-    }
-  : realStories[0]!
-
-const latest: Card[] = usingSampleStories
-  ? SAMPLE_STORIES.map((s) => ({
-      title: fil ? s.titleFil : s.titleEn,
-      body: undefined,
-      date: s.date,
-      category: fil ? s.categoryFil : s.categoryEn,
-      image: s.image,
-    }))
-  : realStories.slice(1, 6)
-
-const usingSampleEvents = CALENDAR.length === 0
-const events = usingSampleEvents
-  ? SAMPLE_EVENTS.map((e) => ({
-      month: e.month,
-      day: e.day,
-      title: fil ? e.titleFil : e.titleEn,
-      place: fil ? e.placeFil : e.placeEn,
-    }))
-  : CALENDAR.slice(0, 4).map((e) => ({
-      month: e.month,
-      day: e.day,
-      title: e.title,
-      place: e.location,
-    }))
+const events = upcoming.items.slice(0, 4).map((e) => ({
+  month: monthAbbrev(e.startsAt!, locale),
+  day: String(e.startsAt!.getDate()),
+  title: fil ? e.titleFil : e.titleEn,
+  place: (fil ? e.locationFil : e.locationEn) ?? '',
+  href: articleHref(e, locale),
+}))
 ---
 
 {/* ── Column 1: featured ─────────────────────────────────────── */}
@@ -111,27 +101,36 @@ const events = usingSampleEvents
     {usingSampleStories && <SampleChip locale={locale} />}
   </h2>
 
-  <a class="mega-feature" href={`${p}/balita`}>
-    <span class="mega-feature__media">
-      {
-        featured.image ? (
-          <img src={featured.image} alt="" width="320" height="180" loading="lazy" decoding="async" />
-        ) : (
-          <span class="mega-feature__noimg">{fil ? 'Walang larawan' : 'No photograph'}</span>
-        )
-      }
-    </span>
-    <span class="mega-feature__body">
-      {featured.category && <span class="mega-badge">{featured.category}</span>}
-      <span class="mega-feature__title">{featured.title}</span>
-      {featured.body && <span class="mega-feature__excerpt">{featured.body}</span>}
-      <span class="mega__meta">{featured.date}</span>
-      <span class="mega-cta">
-        {fil ? 'Basahin ang buong balita' : 'Read full story'}
-        <Icon name="chevron-right" size={16} />
-      </span>
-    </span>
-  </a>
+  {/* `featured` is undefined only if the barangay has published nothing AND
+      the sample set were emptied — but the panel must not throw in that case,
+      because it is in the header of every page including /ligtas. */}
+  {
+    featured ? (
+      <a class="mega-feature" href={featured.href}>
+        <span class="mega-feature__media">
+          {featured.image ? (
+            <img src={featured.image} alt="" width="320" height="180" loading="lazy" decoding="async" />
+          ) : (
+            <span class="mega-feature__noimg">{fil ? 'Walang larawan' : 'No photograph'}</span>
+          )}
+        </span>
+        <span class="mega-feature__body">
+          {featured.category && <span class="mega-badge">{featured.category}</span>}
+          <span class="mega-feature__title">{featured.title}</span>
+          {featured.body && <span class="mega-feature__excerpt">{featured.body}</span>}
+          <span class="mega__meta">{featured.date}</span>
+          <span class="mega-cta">
+            {fil ? 'Basahin ang buong balita' : 'Read full story'}
+            <Icon name="chevron-right" size={16} />
+          </span>
+        </span>
+      </a>
+    ) : (
+      <p class="mega__meta">
+        {fil ? 'Wala pang nailathalang balita.' : 'No news has been published yet.'}
+      </p>
+    )
+  }
 </section>
 
 {/* ── Column 2: latest ───────────────────────────────────────── */}
@@ -152,7 +151,7 @@ const events = usingSampleEvents
     {
       latest.map((s) => (
         <li>
-          <a class="mega-row" href={`${p}/balita`}>
+          <a class="mega-row" href={s.href}>
             <span class="mega-row__thumb">
               {s.image ? (
                 <img src={s.image} alt="" width="56" height="56" loading="lazy" decoding="async" />
@@ -195,7 +194,7 @@ const events = usingSampleEvents
     {
       events.map((e) => (
         <li>
-          <a class="mega-event" href={`${p}/balita`}>
+          <a class="mega-event" href={e.href}>
             {/* `aria-hidden`: "AGO 15" read as two separate strings is noise.
                 The full date follows in the visually-hidden run. */}
             <span class="mega-event__date" aria-hidden="true">
@@ -216,7 +215,9 @@ const events = usingSampleEvents
     }
   </ul>
 
-  <a class="mega__viewall" href={`${p}/balita`}>
+  {/* /kaganapan, not /balita. "View all events" pointing at the news list was
+      the same wrong-destination bug as the rows above, one level up. */}
+  <a class="mega__viewall" href={`${p}/kaganapan`}>
     {fil ? 'Lahat ng kaganapan' : 'View all events'}
     <Icon name="chevron-right" size={16} />
   </a>

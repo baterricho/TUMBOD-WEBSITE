@@ -1,20 +1,33 @@
 ---
 /**
- * News body, locale-aware.
+ * News index, locale-aware.
  *
- * The empty state gives direction rather than apologising (§7.3), and it is
- * honest about where the community actually is right now: the Facebook page.
+ * ─────────────────────────────────────────────────────────────────
+ * 2026-08-07. This page used to render `ANNOUNCEMENTS`, which is `[]` outside
+ * demo mode, so it showed nothing but an empty state — while the News mega
+ * panel in the header listed six stories with photographs. The panel's own
+ * "All news" link led here, to a page that contradicted it.
+ *
+ * Both now read the same sample set, and every headline is a LINK to an
+ * article page. The previous version rendered `<article>` elements with no
+ * anchor at all: the stories looked clickable and were not.
+ *
+ * WHEN REAL CONTENT ARRIVES: `ANNOUNCEMENTS` is still checked first and still
+ * wins. The sample set is the fallback, not the content — the moment the
+ * barangay publishes anything, the real thing is what renders.
+ * ─────────────────────────────────────────────────────────────────
  *
  * The Facebook block is NOT an embed or iframe — that would be a third-party
  * request on a public route (§22.3) and would fail offline.
  */
 import Section from '@/components/Section.astro'
 import Icon from '@/components/Icon.astro'
-import { getDictionary, type Locale } from '@/lib/i18n'
+import SampleChip from '@/components/SampleChip.astro'
+import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 import { SITE } from '@/lib/content/site'
-import { ANNOUNCEMENTS } from '@/lib/content/active'
-import { isPlaceholder } from '@/lib/content/placeholder'
-import { formatAbsolute } from '@/lib/time'
+import { formatDay, isoAttr } from '@/lib/time'
+import { articleHref } from '@/lib/content/sample-news'
+import { getNews, getUpcomingEvents } from '@/lib/content/articles'
 
 interface Props {
   locale: Locale
@@ -23,62 +36,156 @@ interface Props {
 const { locale } = Astro.props
 const t = getDictionary(locale)
 const fil = locale === 'fil'
+const p = prefix(locale)
 
-/** Titles are `Maybe<string>` — a story can exist with its headline pending. */
-const text = (v: unknown) => (isPlaceholder(v) ? null : (v as string))
-
-const CATEGORY: Record<string, { fil: string; en: string }> = {
-  anunsyo: { fil: 'Anunsyo', en: 'Notice' },
-  kalusugan: { fil: 'Kalusugan', en: 'Health' },
-  ayuda: { fil: 'Ayuda', en: 'Aid' },
-  babala: { fil: 'Babala', en: 'Warning' },
-  ordinansa: { fil: 'Ordinansa', en: 'Ordinance' },
-  kaganapan: { fil: 'Kaganapan', en: 'Event' },
-}
+/*
+ * ONE code path, whether the stories came from the database or the samples.
+ *
+ * The previous version branched: an `ANNOUNCEMENTS.length > 0` arm that
+ * rendered plain cards, and a sample arm that rendered the lead story, the
+ * grid and the events teaser. That meant the barangay's REAL news would have
+ * been shown in the plainer of the two layouts — the good one was reserved for
+ * fake content. Resolution now happens in `articles.ts`, the template renders
+ * whatever it is handed, and `isSample` only decides whether a chip appears.
+ */
+const news = await getNews()
+const upcoming = await getUpcomingEvents()
+const [lead, ...rest] = news.items
 ---
 
 <Section divider={false} class="section--airy">
   <h1 class="page-title">{t.nav.news}</h1>
+  <p class="section-lede">
+    {
+      fil
+        ? 'Mga anunsyo, abiso at kaganapan mula sa barangay.'
+        : 'Announcements, notices and events from the barangay.'
+    }
+  </p>
 </Section>
 
-{/*
-  THIS SECTION RENDERED NOTHING UNTIL 2026-08-06.
+{
+  lead && (
+    /* Lead story — one card at full width, because a list of five equal cards
+       has no entry point and nothing to look at first. */
+    <Section>
+      <a href={articleHref(lead, locale)} class="leadstory" data-plain>
+        {lead.image && (
+          <img
+            class="leadstory__media"
+            src={lead.image.src}
+            alt={fil ? lead.image.altFil : lead.image.altEn}
+            width={lead.image.width}
+            height={lead.image.height}
+            loading="eager"
+            decoding="async"
+          />
+        )}
+        <span class="leadstory__body">
+          <span class="fcard__meta">
+            <span class="chip">{fil ? lead.categoryFil : lead.categoryEn}</span>
+            {news.isSample && <SampleChip locale={locale} />}
+          </span>
+          <span class="leadstory__title">{fil ? lead.titleFil : lead.titleEn}</span>
+          {(fil ? lead.leadFil : lead.leadEn) && (
+            <span class="fcard__body">{fil ? lead.leadFil : lead.leadEn}</span>
+          )}
+          <span class="fcard__meta">
+            <time datetime={isoAttr(lead.publishedAt)}>
+              {formatDay(lead.publishedAt, locale)}
+            </time>
+          </span>
+          <span class="btn btn--primary leadstory__cta">
+            {fil ? 'Basahin' : 'Read the story'}
+            <Icon name="chevron-right" size={18} />
+          </span>
+        </span>
+      </a>
+    </Section>
+  )
+}
 
-  The template carried only the empty state — `ANNOUNCEMENTS.length === 0 &&
-  <p>…</p>` — and no branch for the case where announcements exist. So the page
-  was correct while the barangay had published nothing, and silently blank the
-  moment it published anything. The News mega panel listed six stories and its
-  own "View all news" link led here, to a page showing none of them.
-*/}
-<Section>
-  {
-    ANNOUNCEMENTS.length === 0 ? (
-      <div class="card" style="max-width:var(--measure)">
-        <p>{t.empty.announcements}</p>
-      </div>
-    ) : (
+{
+  rest.length > 0 && (
+    <Section title={fil ? 'Iba pang balita' : 'More news'} titleId="more-news">
+      {news.isSample && <SampleChip locale={locale} slot="aside" />}
       <ul class="grid-cards">
-        {ANNOUNCEMENTS.map((a) => (
+        {rest.map((a) => (
           <li>
-            <article class="fcard">
-              <p class="fcard__meta">
-                {fil ? CATEGORY[a.category]?.fil : CATEGORY[a.category]?.en}
+            <a href={articleHref(a, locale)} class="fcard" data-plain>
+              {a.image && (
+                <img
+                  class="fcard__media"
+                  src={a.image.thumb}
+                  alt=""
+                  width={a.image.width}
+                  height={a.image.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+              <span class="fcard__meta">
+                {fil ? a.categoryFil : a.categoryEn}
                 {' · '}
-                <time datetime={a.publishedAt.toISOString()}>
-                  {formatAbsolute(a.publishedAt, locale)}
-                </time>
-              </p>
-              <h2 class="fcard__title">
-                {text(fil ? a.titleFil : a.titleEn) ?? (fil ? 'Walang pamagat' : 'Untitled')}
-              </h2>
-              {text(a.excerptFil) && <p class="fcard__body">{text(a.excerptFil)}</p>}
-            </article>
+                <time datetime={isoAttr(a.publishedAt)}>{formatDay(a.publishedAt, locale)}</time>
+              </span>
+              <span class="fcard__title">{fil ? a.titleFil : a.titleEn}</span>
+              {(fil ? a.leadFil : a.leadEn) && (
+                <span class="fcard__body">{fil ? a.leadFil : a.leadEn}</span>
+              )}
+            </a>
           </li>
         ))}
       </ul>
-    )
-  }
-</Section>
+    </Section>
+  )
+}
+
+{
+  !lead && (
+    <Section>
+      <div class="card" style="max-width:var(--measure)">
+        <p>{t.empty.announcements}</p>
+      </div>
+    </Section>
+  )
+}
+
+{
+  upcoming.items.length > 0 && (
+    <Section
+      tone="sunken"
+      title={fil ? 'Mga paparating na kaganapan' : 'Upcoming events'}
+      titleId="upcoming"
+    >
+      {upcoming.isSample && <SampleChip locale={locale} slot="aside" />}
+      <ul class="grid-cards grid-cards--tight">
+        {upcoming.items.slice(0, 3).map((e) => (
+          <li>
+            <a href={articleHref(e, locale)} class="fcard fcard--icon" data-plain>
+              <span class="fcard__icon">
+                <Icon name="calendar" size={20} />
+              </span>
+              <span class="fcard__text">
+                <span class="fcard__title">{fil ? e.titleFil : e.titleEn}</span>
+                <span class="fcard__meta">
+                  <time datetime={isoAttr(e.startsAt!)}>{formatDay(e.startsAt!, locale)}</time>
+                  {e.timeLabel ? ` · ${e.timeLabel}` : ''}
+                </span>
+              </span>
+              <span class="fcard__arrow">
+                <Icon name="chevron-right" size={18} />
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p style="margin-top:var(--space-4)">
+        <a href={`${p}/kaganapan`}>{fil ? 'Lahat ng kaganapan' : 'All events'}</a>
+      </p>
+    </Section>
+  )
+}
 
 <Section title={t.home.fromFacebook} titleId="facebook">
   <div style="max-width:var(--measure);display:grid;gap:var(--space-3)">

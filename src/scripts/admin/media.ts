@@ -48,6 +48,80 @@ const THUMB_EDGE = 480
 /** Formats we re-encode. Everything else is uploaded exactly as supplied. */
 const RASTER = ['image/jpeg', 'image/png', 'image/webp']
 
+/**
+ * Video was rejected until 2026-08-07, and NOT because of this file.
+ *
+ * The Supabase storage bucket carried `allowed_mime_types` of images + PDF and
+ * a 10 MB cap, so an upload was refused by the server no matter what the UI
+ * offered. The bucket now accepts mp4/webm/quicktime up to 50 MB. If video
+ * uploads start failing again, check the bucket before reading any of this.
+ */
+export const VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime'] as const
+
+/** `startsWith` rather than a list membership test: a browser may report
+ *  `video/mp4; codecs=...` on some platforms, and the prefix is what matters. */
+const isVideo = (mime: string) => mime.startsWith('video/')
+
+/**
+ * The size past which a video is a problem rather than a file.
+ *
+ * Not a hard limit — the barangay may legitimately want to keep an original.
+ * It is the point at which the uploader says so plainly, because a 40 MB clip
+ * on the homepage is roughly six minutes of a 1 Mbps connection and a visible
+ * bite out of a prepaid load. `scripts/optimise-video.mjs` turns a camera
+ * original into something around 2 MB per 10 seconds.
+ */
+const VIDEO_WARN_BYTES = 8 * 1024 * 1024
+
+/**
+ * A poster frame, grabbed from the video itself.
+ *
+ * Without this the library shows a generic document icon for every clip, and
+ * an editor picking a hero video has to guess from the filename. Seeking to 1s
+ * rather than 0 avoids the black frame most cameras start on.
+ *
+ * Fails soft: a codec the browser cannot decode simply gets no thumbnail,
+ * which is the same place we were before.
+ */
+async function videoPoster(file: File): Promise<{ blob: Blob; w: number; h: number } | null> {
+  const url = URL.createObjectURL(file)
+  try {
+    const v = document.createElement('video')
+    v.muted = true
+    v.playsInline = true
+    v.preload = 'metadata'
+    v.src = url
+
+    await new Promise<void>((resolve, reject) => {
+      const fail = () => reject(new Error('decode'))
+      v.onloadedmetadata = () => {
+        // Never seek past the end: an 0.5s clip has no frame at 1s, and the
+        // `seeked` event would never fire.
+        v.currentTime = Math.min(1, (v.duration || 1) / 2)
+      }
+      v.onseeked = () => resolve()
+      v.onerror = fail
+      setTimeout(fail, 10_000)
+    })
+
+    const scale = Math.min(1, THUMB_EDGE / Math.max(v.videoWidth, v.videoHeight))
+    const w = Math.round(v.videoWidth * scale)
+    const h = Math.round(v.videoHeight * scale)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    canvas.getContext('2d')?.drawImage(v, 0, 0, w, h)
+
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.72))
+    return blob ? { blob, w: v.videoWidth, h: v.videoHeight } : null
+  } catch {
+    return null
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
 let sb: SupabaseClient
 let baseUrl = ''
 
@@ -188,6 +262,27 @@ async function uploadOne(
       contentType: file.type,
       upsert: true,
     })
+  } else if (isVideo(file.type)) {
+    /*
+     * Video is uploaded UNTOUCHED — there is no in-browser re-encoder here.
+     *
+     * ffmpeg.wasm would be ~30 MB of dependency for the admin bundle and
+     * minutes of work on the phones this barangay owns. So the compression
+     * step lives outside the browser, in `scripts/optimise-video.mjs`, and
+     * what happens here is: record the real dimensions, grab a poster so the
+     * library is browsable, and warn if the file is large.
+     */
+    onProgress(15, 'Kinukuha ang poster…')
+    const poster = await videoPoster(file)
+    if (poster) {
+      width = poster.w
+      height = poster.h
+      thumbPath = `${base}-thumb.jpg`
+      await sb.storage.from(BUCKET).upload(thumbPath, poster.blob, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      })
+    }
   }
 
   onProgress(70, 'Ina-upload…')
@@ -301,7 +396,10 @@ export async function renderMediaLibrary(
   const fileInput = el('input', {
     type: 'file',
     multiple: true,
-    accept: 'image/jpeg,image/png,image/webp,image/svg+xml,application/pdf',
+    // Must stay in step with the bucket's `allowed_mime_types`. A type offered
+    // here but refused there produces a server error the editor cannot act on.
+    accept:
+      'image/jpeg,image/png,image/webp,image/svg+xml,image/gif,application/pdf,video/mp4,video/webm,video/quicktime',
     style: 'display:none',
   }) as HTMLInputElement
 
@@ -370,6 +468,24 @@ export async function renderMediaLibrary(
         el('div', { class: 'a-qbar' }, bar),
       )
       queue.append(item)
+
+      /*
+       * Say it before the upload, not after.
+       *
+       * A large video uploads perfectly happily and then costs every visitor
+       * on the island real money. The editor is the only person who can
+       * prevent that, and only if they are told while they can still act.
+       */
+      if (isVideo(file.type) && file.size > VIDEO_WARN_BYTES) {
+        const warn = txt(
+          'div',
+          'a-cellsub',
+          `⚠ Malaki ang video na ito (${fmtBytes(file.size)}). Sa mabagal na signal, ` +
+            'mabigat itong i-download. Mas mabuti kung pinaliit muna bago i-upload.',
+        )
+        warn.style.color = 'var(--amber, #b45309)'
+        item.append(warn)
+      }
 
       try {
         const row = await uploadOne(file, uploadFolder.value, (pct, msg) => {
@@ -458,7 +574,9 @@ export async function renderMediaLibrary(
         title: 'Buksan nang buo',
       }) as HTMLButtonElement
 
-      if (isImage) {
+      const video = isVideo(row.mime_type)
+
+      if (isImage || (video && row.thumb_path)) {
         const img = el('img', {
           src: publicUrl(row.thumb_path ?? row.storage_path),
           alt: row.alt_fil ?? row.filename,
@@ -467,15 +585,33 @@ export async function renderMediaLibrary(
           style: 'width:100%;height:100%;object-fit:cover;display:block',
         }) as HTMLImageElement
         // SVGs get no thumbnail, and rows created before `thumb_path` existed
-        // have none recorded. Both fall back to the full file.
+        // have none recorded. Both fall back to the full file. A VIDEO must
+        // not: falling back would put the whole clip in an <img> that can
+        // never render it, and download it to draw nothing.
         img.addEventListener('error', () => {
+          if (video) {
+            thumb.replaceChildren(icon('slides', 28))
+            return
+          }
           img.src = publicUrl(row.storage_path)
         })
         thumb.append(img)
+
+        // A poster is indistinguishable from a photograph without this.
+        if (video) {
+          const badge = el('span', { class: 'a-mediakind' }, icon('slides', 13), 'VIDEO')
+          thumb.append(badge)
+        }
+      } else if (video) {
+        thumb.append(icon('slides', 28))
       } else {
         thumb.append(icon('doc', 28))
       }
-      thumb.addEventListener('click', () => (isImage ? lightbox(row) : window.open(publicUrl(row.storage_path), '_blank')))
+
+      thumb.addEventListener('click', () => {
+        if (isImage) lightbox(row)
+        else window.open(publicUrl(row.storage_path), '_blank')
+      })
 
       const meta = el(
         'div',

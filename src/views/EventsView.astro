@@ -1,0 +1,143 @@
+---
+/**
+ * Events index — upcoming first, then what has already happened.
+ *
+ * TWO SECTIONS, AND THE PAST ONE IS NOT AN AFTERTHOUGHT. A barangay events
+ * page that deletes an event the day after it happens is a page that cannot
+ * answer "was there a medical mission last month, and did I miss it?" — which
+ * is a question residents actually ask. Past events stay, dated, clearly
+ * marked, in reverse order.
+ *
+ * The upcoming/past split is computed ONCE, in sample-news.ts, against build
+ * time. It is not recomputed here: a list and a badge that each decide for
+ * themselves what "upcoming" means will eventually disagree on the day of.
+ *
+ * NOTE ON A STATIC SITE. "Upcoming" is fixed at BUILD time, not at read time.
+ * A site rebuilt weekly can show an event as upcoming for up to a week after
+ * it happened. That is a real limitation and the reason the detail page states
+ * the date plainly rather than relying only on the badge.
+ */
+import Section from '@/components/Section.astro'
+import Icon from '@/components/Icon.astro'
+import SampleChip from '@/components/SampleChip.astro'
+import { type Locale, prefix } from '@/lib/i18n'
+import { formatDay, isoAttr, monthAbbrev } from '@/lib/time'
+import { articleHref } from '@/lib/content/sample-news'
+import { getUpcomingEvents, getPastEvents } from '@/lib/content/articles'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = prefix(locale)
+
+/** Database first, samples only if the barangay has published no events. */
+const upcoming = await getUpcomingEvents()
+const past = await getPastEvents()
+
+const month = (d: Date) => monthAbbrev(d, locale)
+---
+
+<Section divider={false} class="section--airy">
+  <h1 class="page-title">{fil ? 'Mga Kaganapan' : 'Events'}</h1>
+  <p class="section-lede">
+    {
+      fil
+        ? 'Mga pulong, medical mission, at gawain sa barangay — paparating at nakaraan na.'
+        : 'Assemblies, medical missions and barangay activities — upcoming and past.'
+    }
+  </p>
+  <p style="margin-top:var(--space-3)">
+    <a href={`${p}/balita`}>{fil ? 'Bumalik sa balita' : 'Back to news'}</a>
+  </p>
+</Section>
+
+<Section
+  title={fil ? 'Paparating' : 'Upcoming'}
+  titleId="upcoming"
+>
+  {upcoming.isSample && <SampleChip locale={locale} slot="aside" />}
+  {
+    upcoming.items.length === 0 ? (
+      <p style="color:var(--ink-muted);max-width:var(--measure)">
+        {fil
+          ? 'Wala pang nakatakdang kaganapan. Ipapaskil dito ang susunod.'
+          : 'Nothing is scheduled yet. The next one will be posted here.'}
+      </p>
+    ) : (
+      <ul class="grid-cards grid-cards--wide">
+        {upcoming.items.map((e) => (
+          <li>
+            <a href={articleHref(e, locale)} class="fcard eventcard" data-plain>
+              <span class="eventcard__date" aria-hidden="true">
+                <span class="eventcard__month">{month(e.startsAt!)}</span>
+                <span class="eventcard__day">{e.startsAt!.getDate()}</span>
+              </span>
+              <span class="eventcard__body">
+                <span class="fcard__title">{fil ? e.titleFil : e.titleEn}</span>
+                <span class="fcard__meta">
+                  {/* The date is repeated as text, not left to the tile above.
+                      The tile is aria-hidden because "AGO 15" read aloud is
+                      noise; a screen-reader user still needs the date. */}
+                  <time datetime={isoAttr(e.startsAt!)}>
+                    {formatDay(e.startsAt!, locale)}
+                  </time>
+                  {e.timeLabel ? ` · ${e.timeLabel}` : ''}
+                </span>
+                {(fil ? e.locationFil : e.locationEn) && (
+                  <span class="fcard__meta">
+                    <Icon name="pin" size={14} />
+                    {fil ? e.locationFil : e.locationEn}
+                  </span>
+                )}
+                <span class="fcard__body">{fil ? e.leadFil : e.leadEn}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</Section>
+
+<Section
+  tone="sunken"
+  title={fil ? 'Mga nakaraang kaganapan' : 'Past events'}
+  titleId="past"
+>
+  {past.isSample && <SampleChip locale={locale} slot="aside" />}
+  {
+    past.items.length === 0 ? (
+      <p style="color:var(--ink-muted);max-width:var(--measure)">
+        {fil ? 'Wala pang naitalang kaganapan.' : 'No events have been recorded yet.'}
+      </p>
+    ) : (
+      <ul class="grid-cards grid-cards--wide">
+        {past.items.map((e) => (
+          <li>
+            <a href={articleHref(e, locale)} class="fcard eventcard eventcard--past" data-plain>
+              <span class="eventcard__date" aria-hidden="true">
+                <span class="eventcard__month">{month(e.startsAt!)}</span>
+                <span class="eventcard__day">{e.startsAt!.getDate()}</span>
+              </span>
+              <span class="eventcard__body">
+                <span class="fcard__meta">
+                  <span class="chip chip--muted">{fil ? 'Nakaraan na' : 'Past'}</span>
+                </span>
+                <span class="fcard__title">{fil ? e.titleFil : e.titleEn}</span>
+                <span class="fcard__meta">
+                  <time datetime={isoAttr(e.startsAt!)}>
+                    {formatDay(e.startsAt!, locale)}
+                  </time>
+                </span>
+                <span class="fcard__body">{fil ? e.leadFil : e.leadEn}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</Section>

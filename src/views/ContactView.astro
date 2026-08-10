@@ -11,10 +11,9 @@ import Icon from '@/components/Icon.astro'
 import Placeholder from '@/components/Placeholder.astro'
 import PhoneNumber from '@/components/PhoneNumber.astro'
 import LocationMap from '@/components/LocationMap.astro'
-import LivingChartHeader from '@/components/LivingChartHeader.astro'
-import { getDictionary, type Locale } from '@/lib/i18n'
+import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 import { SITE } from '@/lib/content/site'
-import { HOTLINES } from '@/lib/content/active'
+import { getHotlines } from '@/lib/content/live-collections'
 import { isPlaceholder, needsData } from '@/lib/content/placeholder'
 
 interface Props {
@@ -22,9 +21,10 @@ interface Props {
 }
 
 const { locale } = Astro.props
+const HOTLINES = (await getHotlines()).items
 const t = getDictionary(locale)
 const fil = locale === 'fil'
-const p = fil ? '' : '/en'
+const p = prefix(locale)
 
 const BOAT_ROUTES = needsData(
   fil
@@ -39,7 +39,20 @@ const BOAT_ROUTES = needsData(
   <h1 class="page-title">{t.nav.contact}</h1>
 </Section>
 
-<LivingChartHeader locale={locale} />
+{/*
+  The chart band is GONE from this page, and the reason is that it was the
+  second map on it.
+
+  /kontak already carries `<LocationMap>` further down: a real tile map with
+  zoom, four base layers, a marker with the PSA-centroid caveat, and links out
+  to Google Maps and OpenStreetMap. The decorative chart strip sat above it
+  showing the same island in schematic form, so a reader scrolling this page met
+  the same place twice in two visual languages — and after the strip became
+  interactive too, two tile maps loading two sets of tiles.
+
+  The strip stays on the homepage, where it is the only map and is doing
+  orienting work rather than duplicating an answer.
+*/}
 
 <Section title={fil ? 'Saan kami' : 'Where we are'} titleId="location">
   <div style="max-width:var(--measure);display:grid;gap:var(--space-3)">

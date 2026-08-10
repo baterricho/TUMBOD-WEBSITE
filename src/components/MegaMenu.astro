@@ -28,6 +28,16 @@
  * ARIA: `<details>` exposes its own expanded state through the summary. No
  * hand-written `aria-expanded` — it desynchronises from the `open` attribute
  * the moment anything else toggles it.
+ *
+ * `aria-current` IS hand-written, and has to be. It was previously carried by
+ * `data-current` alone, which styles the underline and says nothing to a screen
+ * reader — so the five primary nav items were the only place on the site where
+ * "you are in this section" was communicated by appearance and by nothing else.
+ * Every other current-page marker on the site (the More panel's links, the
+ * breadcrumbs) already used `aria-current`. Both attributes are emitted now:
+ * `aria-current` is the semantics, `data-current` is retained because mega.css
+ * hangs the underline and the weight change off it and those two selectors are
+ * load-bearing for the "no layout shift on open" trick.
  */
 import Icon from './Icon.astro'
 import type { IconName } from './Icon.astro'
@@ -47,7 +57,11 @@ const { id, label, icon, current = false, panelLabel } = Astro.props
 ---
 
 <details class="mega" id={`mega-${id}`} data-mega>
-  <summary class="mainnav__link mega__summary" data-current={current ? 'page' : undefined}>
+  <summary
+    class="mainnav__link mega__summary"
+    data-current={current ? 'page' : undefined}
+    aria-current={current ? 'page' : undefined}
+  >
     <Icon name={icon} size={24} />
     {/* `data-label` feeds a hidden bold copy in CSS, so the label's box is
         already the width it will need when the item goes semibold on open.

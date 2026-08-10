@@ -6,40 +6,52 @@
  * THERE IS NOW A HERO. §12 and §35 forbade one until the owner retired that
  * rule. The ordering below is the compromise that keeps the site useful:
  *
- *   hero  →  sea state  →  boat status  →  office  →  actions  →  everything else
+ *   hero  →  office  →  actions  →  everything else
  *
- * The hero is the welcome. The sea band immediately under it is still the
- * first *fact*, and it still bleeds edge to edge in boat paint, because on an
- * island whether the boat sails outranks how the site looks. A resident who
- * scrolls one screen gets the same answer they got before the redesign; a
- * first-time visitor now gets a front door as well.
+ * ─────────────────────────────────────────────────────────────────
+ * THE SEA BAND AND BOAT STRIP ARE GONE FROM HERE, 2026-08-07 (owner request).
+ *
+ * They used to sit directly under the hero as the page's first *fact*, bleeding
+ * edge to edge in boat paint. Two things made that stop working:
+ *
+ *   1. Under the Deep Coastal Oceanic theme they were the only two full-bleed
+ *      light slabs left on a near-black page — an amber band and a pale grey
+ *      strip that read as a rendering fault rather than as emphasis.
+ *   2. Almost everything in them was `[[NEEDS DATA]]`. Wind speed, route and
+ *      departure time were all unfilled, so the loudest element on the
+ *      homepage was mostly placeholder chips.
+ *
+ * THE READING ITSELF IS NOT GONE. It still lives in the Today mega panel,
+ * which is in the header of every page and is where the sea state, the boat
+ * and the office hours now sit together. The components are untouched and
+ * still catalogued in /design-system, so putting the band back is one line.
+ * ─────────────────────────────────────────────────────────────────
  *
  * Module order and the persona each serves: UX-STRATEGY.md §2.
  */
 import Section from '@/components/Section.astro'
 import Hero from '@/components/Hero.astro'
 import Icon from '@/components/Icon.astro'
+import SeaAdvisory from '@/components/SeaAdvisory.astro'
+import { getSiteSettings } from '@/lib/content/live-collections'
 import Placeholder from '@/components/Placeholder.astro'
-import SeaConditionIndicator from '@/components/SeaConditionIndicator.astro'
-import BoatStatusRow from '@/components/BoatStatusRow.astro'
 import OfficeStatusBadge from '@/components/OfficeStatusBadge.astro'
 import LastUpdated from '@/components/LastUpdated.astro'
 import PhoneNumber from '@/components/PhoneNumber.astro'
-import { getDictionary, type Locale } from '@/lib/i18n'
+import MonthCalendar from '@/components/MonthCalendar.astro'
+import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 import { formatDate, isoAttr } from '@/lib/time'
 import {
-  seaCondition,
-  nextBoat,
   officeHours,
-  HOTLINES,
-  SERVICES,
-  ANNOUNCEMENTS,
+
+  SERVICE_DETAILS,
   HEALTH_OUTREACH,
-  CALENDAR,
-  PROJECTS,
   STATS,
 } from '@/lib/content/active'
 import { isPlaceholder } from '@/lib/content/placeholder'
+import { getHotlines, getProjects } from '@/lib/content/live-collections'
+import { getNews, getUpcomingEvents } from '@/lib/content/articles'
+import { articleHref } from '@/lib/content/sample-news'
 
 interface Props {
   locale: Locale
@@ -48,12 +60,18 @@ interface Props {
 const { locale } = Astro.props
 const t = getDictionary(locale)
 const fil = locale === 'fil'
-const p = fil ? '' : '/en'
+const settings = await getSiteSettings()
+const p = prefix(locale)
 
 const now = new Date()
-const sea = seaCondition(now)
-const boat = nextBoat(now)
 const office = officeHours(formatDate(now))
+const HOTLINES = (await getHotlines()).items
+
+/* Database first, exactly like every other surface. Three strips on this page
+   read permanently-empty arrays until 2026-08-07; see the note at module 5. */
+const homeNews = (await getNews()).items.slice(0, 3)
+const homeEvents = (await getUpcomingEvents()).items.slice(0, 4)
+const PROJECTS = (await getProjects()).items
 
 /*
  * Quick actions, rebuilt as CARDS (2026-08-06).
@@ -166,9 +184,6 @@ const exploreCards = [
   It is unchanged and still in use on /kontak, where it is the only map on the
   page and answers "where is this place", and in the design-system catalogue.
 */}
-<SeaConditionIndicator condition={sea} locale={locale} />
-<BoatStatusRow trip={boat} locale={locale} />
-
 <Section divider={false}>
   <div class="office">
     <OfficeStatusBadge hours={office} locale={locale} />
@@ -199,26 +214,59 @@ const exploreCards = [
   </ul>
 </Section>
 
+{/*
+  SEA SAFETY ADVISORY — placed here, above the emergency numbers, and that
+  order is the argument.
+
+  The hotline list answers "something has gone wrong, who do I call". The
+  advisory answers "should I do the thing that would go wrong". Prevention
+  outranks response, and this is the decision a fisherman or a boat operator
+  makes before leaving the shore — several times a week, not once a crisis.
+
+  It sits ABOVE the fold-adjacent emergency block and BELOW the quick actions,
+  so the page reads: who we are, what you came to do, whether the sea will let
+  you, and who to call if it does not.
+
+  Full-bleed and outside <Section> on purpose: sections are a measured column,
+  and this one spans the viewport like the band it replaces.
+*/}
+<SeaAdvisory advisory={settings.advisory} locale={locale} />
+
 {/* Module 7 promoted: emergency contacts now sit directly under the actions,
     in a bordered block, because they must be findable under stress. */}
 <Section title={t.home.emergencyContacts} titleId="emergency-contacts">
-  <div class="hotlines">
-    <p class="hotlines__title">
-      <Icon name="phone" size={20} />
-      {t.safety.callNow}
-    </p>
-    <ul class="list-reset">
-      {
-        HOTLINES.slice(0, 4).map((line) => (
-          <li class="row">
-            <span class="row__label">{fil ? line.labelFil : line.labelEn}</span>
-            <PhoneNumber number={line.number} locale={locale} />
-          </li>
-        ))
-      }
-    </ul>
-  </div>
-  <p style="margin-top:var(--space-3)"><a href={`${p}/ligtas/hotline`}>{t.home.fullDirectory} →</a></p>
+  {/*
+    The SAME card layout as everything else on this page, with one difference
+    that is not cosmetic: these keep `.fcard--urgent`, so the badge and the
+    link stay red. Red means emergency site-wide and this is the one place on
+    the homepage it belongs.
+
+    `PhoneNumber` still renders the number, so the `tel:` rules — no dialable
+    sample numbers, plain text in demo mode, placeholder when missing — apply
+    here exactly as they do on /ligtas/hotline. The card is NOT a link: making
+    the whole thing dial would have meant duplicating that logic, and getting
+    it wrong here is the worst bug this site can ship.
+  */}
+  <ul class="grid-cards">
+    {
+      HOTLINES.slice(0, 4).map((line) => (
+        <li>
+          <div class="fcard fcard--feature fcard--urgent">
+            <span class="fcard__badge" aria-hidden="true">
+              <Icon name="phone" size={24} />
+            </span>
+            <span class="fcard__title">{fil ? line.labelFil : line.labelEn}</span>
+            <span class="fcard__body">
+              <PhoneNumber number={line.number} locale={locale} large />
+            </span>
+          </div>
+        </li>
+      ))
+    }
+  </ul>
+  <p style="margin-top:var(--space-4)">
+    <a href={`${p}/ligtas/hotline`}>{t.home.fullDirectory} →</a>
+  </p>
 </Section>
 
 {/* Module 6: next health outreach. Largest age band here is 5–9, so child
@@ -242,25 +290,46 @@ const exploreCards = [
   )
 }
 
-{/* Module 5: announcements. */}
+{/*
+  Module 5: announcements.
+
+  ─────────────────────────────────────────────────────────────────
+  THIS READ `ANNOUNCEMENTS` FROM active.ts UNTIL 2026-08-07, and that export is
+  `[]` outside demo mode. So the homepage news strip rendered its empty state
+  permanently, while six announcements sat published in the database and the
+  News mega panel — in the header of this very page — listed them.
+
+  Found by marking the superseded exports `@deprecated`: the editor flagged
+  three call sites here within a second of the annotation landing. That is the
+  whole argument for ARCHITECTURE-REVIEW.md §3.1 in one file.
+  ─────────────────────────────────────────────────────────────────
+*/}
 <Section title={t.home.announcements} titleId="announcements">
   <LastUpdated slot="aside" at={now} now={now} locale={locale} />
-  {ANNOUNCEMENTS.length === 0 ? (
+  {homeNews.length === 0 ? (
     <p class="muted" style="max-width:var(--measure)">{t.empty.announcements}</p>
   ) : (
-    <ul class="list-reset" style="display:grid;gap:var(--space-3)">
-      {ANNOUNCEMENTS.map((a) => (
-        <li class="card">
-          <p class="small" style="letter-spacing:var(--tracking-caps);text-transform:uppercase;color:var(--ink-muted)">
-            {a.category}
-          </p>
-          <p style="font-family:var(--font-display);font-size:var(--text-lg);margin-top:var(--space-1)">
-            {isPlaceholder(a.titleFil) ? <Placeholder value={a.titleFil} /> : (fil ? a.titleFil : a.titleEn)}
-          </p>
-          {!isPlaceholder(a.excerptFil) && <p class="muted small">{a.excerptFil}</p>}
-          <p class="small muted" style="margin-top:var(--space-2)">
-            <time datetime={isoAttr(a.publishedAt)}>{formatDate(a.publishedAt)}</time>
-          </p>
+    <ul class="grid-cards">
+      {homeNews.map((a) => (
+        <li>
+          <a href={articleHref(a, locale)} class="fcard fcard--feature" data-plain>
+            <span class="fcard__badge" aria-hidden="true">
+              <Icon name="megaphone" size={24} />
+            </span>
+            <span class="fcard__title">{fil ? a.titleFil : a.titleEn}</span>
+            {(fil ? a.leadFil : a.leadEn) && (
+              <span class="fcard__body">{fil ? a.leadFil : a.leadEn}</span>
+            )}
+            <span class="fcard__meta">
+              {fil ? a.categoryFil : a.categoryEn}
+              {' · '}
+              <time datetime={isoAttr(a.publishedAt)}>{formatDate(a.publishedAt)}</time>
+            </span>
+            <span class="fcard__more">
+              {fil ? 'Basahin' : 'Learn more'}
+              <Icon name="chevron-right" size={16} />
+            </span>
+          </a>
         </li>
       ))}
     </ul>
@@ -268,18 +337,33 @@ const exploreCards = [
   <p style="margin-top:var(--space-3)"><a href={`${p}/balita`}>{t.home.allAnnouncements} →</a></p>
 </Section>
 
-{/* Module 8: most requested documents. */}
+{/* Module 8: most requested documents — feature cards. */}
 <Section title={t.home.commonDocuments} titleId="documents">
-  <ul class="list-reset">
+  <ul class="grid-cards">
     {
-      SERVICES.slice(0, 3).map((s) => (
+      SERVICE_DETAILS.slice(0, 6).map((s) => (
         <li>
-          <a href={`${p}/serbisyo/${s.slug}`} class="row" data-plain style="color:var(--ink)">
-            <span style="text-decoration:underline;text-underline-offset:0.2em;color:var(--interactive)">
-              {fil ? s.nameFil : s.nameEn}
+          <a href={`${p}/serbisyo/${s.slug}`} class="fcard fcard--feature" data-plain>
+            <span class="fcard__badge" aria-hidden="true">
+              <Icon name="document" size={24} />
             </span>
-            <span class="small muted">
-              {isPlaceholder(s.fee) ? <Placeholder value={s.fee} /> : <span class="figure">{s.fee}</span>}
+            <span class="fcard__title">{fil ? s.nameFil : s.nameEn}</span>
+            <span class="fcard__body">
+              {fil ? s.descriptionFil : s.descriptionEn}
+            </span>
+            <span class="fcard__facts">
+              <span class="fcard__fact">
+                <span class="fcard__factlabel">{t.services.fee}</span>
+                {isPlaceholder(s.fee) ? (
+                  <Placeholder value={s.fee} />
+                ) : (
+                  <span class="figure">{s.fee}</span>
+                )}
+              </span>
+            </span>
+            <span class="fcard__more">
+              {fil ? 'Alamin pa' : 'Learn more'}
+              <Icon name="chevron-right" size={16} />
             </span>
           </a>
         </li>
@@ -288,18 +372,16 @@ const exploreCards = [
   </ul>
 </Section>
 
-{/* Module 9: calendar. */}
+{/*
+  Module 9: calendar.
+
+  A real month grid now, not a list of dates. The list is still there — beside
+  the grid, where it answers "what is it" that a marked square cannot.
+*/}
 {
-  CALENDAR.length > 0 && (
+  homeEvents.length > 0 && (
     <Section title={t.home.calendar} titleId="calendar">
-      <ul class="list-reset">
-        {CALENDAR.map((e) => (
-          <li class="row">
-            <span class="figure" style="min-width:6rem">{e.date}</span>
-            <span style="margin-right:auto">{e.title}</span>
-          </li>
-        ))}
-      </ul>
+      <MonthCalendar locale={locale} events={homeEvents} />
     </Section>
   )
 }
@@ -308,26 +390,48 @@ const exploreCards = [
 {
   PROJECTS.length > 0 && (
     <Section title={t.home.projects} titleId="projects">
-      <div style="display:grid;gap:var(--space-3)">
+      <ul class="grid-cards">
         {PROJECTS.map((proj) => (
-          <div class="card">
-            <p style="font-family:var(--font-display);font-size:var(--text-lg)">{proj.title}</p>
-            <p style="margin-top:var(--space-2);display:flex;align-items:center;gap:var(--space-2)">
+          <li>
+            <a href={`${p}/proyekto`} class="fcard fcard--feature" data-plain>
+              <span class="fcard__badge" aria-hidden="true">
+                <Icon name="checklist" size={24} />
+              </span>
+              <span class="fcard__title">{proj.title}</span>
+              {/* Progress is stated as TEXT with the figure, never as a bar
+                  alone — a bar carries meaning by length and colour only. */}
+              <span class="fcard__body">
+                <strong>{proj.status}</strong>
+                <span class="figure"> · {proj.percent}%</span>
+              </span>
               <span
                 aria-hidden="true"
-                class="dot"
-                style={`background:${proj.percent === 100 ? 'var(--status-open)' : 'var(--accent)'}`}
-              />
-              {/* Progress is stated as text, never as a bar alone. */}
-              <strong>{proj.status}</strong>
-              <span class="figure muted">{proj.percent}%</span>
-            </p>
-            <p class="small muted" style="margin-top:var(--space-1)">
-              <span class="figure">{proj.budget}</span> · {proj.fund}
-            </p>
-          </div>
+                style="height:6px;border-radius:var(--radius-full);background:var(--surface-sunken);overflow:hidden;display:block"
+              >
+                <span
+                  style={`height:100%;display:block;width:${proj.percent}%;background:${
+                    proj.percent === 100 ? 'var(--status-open)' : 'var(--accent)'
+                  }`}
+                />
+              </span>
+              <span class="fcard__facts">
+                <span class="fcard__fact">
+                  <span class="fcard__factlabel">{fil ? 'Badyet' : 'Budget'}</span>
+                  <span class="figure">{proj.budget}</span>
+                </span>
+                <span class="fcard__fact">
+                  <span class="fcard__factlabel">{fil ? 'Pondo' : 'Funded by'}</span>
+                  <span>{proj.fund}</span>
+                </span>
+              </span>
+              <span class="fcard__more">
+                {fil ? 'Alamin pa' : 'Learn more'}
+                <Icon name="chevron-right" size={16} />
+              </span>
+            </a>
+          </li>
         ))}
-      </div>
+      </ul>
     </Section>
   )
 }

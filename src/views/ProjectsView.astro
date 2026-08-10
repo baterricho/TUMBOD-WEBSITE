@@ -11,16 +11,34 @@
  * from" is the question a project list is actually asked.
  */
 import Section from '@/components/Section.astro'
-import { PROJECTS } from '@/lib/content/active'
-import type { Locale } from '@/lib/i18n'
+import SampleChip from '@/components/SampleChip.astro'
+import { getProjects, getProjectPhotos, type ProjectStage } from '@/lib/content/live-collections'
+import { prefix, type Locale } from '@/lib/i18n'
+import { formatDay, isoAttr } from '@/lib/time'
 
 interface Props {
   locale: Locale
 }
 
 const { locale } = Astro.props
+const projects = await getProjects()
+const PROJECTS = projects.items
+const photos = await getProjectPhotos()
 const fil = locale === 'fil'
-const p = fil ? '' : '/en'
+const p = prefix(locale)
+
+/*
+ * Stage labels. Filipino values in the database, both languages here.
+ *
+ * The word matters more than the picture. "Tapos na — Marso 4, 2026" under a
+ * photograph is a checkable claim; the same photograph with no stage and no
+ * date is decoration that happens to be on a government page.
+ */
+const STAGE_LABEL: Record<ProjectStage, { fil: string; en: string }> = {
+  bago: { fil: 'Bago simulan', en: 'Before' },
+  ginagawa: { fil: 'Ginagawa', en: 'In progress' },
+  tapos: { fil: 'Tapos na', en: 'Completed' },
+}
 ---
 
 <Section divider={false} class="section--airy">
@@ -46,10 +64,26 @@ const p = fil ? '' : '/en'
         </p>
       </div>
     ) : (
-      <div class="grid-cards">
+      /* `--wide` gives a card room for a contact sheet of evidence; `--start`
+         stops a project with no photographs being stretched to match one that
+         has three. A `{/* … *​/}` comment cannot go here — a ternary branch
+         holds exactly one expression, and the comment plus the element is two,
+         which fails the compiler with a misleading "Expected `,` or `)`". */
+      <div class="grid-cards grid-cards--wide grid-cards--start">
         {PROJECTS.map((proj) => (
           <article class="fcard" data-reveal="pending">
-            <h3 class="fcard__title">{proj.title}</h3>
+            {/*
+              h2, not h3. This grid sits in an UNTITLED <Section>, so there is
+              no h2 between the page's h1 and these cards — an h3 here skipped a
+              level and made the outline lie about the page's structure. A
+              screen-reader user navigating by heading would be told there is a
+              missing section between the title and the first project.
+
+              The visual size is set by `.fcard__title`, not by the tag, so this
+              changes the outline and nothing else. Card titles inside a section
+              that DOES have a title stay h3 — see NewsView.
+            */}
+            <h2 class="fcard__title">{proj.title}</h2>
             {/* The percentage is text FIRST. */}
             <p>
               <strong>{proj.status}</strong>
@@ -75,6 +109,58 @@ const p = fil ? '' : '/en'
                 <span>{proj.fund}</span>
               </span>
             </p>
+
+            {/*
+              THE EVIDENCE.
+              A status of "Tapos na — 100%" is a claim. A dated photograph of
+              the finished work is proof, and proof is the entire reason a
+              resident opens this page. Rendered in stage order — before,
+              during, after — so the sequence tells the story by itself.
+
+              Every figure states its stage and its date as TEXT. A photo grid
+              with no words is not evidence of anything.
+            */}
+            {
+              proj.id && photos.get(proj.id)?.length ? (
+                <div class="evidence">
+                  <p class="evidence__legend">
+                    {fil ? 'Larawang patunay' : 'Photographic evidence'}
+                    {photos.get(proj.id)!.some((ph) => ph.isSample) && (
+                      <SampleChip locale={locale} />
+                    )}
+                  </p>
+                  <ul class="evidence__grid">
+                    {photos.get(proj.id)!.map((ph) => (
+                      <li>
+                        <figure class="evidence__item">
+                          <img
+                            src={ph.src}
+                            alt={fil ? ph.altFil : ph.altEn}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <figcaption>
+                            <span class={`chip chip--stage-${ph.stage}`}>
+                              {fil ? STAGE_LABEL[ph.stage].fil : STAGE_LABEL[ph.stage].en}
+                            </span>
+                            {ph.takenAt && (
+                              <time datetime={isoAttr(ph.takenAt)} class="evidence__date">
+                                {formatDay(ph.takenAt, locale)}
+                              </time>
+                            )}
+                            {(fil ? ph.captionFil : ph.captionEn) && (
+                              <span class="evidence__caption">
+                                {fil ? ph.captionFil : ph.captionEn}
+                              </span>
+                            )}
+                          </figcaption>
+                        </figure>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null
+            }
           </article>
         ))}
       </div>

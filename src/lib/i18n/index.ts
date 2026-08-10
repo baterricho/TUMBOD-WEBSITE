@@ -51,3 +51,38 @@ export function alternateHref(pathname: string, locale: Locale): string {
 export function htmlLang(locale: Locale): string {
   return locale === 'fil' ? 'fil' : 'en'
 }
+
+/**
+ * The prefix for a locale-relative link: `''` for Filipino, `/en` for English.
+ *
+ * ─────────────────────────────────────────────────────────────────
+ * CONSOLIDATED HERE 2026-08-07 (ARCHITECTURE-REVIEW.md §3.2).
+ *
+ * This existed in `lib/content/menu.ts` and was used ten times. It was ALSO
+ * hand-rolled — as a literal `locale === 'fil'` ternary — in sixteen other
+ * files: two idioms for one concept, with the copy-pasted one winning on
+ * count. That was the highest-count duplication in the repository.
+ *
+ * It lives here rather than in `menu.ts` because it is a routing rule, not
+ * menu content: `alternateHref` and `htmlLang` are its neighbours, and the
+ * three of them together are everything the site knows about how a locale
+ * becomes a URL. `menu.ts` re-exports it so its existing callers keep working.
+ * ─────────────────────────────────────────────────────────────────
+ */
+export function prefix(locale: Locale): string {
+  return locale === 'fil' ? '' : '/en'
+}
+
+/**
+ * A locale-relative href.
+ *
+ * `localeHref('en', '/serbisyo')` → `/en/serbisyo`. Prefer this over
+ * `` `${prefix(locale)}/serbisyo` `` in new code: the template form silently
+ * produces `//serbisyo` if the path is ever passed with a leading slash
+ * already stripped, and `/en` + `/` produces `/en/` rather than `/en`.
+ */
+export function localeHref(locale: Locale, path = '/'): string {
+  const p = prefix(locale)
+  if (path === '/' || path === '') return p || '/'
+  return `${p}${path.startsWith('/') ? path : `/${path}`}`
+}

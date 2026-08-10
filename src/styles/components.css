@@ -106,12 +106,30 @@ html:not([data-motion='seen']) .chart-pin {
 
 /* Section titles are set in the display face and preceded by a short accent
    rule — a chart's section marker, made loud. */
+/*
+ * SENTENCE CASE, NOT UPPERCASE — a readability fix, not a taste one.
+ *
+ * These were `text-transform: uppercase` with `--tracking-caps`. Uppercase
+ * flattens every word to a rectangle: it removes the ascender and descender
+ * profile that lets a reader recognise a word by its shape rather than by
+ * decoding it letter by letter. That word-shape cue is worth least to a
+ * confident reader and most to the two groups this site names in its own
+ * planning documents — readers with low literacy, and older readers.
+ *
+ * It also cost more than it bought. Filipino compounds are long, and
+ * "MADALAS HINGING DOKUMENTO" set in caps with extra tracking took two lines
+ * at 320px where the sentence-case version takes one.
+ *
+ * Hierarchy now comes from size, weight and the accent rule — three signals
+ * that survive translation, small screens and glare. It never came from the
+ * capitals.
+ */
 .section__title {
   font-family: var(--font-display);
   font-size: var(--text-xl);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  color: var(--ink-strong);
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -242,12 +260,12 @@ html:not([data-motion='seen']) .chart-pin {
 }
 
 /* Colour is never the sole carrier: every tile has an icon AND a label. */
-.tile--doc   { background: var(--surface-inverse);   color: var(--ink-inverse); }      /* 11.86:1 */
-.tile--sos   { background: var(--alert-emergency);   color: var(--alert-emergency-ink); } /* 6.95:1 */
-.tile--boat  { background: var(--accent);            color: var(--accent-ink); }       /* 9.01:1 */
+.tile--doc   { background: var(--surface-inverse);   color: var(--ink-inverse); }      /* 17.28:1 */
+.tile--sos   { background: var(--alert-emergency);   color: var(--alert-emergency-ink); } /* 4.83:1 */
+.tile--boat  { background: var(--accent);            color: var(--accent-ink); }       /* 9.39:1 */
 
 /*
- * DARK-MODE BUG, fixed 2026-08-05.
+ * DARK-MODE BUG, fixed 2026-08-05, and the pair below is the fix.
  *
  * This was `background: var(--palette-mangrove); color: var(--ink-inverse)`.
  * The background is a FIXED primitive but the ink was SEMANTIC, so in dark
@@ -257,28 +275,17 @@ html:not([data-motion='seen']) .chart-pin {
  * during a brownout or a pre-dawn departure.
  *
  * Rule this enforces: a FIXED background takes a FIXED ink. Never pair a
- * primitive with a token that inverts.
+ * primitive with a token that inverts. It has since survived a full re-theme
+ * to the light palette untouched, which is the evidence the rule was right.
  */
-.tile--list  { background: var(--palette-mangrove);  color: var(--palette-glare); }    /* 14.67:1 */
+.tile--list  { background: var(--palette-mangrove);  color: var(--palette-glare); }    /* 17.28:1 */
 
-/* In dark mode the mangrove tile also sits too close to the page surface to
-   read as a distinct target, so it lifts to the wet-root tone and keeps an
-   explicit edge. Glare on mangrove-wet measures 7.4:1. */
-:root[data-theme='dark'] .tile--list,
-:root:not([data-theme='light']) .tile--list {
-  border-color: var(--line-strong);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .tile--list {
-    background: var(--palette-mangrove-wet);
-    border-color: var(--line-strong);
-  }
-}
-
-:root[data-theme='dark'] .tile--list {
-  background: var(--palette-mangrove-wet);
-}
+/*
+ * The `prefers-color-scheme` and `[data-theme]` variants of this tile that
+ * used to sit here are DELETED, not updated. The site ships one theme; those
+ * three blocks were the last place a second one could silently repaint a
+ * surface. oceanic.css gives the tile its edge unconditionally.
+ */
 
 /* ── Office status ──────────────────────────────────────────── */
 
@@ -424,8 +431,38 @@ html:not([data-motion='seen']) .chart-pin {
 /* Once the map mounts, the centring that framed the idle panel must go — a
    flex item with `width: auto` collapses the map and pushes its controls out
    of reach. */
+/*
+ * ═══════════════════════════════════════════════════════════════
+ * `isolation: isolate` IS A BUG FIX. Do not drop it as redundant.
+ *
+ * REPORTED: open the map on /kontak, then open any mega panel. The panel
+ * appears — and the map draws straight through it, tiles, zoom buttons and
+ * layer switcher sitting on top of the menu.
+ *
+ * IT IS NOT A MISSING TEARDOWN. Nothing needs to hide the map; the map should
+ * simply be painted underneath. Leaflet assigns its own stacking order inside
+ * the map, and those numbers are large:
+ *     .leaflet-pane          400
+ *     .leaflet-control       800
+ *     .leaflet-top/-bottom  1000
+ * Those are only meant to order Leaflet's parts against EACH OTHER. With no
+ * stacking context around the container they escape and compete at the root,
+ * where the mega panel is `z-index: 60` — so 400, 800 and 1000 all win, and a
+ * full-screen overlay loses to a tile.
+ *
+ * `isolation: isolate` traps the whole range inside this element. Leaflet's
+ * internal ordering is unchanged; it just stops being the page's business.
+ *
+ * The hero has never shown this bug and carries the same Leaflet map, because
+ * `.hero` already sets `isolation: isolate` (redesign.css). This makes the
+ * pattern consistent rather than accidental.
+ * ═══════════════════════════════════════════════════════════════
+ */
 .mapcard__slot--live {
   display: block;
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
 }
 
 .mapcard__idle {

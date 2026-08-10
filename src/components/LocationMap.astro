@@ -197,18 +197,21 @@ const osm = `https://www.openstreetmap.org/?mlat=${LAT}&mlon=${LON}#map=${ZOOM}/
           // Attribution is a licence condition, not decoration. Do not remove.
           var streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
+            crossOrigin: true,
             attribution: '&copy; OpenStreetMap contributors',
           })
           var satellite = L.tileLayer(
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            { maxZoom: 19, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics' },
+            { maxZoom: 19,
+            crossOrigin: true, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics' },
           )
           var labels = L.tileLayer(
             'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-            { maxZoom: 19 },
+            { maxZoom: 19, crossOrigin: true },
           )
           var terrain = L.tileLayer('https://tile.opentopomap.org/{z}/{x}/{y}.png', {
             maxZoom: 17,
+            crossOrigin: true,
             attribution: '&copy; OpenTopoMap (CC-BY-SA), &copy; OpenStreetMap contributors',
           })
           var hybrid = L.layerGroup([satellite, labels])

@@ -31,7 +31,7 @@ import Icon from './Icon.astro'
 import { SITE } from '@/lib/content/site'
 import { CHART_GEOMETRY } from '@/features/chart/geometry'
 import { TUMBOD_BOUNDS, TUMBOD_BOUNDARY } from '@/features/chart/boundary'
-import type { Locale } from '@/lib/i18n'
+import { prefix, type Locale } from '@/lib/i18n'
 
 interface Props {
   locale: Locale
@@ -39,7 +39,7 @@ interface Props {
 
 const { locale } = Astro.props
 const fil = locale === 'fil'
-const p = fil ? '' : '/en'
+const p = prefix(locale)
 
 /**
  * THE SEAL PLACEHOLDERS ARE GONE FROM THE HERO. Two dashed circles reading
@@ -53,6 +53,7 @@ const p = fil ? '' : '/en'
 
 /** Narrowed once, so the template does not repeat the predicate. */
 type PhotoSlide = Extract<(typeof SLIDES)[number], { kind: 'photo' }>
+type VideoSlide = Extract<(typeof SLIDES)[number], { kind: 'video' }>
 
 /**
  * Slides after the map. Each names the photograph that belongs in it, so the
@@ -97,7 +98,46 @@ type PhotoSlide = Extract<(typeof SLIDES)[number], { kind: 'photo' }>
  */
 const SLIDES = [
   { id: 'hero-map', kind: 'map', labelFil: 'Mapa ng barangay', labelEn: 'Barangay map' },
-  { id: 'hero-video', kind: 'video', labelFil: 'Video ng baybayin', labelEn: 'Shoreline video' },
+  /*
+   * VIDEO SLIDES. Every one carries its own src and poster — there were
+   * hard-coded paths on a single `#hero-video` element until 2026-08-07, so
+   * adding a second clip meant duplicating the element AND the script that
+   * drove it. They are data now, and the script handles however many exist.
+   *
+   * Each file passed through `scripts/optimise-video.mjs` first. The two added
+   * here arrived as 42.6 MB and 9.4 MB camera originals at 10 Mbps; they ship
+   * at 7.1 MB and 2.0 MB. Do not put an unprocessed clip in this list.
+   */
+  {
+    id: 'hero-video',
+    kind: 'video',
+    src: '/media/tumbod-hero.mp4',
+    poster: '/media/tumbod-hero-poster.jpg',
+    labelFil: 'Video ng baybayin',
+    labelEn: 'Shoreline video',
+    altFil: 'Video mula sa himpapawid ng baybaying pamayanan at mga bangka.',
+    altEn: 'Aerial video of a coastal settlement and outrigger boats.',
+  },
+  {
+    id: 'hero-video-2',
+    kind: 'video',
+    src: '/media/tumbod-hero-2.mp4',
+    poster: '/media/tumbod-hero-2-poster.jpg',
+    labelFil: 'Video ng barangay',
+    labelEn: 'Barangay video',
+    altFil: 'Maikling video mula sa Barangay Tumbod.',
+    altEn: 'A short video from Barangay Tumbod.',
+  },
+  {
+    id: 'hero-video-3',
+    kind: 'video',
+    src: '/media/tumbod-hero-3.mp4',
+    poster: '/media/tumbod-hero-3-poster.jpg',
+    labelFil: 'Video ng barangay (mahaba)',
+    labelEn: 'Barangay video (longer)',
+    altFil: 'Mahabang video mula sa Barangay Tumbod.',
+    altEn: 'A longer video from Barangay Tumbod.',
+  },
   {
     id: 'hero-falls',
     kind: 'photo',
@@ -159,6 +199,7 @@ const SLIDES = [
 ] as const
 
 const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
+const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
 ---
 
 <section class="hero" aria-labelledby="hero-title">
@@ -195,27 +236,35 @@ const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
         <div class="hero__map" id="hero-map-mount" aria-hidden="true"></div>
       </div>
 
-      {/* Video slide. `preload="none"` so 5.5 MB is never fetched until this
-          slide is actually reached; the poster (26 KB) stands in until then. */}
-      <div class="hero__slide hero__slide--video" id="hero-video">
-        <video
-          id="hero-video-el"
-          class="hero__video"
-          poster="/media/tumbod-hero-poster.jpg"
-          preload="none"
-          muted
-          loop
-          playsinline
-          disablepictureinpicture
-          aria-label={
-            fil
-              ? 'Video mula sa himpapawid ng baybaying pamayanan at mga bangka'
-              : 'Aerial video of a coastal settlement and outrigger boats'
-          }
-        >
-          <source src="/media/tumbod-hero.mp4" type="video/mp4" />
-        </video>
-      </div>
+      {/*
+        Video slides, one per entry in SLIDES.
+
+        `preload="none"` on every one: three clips totalling 14 MB must never
+        be fetched because someone opened the homepage. A clip downloads only
+        when its slide is actually reached, and the poster stands in until
+        then. That is also why `<source>` carries `data-src` rather than `src`
+        — a bare `src` inside a `<video>` is fetched by some browsers even at
+        `preload="none"`, which would defeat the whole arrangement.
+      */}
+      {
+        VIDEOS.map((s) => (
+          <div class="hero__slide hero__slide--video" id={s.id}>
+            <video
+              class="hero__video"
+              data-hero-video
+              poster={s.poster}
+              preload="none"
+              muted
+              loop
+              playsinline
+              disablepictureinpicture
+              aria-label={fil ? s.altFil : s.altEn}
+            >
+              <source data-src={s.src} type="video/mp4" />
+            </video>
+          </div>
+        ))
+      }
 
       {/* Divs, not list items. `role="group"` on the track (needed to give the
           focusable scroll region a name) replaces a <ul>'s implicit list role,
@@ -349,7 +398,7 @@ const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
     while the video slide is active.
   */}
   <button class="hero__videobtn" id="hero-video-btn" type="button" hidden>
-    <span id="hero-video-btn-label">{fil ? 'I-play ang video' : 'Play video'}</span>
+    <span id="hero-video-btn-label">{fil ? "I-pause ang video" : "Pause video"}</span>
   </button>
 
   {/*
@@ -424,7 +473,7 @@ const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
               data-thumb={s.id}
               style={
                 s.kind === 'video'
-                  ? 'background-image:url(/media/tumbod-hero-poster.jpg)'
+                  ? `background-image:url(${s.poster})`
                   : s.kind === 'photo'
                     ? `background-image:url(${s.thumb})`
                     : undefined
@@ -500,10 +549,20 @@ const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
          - it always has a real pause control (WCAG 2.2.2), and it stops the
            moment the slide leaves the screen.
     */
-    var video = document.getElementById('hero-video-el')
+    /*
+     * ONE HANDLER FOR EVERY VIDEO SLIDE.
+     *
+     * This drove a single `#hero-video-el`. Three clips now, and duplicating
+     * the whole block per clip is how a carousel ends up with two of them
+     * playing at once over each other.
+     *
+     * `current` is whichever video's slide is on screen; everything below acts
+     * on that one and pauses the rest.
+     */
+    var videos = [].slice.call(document.querySelectorAll('[data-hero-video]'))
+    var current = null
     var vbtn = document.getElementById('hero-video-btn')
     var vlabel = document.getElementById('hero-video-btn-label')
-    var loaded = false
 
     var conn = navigator.connection || {}
     var slowNetwork =
@@ -525,32 +584,85 @@ const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
       vbtn.setAttribute('aria-pressed', playing ? 'true' : 'false')
     }
 
+    /* The <source> carries `data-src`, so nothing is fetched until here. */
+    function ensureLoaded(v) {
+      if (v.dataset.loaded) return
+      var src = v.querySelector('source[data-src]')
+      if (src) src.src = src.getAttribute('data-src')
+      v.load()
+      v.dataset.loaded = '1'
+    }
+
+    /*
+     * KEEP THE CLIP THAT WAS ACTUALLY WATCHED, so it plays again with no signal.
+     *
+     * Asked for by the owner: the hero video, map and photographs should work
+     * offline. Photographs and posters the service worker caches on sight —
+     * they are ~820 KB for every one on the site. Video cannot be treated that
+     * way: three clips are 14.8 MB, and pre-downloading them would spend a
+     * resident's prepaid data on decoration and put the whole origin's storage
+     * near its quota, where the browser may evict /ligtas along with it.
+     *
+     * So the rule is "keep what you already fetched, never fetch more". This
+     * fires on `playing` — not on `play`, which also fires for an attempt that
+     * then fails — so we only ask after real bytes have arrived and the person
+     * has visibly chosen this clip. The worker holds at most two, skips the
+     * whole thing under Save-Data, and stores nothing on its own initiative.
+     */
+    function keepForOffline(v) {
+      if (!navigator.serviceWorker || !navigator.serviceWorker.controller) return
+      var src = v.querySelector('source[src]')
+      var url = src && src.getAttribute('src')
+      if (!url || v.dataset.kept) return
+      v.dataset.kept = '1'
+      navigator.serviceWorker.controller.postMessage({ type: 'cache-video', url: url })
+    }
+
+    videos.forEach(function (v) {
+      v.addEventListener('playing', function () { keepForOffline(v) }, { once: true })
+    })
+
     function playVideo() {
-      if (!video) return
-      if (!loaded) {
-        video.load()
-        loaded = true
-      }
-      var r = video.play()
+      if (!current) return
+      ensureLoaded(current)
+      var r = current.play()
       if (r && r.catch) r.catch(function () { setLabel(false) })
       setLabel(true)
     }
 
     function pauseVideo() {
-      if (!video || video.paused) return
-      video.pause()
+      videos.forEach(function (v) { if (!v.paused) v.pause() })
       setLabel(false)
     }
 
-    function onVideoSlide() {
+    /*
+     * AUTOPLAY. Requested by the owner, 2026-08-07: no tap to start.
+     *
+     * Two guards remain, and neither contradicts that request — in both cases
+     * the reader has already told us not to.
+     *
+     *   saveData / 2g   Autoplaying 7 MB at somebody on a metered island
+     *                   connection is spending their money on decoration. The
+     *                   poster shows instead and the button offers the choice.
+     *   reduced motion  A standing accessibility requirement, not a
+     *                   preference we get to override.
+     *
+     * THE PAUSE CONTROL STAYS. WCAG 2.2.2 requires a way to stop anything that
+     * moves for more than five seconds and starts on its own; without it this
+     * page fails AA, which is the standard the whole site is gated on. It no
+     * longer says "Play" — the video is already playing — so it costs the
+     * reader nothing and it is there for anyone who needs it.
+     */
+    function onVideoSlide(v) {
+      current = v
       if (mayAutoplay) playVideo()
+      else setLabel(false)
     }
 
-    if (video && vbtn) {
-      vbtn.hidden = false
-      setLabel(false)
+    if (videos.length && vbtn) {
       vbtn.addEventListener('click', function () {
-        if (video.paused) playVideo()
+        if (!current) return
+        if (current.paused) playVideo()
         else pauseVideo()
       })
       // A backgrounded tab must not keep streaming.
@@ -631,12 +743,14 @@ const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
               var chrome = document.getElementById('hero-mapchrome')
               if (chrome) chrome.classList.toggle('is-visible', onMap)
 
-              // Video plays only while its own slide is on screen, and never
-              // keeps running in the background burning data.
-              var onVideo = e.target.id === 'hero-video'
-              if (vbtn) vbtn.classList.toggle('is-visible', onVideo)
-              if (onVideo) onVideoSlide()
-              else pauseVideo()
+              // A video plays only while its own slide is on screen, and never
+              // keeps running in the background burning data. Pause FIRST, so
+              // moving from one clip to the next never leaves two running.
+              var vid = e.target.querySelector('[data-hero-video]')
+              if (vbtn) vbtn.classList.toggle('is-visible', !!vid)
+              pauseVideo()
+              if (vid) onVideoSlide(vid)
+              else current = null
             })
           },
           { root: track, threshold: 0.6 },
@@ -734,7 +848,7 @@ const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
         // crisp inner line, so the outline reads against both dark water and
         // bright reef.
         L.polygon(ring, {
-          color: '#7ee787',
+          color: '#fbbf24',
           weight: 6,
           opacity: 0.25,
           fill: false,
@@ -742,10 +856,10 @@ const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
         }).addTo(map)
 
         L.polygon(ring, {
-          color: '#7ee787',
+          color: '#fbbf24',
           weight: 2,
           opacity: 1,
-          fillColor: '#7ee787',
+          fillColor: '#fbbf24',
           fillOpacity: 0.08,
           interactive: false,
         }).addTo(map)

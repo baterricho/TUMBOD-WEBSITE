@@ -20,6 +20,8 @@ import {
   skeleton, fmtDate, fmtRelative,
 } from './ui'
 import { initMedia, renderMediaLibrary, pickMedia, publicUrl, FOLDERS } from './media'
+import { initContext } from './context'
+import { renderAnalytics } from './screens/analytics'
 
 interface AdminConfig {
   SUPABASE_URL: string
@@ -37,6 +39,21 @@ if (!cfg?.SUPABASE_URL) {
 
 const sb: SupabaseClient = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_KEY)
 initMedia(sb, cfg.SUPABASE_URL)
+
+/*
+ * Hand the shared context to the extracted screens.
+ *
+ * This runs at module scope, immediately after the client exists and before
+ * anything can render, so `sb()` inside a screen can never be called against a
+ * null client. `navigate` is passed as a thunk because `go` is defined below —
+ * and because a screen importing `go` directly would create the import cycle
+ * (main → screen → main) that made the first extraction attempt fail.
+ */
+initContext({
+  sb,
+  collections: cfg.COLLECTIONS,
+  navigate: (route: string) => go(route),
+})
 
 /** `#app` boots with `data-loading`, which forces `display:block`. Leaving it
     set means the two-column grid never engages and the sidebar paints over the
@@ -61,6 +78,7 @@ const NAV: { group: string; items: NavEntry[] }[] = [
     group: '',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+      { id: 'analytics', label: 'Bisita sa website', icon: 'activity' },
       { id: 'media', label: 'Media Library', icon: 'image' },
       { id: 'hero', label: 'Hero Slider', icon: 'slides' },
     ],
@@ -86,6 +104,7 @@ const NAV: { group: string; items: NavEntry[] }[] = [
     items: [
       { id: 'officials', label: 'Mga Opisyal', icon: 'shield', table: 'officials' },
       { id: 'projects', label: 'Proyekto', icon: 'build', table: 'projects' },
+      { id: 'project_photos', label: 'Larawan ng Proyekto', icon: 'image', table: 'project_photos' },
       { id: 'forms', label: 'Mga Porma', icon: 'download', table: 'forms' },
       { id: 'faqs', label: 'Madalas Itanong', icon: 'help', table: 'faqs' },
     ],
@@ -324,6 +343,7 @@ async function renderRoute() {
   }
   if (state.route === 'hero') return renderHero(host)
   if (state.route === 'activity') return renderActivity(host)
+  if (state.route === 'analytics') return renderAnalytics(host)
 
   const col = collectionFor(state.route)
   if (col) return renderCollection(host, col)
@@ -403,10 +423,12 @@ async function renderDashboard(host: HTMLElement) {
     statsGrid.append(a)
   })
 
-  /* Content mix — a bar per collection. Answers "what is thin" at a glance,
-     which for this barangay is the only question the numbers can honestly
-     answer: there is no analytics on this site, so there are no visitor
-     figures to show and inventing some would be worse than an empty panel. */
+  /* Content mix — a bar per collection. Answers "what is thin" at a glance.
+
+     (This comment used to end "there is no analytics on this site, so there
+     are no visitor figures to show". There are now: see the Bisita sa website
+     screen. The counter is first-party and cookie-free, and it does not run on
+     the emergency routes.) */
   const chartCard = el('div', { class: 'a-card' })
   chartCard.append(txt('h2', 'a-legend', 'Nilalaman ng website'))
 
@@ -1131,6 +1153,47 @@ async function restore(col: Collection, body: HTMLElement, row: Record<string, u
 
 /* ── Record form ──────────────────────────────────────────────── */
 
+/**
+ * Turn a Postgres error into something a barangay secretary can act on.
+ *
+ * Every message below was one somebody actually hit. They are all correct
+ * — the database is right to refuse each of these — and all of them are
+ * unreadable to the person who caused them, because they name constraints and
+ * columns rather than the thing on screen.
+ *
+ * THE RAW TEXT IS KEPT, appended in brackets. Hiding it entirely would leave
+ * whoever debugs this next with a friendly sentence and nothing to search for.
+ */
+function humanError(message: string): string {
+  const m = message.toLowerCase()
+
+  if (m.includes('photo_requires_consent')) {
+    return (
+      'Hindi mai-save: may larawan pero hindi naka-tsek ang pahintulot. ' +
+      'I-tsek muna ang "May pahintulot sa larawan", o alisin ang larawan.'
+    )
+  }
+  if (m.includes('violates check constraint')) {
+    return `Hindi tinanggap ng database ang isang halaga sa form. [${message}]`
+  }
+  if (m.includes('duplicate key') || m.includes('already exists')) {
+    return `May kaparehong tala na. Baka nagamit na ang slug o pangalan. [${message}]`
+  }
+  if (m.includes('violates foreign key')) {
+    return `Nakaugnay ito sa isang tala na wala na. Piliin muli. [${message}]`
+  }
+  if (m.includes('violates not-null')) {
+    return `May kailangang punan na hindi pa nasasagutan. [${message}]`
+  }
+  if (m.includes('row-level security') || m.includes('permission denied')) {
+    return 'Walang pahintulot ang account na ito para sa pagbabagong ito.'
+  }
+  if (m.includes('payload too large') || m.includes('exceeded the maximum')) {
+    return 'Masyadong malaki ang file. Paliitin muna bago i-upload.'
+  }
+  return message
+}
+
 function controlFor(f: Field, value: unknown): HTMLElement {
   if (f.type === 'boolean') {
     const i = el('input', { type: 'checkbox' }) as HTMLInputElement
@@ -1142,6 +1205,46 @@ function controlFor(f: Field, value: unknown): HTMLElement {
     const s = el('select', { class: 'a-input' }) as HTMLSelectElement
     for (const o of f.options ?? []) s.append(el('option', { value: o.value }, o.label))
     if (value != null) s.value = String(value)
+    return s
+  }
+
+  /*
+   * A dropdown of rows from another table.
+   *
+   * Populated asynchronously AFTER the control is in the DOM. The form builder
+   * is synchronous and making it async would mean every field waited on the
+   * slowest one; instead the select renders immediately with the current value
+   * preserved as its only option, and fills in when the query answers. An
+   * editor who saves before it loads keeps the value they already had rather
+   * than silently writing an empty foreign key.
+   */
+  if (f.type === 'reference') {
+    const s = el('select', { class: 'a-input' }) as HTMLSelectElement
+    const current = value == null ? '' : String(value)
+    s.append(el('option', { value: current }, current ? 'Naglo-load…' : '— pumili —'))
+    s.value = current
+
+    void (async () => {
+      const labelCol = f.referenceLabel ?? 'title_fil'
+      const { data } = await sb
+        .from(f.referenceTable ?? '')
+        .select(`id, ${labelCol}`)
+        .is('deleted_at', null)
+        .order(labelCol, { ascending: true })
+
+      clear(s)
+      if (!f.required) s.append(el('option', { value: '' }, '— pumili —'))
+      // Through `unknown`: the select list is built at runtime from
+      // `referenceLabel`, so supabase-js cannot infer the row shape and types
+      // the result as a parser error. The shape is checked by the guards below
+      // rather than by the compiler.
+      for (const row of (data ?? []) as unknown as Record<string, unknown>[]) {
+        s.append(el('option', { value: String(row['id']) }, String(row[labelCol] ?? row['id'])))
+      }
+      s.value = current
+    })()
+
+    if (f.required) s.required = true
     return s
   }
 
@@ -1248,7 +1351,22 @@ function openForm(col: Collection, row: Record<string, unknown> | null, into?: H
 
     const wrap = el('div', { class: f.type === 'boolean' ? 'a-field a-field--inline' : 'a-field' })
     if (f.type === 'boolean') {
-      wrap.append(control, txt('label', 'a-label', f.label))
+      /*
+       * The checkbox goes INSIDE its <label>.
+       *
+       * It was a sibling, laid out by a two-column grid, and the label drifted
+       * to the far side of the form — a lone unlabelled box in the middle of
+       * the row and its text metres away, which is how "May pahintulot sa
+       * larawan" came to look like it belonged to something else.
+       *
+       * Wrapping is better than fixing the grid: it makes the association
+       * implicit (no `for`/`id` pair to keep in sync), it makes the TEXT
+       * clickable — a 13px box is a poor target on a phone — and it cannot be
+       * pulled apart by a layout change again.
+       */
+      const lbl = el('label', { class: 'a-label a-checkline' })
+      lbl.append(control, el('span', {}, f.label))
+      wrap.append(lbl)
     } else {
       wrap.append(txt('label', 'a-label', f.label + (f.required ? ' *' : '')))
       if (f.type === 'markdown') wrap.append(mdToolbar(control as HTMLTextAreaElement))
@@ -1291,6 +1409,60 @@ function openForm(col: Collection, row: Record<string, unknown> | null, into?: H
       }
     }
 
+    /*
+     * CONSENT GATE — checked here so the database never has to refuse it.
+     *
+     * `officials` carries `CHECK ((photo_url IS NULL) OR photo_consent)`, and
+     * that constraint is the real guarantee: it is what stops a photograph of
+     * a person being published without recorded permission, and it is not
+     * going anywhere. But when the form let the editor pick a photo, leave the
+     * box unticked and press save, what came back was
+     *
+     *   new row for relation "officials" violates check constraint
+     *   "photo_requires_consent"
+     *
+     * — raw Postgres, in English, on a Filipino admin, naming a column the
+     * editor has never seen. They cannot act on that. Worse, the natural
+     * reading is "the site is broken", and the natural next step is to remove
+     * the photo, which is the opposite of what the rule wants: the photo is
+     * fine, the permission just has not been recorded.
+     *
+     * So the form says it first, in the editor's language, and puts the cursor
+     * on the box that fixes it.
+     */
+    for (const f of col.fields) {
+      if (f.type !== 'image' || !f.consentField) continue
+      if (!payload[f.name]) continue
+      if (payload[f.consentField] === true) continue
+
+      const box = controls[f.consentField] as HTMLInputElement | undefined
+      const consentLabel =
+        col.fields.find((x) => x.name === f.consentField)?.label ?? 'pahintulot'
+
+      toast(
+        `Kailangan munang i-tsek ang "${consentLabel}" bago mai-save ang larawan. ` +
+          'Ang pahintulot sa Facebook ay hindi pahintulot para sa website.',
+        'bad',
+      )
+
+      if (box) {
+        box.focus()
+        box.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        // A tick that appears on its own would be consent granted by the
+        // software rather than by the person. It is highlighted, never set.
+        box.closest('.a-field')?.classList.add('a-field--needs')
+        box.addEventListener(
+          'change',
+          () => box.closest('.a-field')?.classList.remove('a-field--needs'),
+          { once: true },
+        )
+      }
+
+      save.disabled = false
+      save.textContent = 'I-save'
+      return
+    }
+
     // Anything the barangay edits stops being sample content by definition.
     if (row?.['is_sample']) payload['is_sample'] = false
     payload['updated_at'] = new Date().toISOString()
@@ -1305,7 +1477,7 @@ function openForm(col: Collection, row: Record<string, unknown> | null, into?: H
     save.disabled = false
     save.textContent = 'I-save'
 
-    if (error) return toast(error.message, 'bad')
+    if (error) return toast(humanError(error.message), 'bad')
 
     const title = String(payload['title_fil'] ?? payload['name'] ?? payload['label_fil'] ?? col.labelSingular)
     void log(isNew ? 'create' : 'update', col.table, String(row?.['id'] ?? ''), `${isNew ? 'Nagdagdag' : 'Binago'}: ${title}`)

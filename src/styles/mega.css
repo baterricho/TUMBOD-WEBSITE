@@ -120,11 +120,31 @@
   /* Wash over the page behind, so the overlay reads as a layer rather than as
      a very tall dropdown. */
   background: color-mix(in srgb, var(--surface) 82%, transparent);
-  backdrop-filter: blur(10px);
+  /*
+   * PREFIX FIRST, STANDARD LAST — and the order is load-bearing here in a way
+   * it normally is not. See the note in polish.css `.siteheader::before`.
+   */
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+/*
+ * The guard tests ONLY the standard property, deliberately.
+ *
+ * It used to test `(backdrop-filter) or (-webkit-backdrop-filter)`, which was
+ * right when both properties reached the browser. They do not: esbuild
+ * collapses the alias pair to one declaration (polish.css explains), so what
+ * ships is `backdrop-filter` alone. A guard that also accepted the prefixed
+ * form would then be answering a question about a property this stylesheet no
+ * longer emits — Safari 17 reports `-webkit-backdrop-filter` as supported, the
+ * `not (...)` would evaluate false, and the panel would get NEITHER the blur
+ * nor this opaque fallback. A translucent full-screen menu with no blur over
+ * scrolling content is the one outcome this rule exists to prevent.
+ *
+ * Testing exactly what we emit keeps the guard honest: every engine either
+ * blurs or lands here.
+ */
+@supports not (backdrop-filter: blur(1px)) {
   .mega__panel {
     background: var(--surface);
   }
@@ -411,9 +431,40 @@
   min-height: 44px;
   padding-inline: var(--space-4);
   border-radius: var(--r-inner);
-  background: var(--nav-indicator);
-  color: var(--palette-white);
+  /*
+   * ─────────────────────────────────────────────────────────────
+   * WAS WHITE ON `--nav-indicator`, AND THAT BROKE ON 2026-08-07.
+   *
+   * It was correct for the theme it was written against: nav-indicator was
+   * #1f7a45, a dark forest green, and white on it measured comfortably past
+   * AA. The Deep Coastal Oceanic theme repointed that token at teal-400
+   * (#2dd4bf) — a LIGHT colour — and white on light is white on light.
+   * Measured 1.86:1. The "Read full story" button in the News panel was
+   * effectively invisible.
+   *
+   * TWO REAL LESSONS, both worth more than the fix:
+   *
+   * 1. A token can flip from dark to light under a re-theme, and any rule
+   *    that hard-codes an ink against it inherits the flip silently. Pair a
+   *    fill token with its OWN ink token — `--accent` with `--accent-ink` —
+   *    never with a literal colour.
+   *
+   * 2. THE ACCESSIBILITY GATE COULD NOT SEE THIS. The mega panels are closed
+   *    <details>, axe skips hidden subtrees, and so 40 routes × 2 locales ×
+   *    2 themes of automated auditing reported zero violations over a control
+   *    at 1.86:1. `a11y.spec.ts` now opens every panel before scanning.
+   * ─────────────────────────────────────────────────────────────
+   */
+  /* White on deep navy with a gold edge, matching `.btn--primary` — and now
+     literally so: both read the same `--action-*` tokens, which is the fix for
+     lesson (1) above rather than a restatement of it. Two rules that must
+     agree cannot be kept in step by comment. */
+  background: var(--action, #0f172a);
+  color: var(--action-ink, #fff);        /* 17.28:1 */
+  -webkit-text-fill-color: var(--action-ink, #fff);
+  border: 1px solid var(--action-edge, #f59e0b);
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: var(--text-sm);
   text-decoration: none;
 }
@@ -422,10 +473,15 @@
   width: 100%;
 }
 
+/* DEEPENS on hover, which raises contrast under white ink — 19.29:1 — and
+   brightens the gold edge, so the brand colour is what actually moves. */
 .mega-feature:hover .mega-cta,
 .mega-cta:hover,
 .mega-cta:focus-visible {
-  background: color-mix(in srgb, var(--nav-indicator) 84%, black);
+  background: var(--action-hover, #020617);
+  color: var(--action-ink, #fff);
+  -webkit-text-fill-color: var(--action-ink, #fff);
+  border-color: var(--action-edge-hover, #fbbf24);
 }
 
 /* ── News rows ──────────────────────────────────────────────────── */
@@ -912,7 +968,7 @@
   overflow: hidden;
   border-radius: var(--r-card);
   border: 1px solid var(--line);
-  background: linear-gradient(180deg, var(--palette-sound-deep) 0%, #0e3a47 100%);
+  background: linear-gradient(180deg, var(--palette-sound-deep) 0%, #1e293b 100%);
   text-decoration: none;
   transition:
     box-shadow 200ms var(--ease-standard),
@@ -964,9 +1020,9 @@
   gap: var(--space-2);
   min-height: 40px;
   border-radius: var(--r-inner);
-  background: rgb(6 22 26 / 0.72);
-  backdrop-filter: blur(10px);
+  background: rgb(15 23 42 / 0.72);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 1px solid rgb(255 255 255 / 0.28);
   color: var(--palette-white);
   font-family: var(--font-display);
@@ -1157,8 +1213,8 @@ a.mega-social__tile:focus-visible {
   .mega__panel {
     padding: var(--space-4) var(--space-3) var(--space-8);
     background: var(--surface);
-    backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .mega__sheet {

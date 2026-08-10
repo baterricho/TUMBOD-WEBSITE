@@ -13,16 +13,17 @@
  * weather (RESEARCH.md §4).
  */
 import Section from '@/components/Section.astro'
-import { ATTRACTIONS } from '@/lib/content/active'
-import type { Locale } from '@/lib/i18n'
+import { getAttractions } from '@/lib/content/live-collections'
+import { prefix, type Locale } from '@/lib/i18n'
 
 interface Props {
   locale: Locale
 }
 
 const { locale } = Astro.props
+const ATTRACTIONS = (await getAttractions()).items
 const fil = locale === 'fil'
-const p = fil ? '' : '/en'
+const p = prefix(locale)
 ---
 
 <Section divider={false} class="section--airy">
@@ -62,7 +63,10 @@ const p = fil ? '' : '/en'
             <div class="fcard__media" aria-hidden="true">
               {fil ? 'Larawan — wala pa' : 'Photograph — not yet supplied'}
             </div>
-            <h3 class="fcard__title">{fil ? a.nameFil : a.nameEn}</h3>
+            {/* h2, not h3 — this grid is in an untitled <Section>, so an h3
+                skipped a level under the page's h1. Same fix and same reasoning
+                as ProjectsView; the size comes from the class, not the tag. */}
+            <h2 class="fcard__title">{fil ? a.nameFil : a.nameEn}</h2>
             <p class="fcard__meta">{fil ? a.bodyFil : a.bodyEn}</p>
             <p class="fcard__meta">
               <strong>{fil ? 'Paano marating: ' : 'Getting there: '}</strong>

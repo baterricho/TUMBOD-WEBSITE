@@ -1,0 +1,37 @@
+---
+/**
+ * A single news story.
+ *
+ * `getStaticPaths` is ASYNC and reads the database. That is what makes /admin
+ * publish: an announcement saved in the CMS gets a page here on the next
+ * build. Before this, the paths came from a hard-coded sample array, so a real
+ * announcement appeared in no list and had no URL to open.
+ *
+ * Only `kind === 'news'`. Events live under /kaganapan and are built by that
+ * route — one article must not be reachable at two URLs, or the canonical tag
+ * and the sitemap start disagreeing.
+ */
+import type { GetStaticPaths } from 'astro'
+import Base from '@/layouts/Base.astro'
+import ArticleView from '@/views/ArticleView.astro'
+import { getNews } from '@/lib/content/articles'
+
+export const getStaticPaths = (async () => {
+  const { items } = await getNews()
+  return items.map((article) => ({
+    params: { slug: article.slug },
+    props: { article },
+  }))
+}) satisfies GetStaticPaths
+
+const { article } = Astro.props
+---
+
+<Base
+  locale="fil"
+  pathname={`/balita/${article.slug}`}
+  title={article.titleFil}
+  description={article.leadFil}
+>
+  <ArticleView article={article} locale="fil" />
+</Base>

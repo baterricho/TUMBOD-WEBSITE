@@ -11,6 +11,7 @@ import SiteHeader from '@/components/SiteHeader.astro'
 import SiteFooter from '@/components/SiteFooter.astro'
 import DemoBanner from '@/components/DemoBanner.astro'
 import LiveContent from '@/components/LiveContent.astro'
+import VisitCounter from '@/components/VisitCounter.astro'
 import { getDictionary, htmlLang, alternateHref, type Locale } from '@/lib/i18n'
 import { SITE } from '@/lib/content/site'
 
@@ -66,8 +67,11 @@ const jsonLd = {
     <link rel="canonical" href={new URL(pathname, Astro.site)} />
     <link rel="alternate" hreflang={other === 'fil' ? 'fil' : 'en'} href={new URL(alternateHref(pathname, other), Astro.site)} />
     <link rel="alternate" hreflang="x-default" href={new URL(locale === 'fil' ? pathname : alternateHref(pathname, 'fil'), Astro.site)} />
-    <meta name="theme-color" content="#eff1ec" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0c1614" media="(prefers-color-scheme: dark)" />
+    {/* One value, not a light/dark pair: the civic light theme ships
+        unconditionally, so the browser chrome matches --surface either way.
+        This is the HEADER's surface (#ffffff) rather than the canvas, because
+        the header is what sits against the browser chrome. */}
+    <meta name="theme-color" content="#ffffff" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={SITE.name} />
     <meta property="og:title" content={fullTitle} />
@@ -78,14 +82,23 @@ const jsonLd = {
         budget before the first paragraph renders. */}
     <link
       rel="preload"
-      href="/fonts/source-sans-3-latin-400-normal.woff2"
+      href="/fonts/inter-latin-400-normal.woff2"
       as="font"
       type="font/woff2"
       crossorigin="anonymous"
     />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png" />
+    {/*
+      PNG, not SVG. iOS Safari does not support SVG for `apple-touch-icon` and
+      silently ignores it — an iPhone home-screen shortcut then shows a
+      screenshot of the page instead of the barangay icon. It shipped as an SVG
+      until 2026-08-07, so every iPhone install had a blurry thumbnail.
+      180px is Apple's preferred size; iOS applies its own rounding and does
+      not honour transparency, so the square art is correct here.
+    */}
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />
 
     {/*
@@ -143,6 +156,13 @@ const jsonLd = {
       the database is unreachable, and does nothing at all with JS disabled.
     */}
     <LiveContent locale={locale} />
+
+    {/*
+      Counts the visit. Emits NOTHING on /ligtas, /ligtas/hotline or /admin —
+      the exclusion is at build time, so those pages have no beacon to
+      misfire. Honours Do Not Track and Global Privacy Control. No cookies.
+    */}
+    <VisitCounter locale={locale} pathname={pathname} />
 
     {/*
       Offline indicator — a calm band, never a modal, never a browser error

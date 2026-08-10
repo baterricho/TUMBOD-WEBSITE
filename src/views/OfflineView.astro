@@ -8,7 +8,7 @@
  */
 import Section from '@/components/Section.astro'
 import Icon from '@/components/Icon.astro'
-import { getDictionary, type Locale } from '@/lib/i18n'
+import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 
 interface Props {
   locale: Locale
@@ -17,7 +17,7 @@ interface Props {
 const { locale } = Astro.props
 const t = getDictionary(locale)
 const fil = locale === 'fil'
-const p = fil ? '' : '/en'
+const p = prefix(locale)
 
 const available = [
   { href: `${p}/ligtas/hotline`, label: t.nav.emergencyLabel },

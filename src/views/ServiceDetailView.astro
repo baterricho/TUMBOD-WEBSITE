@@ -12,7 +12,7 @@ import Section from '@/components/Section.astro'
 import Placeholder from '@/components/Placeholder.astro'
 import ServiceRequirementChecklist from '@/components/ServiceRequirementChecklist.astro'
 import type { ServiceDetail } from '@/lib/content/services'
-import { getDictionary, type Locale } from '@/lib/i18n'
+import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 import { isPlaceholder } from '@/lib/content/placeholder'
 
 interface Props {
@@ -23,7 +23,7 @@ interface Props {
 const { service, locale } = Astro.props
 const t = getDictionary(locale)
 const fil = locale === 'fil'
-const p = fil ? '' : '/en'
+const p = prefix(locale)
 ---
 
 <Section divider={false}>

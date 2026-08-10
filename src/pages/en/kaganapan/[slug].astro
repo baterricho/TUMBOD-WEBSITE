@@ -1,0 +1,25 @@
+---
+import type { GetStaticPaths } from 'astro'
+import Base from '@/layouts/Base.astro'
+import ArticleView from '@/views/ArticleView.astro'
+import { getEvents } from '@/lib/content/articles'
+
+export const getStaticPaths = (async () => {
+  const { items } = await getEvents()
+  return items.map((article) => ({
+    params: { slug: article.slug },
+    props: { article },
+  }))
+}) satisfies GetStaticPaths
+
+const { article } = Astro.props
+---
+
+<Base
+  locale="en"
+  pathname={`/en/kaganapan/${article.slug}`}
+  title={article.titleEn}
+  description={article.leadEn}
+>
+  <ArticleView article={article} locale="en" />
+</Base>

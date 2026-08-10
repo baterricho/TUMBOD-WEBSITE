@@ -30,19 +30,30 @@ const ICONS: IconName[] = [
   'evacuation', 'offline', 'search', 'print', 'copy', 'external',
 ]
 
+/*
+ * The civic palette, by ROLE rather than by ramp position. The compatibility
+ * aliases this list used to show (`--palette-shoal`, `--palette-mangrove` and
+ * the rest) are still defined in tokens.css for the call sites that have not
+ * been migrated, but they are named after a palette the site no longer runs —
+ * showing them here taught the wrong vocabulary to anyone reading this page as
+ * the source of truth.
+ */
 const PALETTE = [
-  { token: '--palette-glare', source: 'bleached sand + noon glare on Malampaya' },
-  { token: '--palette-paper-raised', source: 'chart paper held to the light' },
-  { token: '--palette-shoal', source: 'shallow water over seagrass' },
-  { token: '--palette-mangrove', source: 'mangrove in shadow — reads black' },
-  { token: '--palette-mangrove-wet', source: 'wet roots at low tide' },
-  { token: '--palette-sound-deep', source: 'deep water of the Outer Sound' },
-  { token: '--palette-hull-blue', source: 'sky blue painted on bangka hulls' },
-  { token: '--palette-hull-blue-ink', source: 'same blue, darkened to carry text' },
-  { token: '--palette-bangka-yellow', source: 'outrigger boom yellow — FILL ONLY' },
-  { token: '--palette-bangka-orange', source: 'hull stripe orange' },
-  { token: '--palette-bangka-red', source: 'hot red hull stripe' },
-  { token: '--palette-signal-red', source: 'RESERVED: emergency + focus ring' },
+  { token: '--palette-slate-50', source: 'the canvas — off-white page' },
+  { token: '--palette-white', source: 'cards and section surfaces' },
+  { token: '--palette-slate-100', source: 'alternating bands, icon wells' },
+  { token: '--palette-slate-200', source: 'borders and dividers' },
+  { token: '--palette-slate-500', source: 'muted labels and captions' },
+  { token: '--palette-slate-700', source: 'body text' },
+  { token: '--palette-slate-900', source: 'dark panels, hero overlay' },
+  { token: '--palette-slate-950', source: 'headings' },
+  { token: '--palette-amber-500', source: 'official gold — FILL AND EDGE ONLY' },
+  { token: '--palette-amber-700', source: 'the only gold that may carry text' },
+  { token: '--palette-red-600', source: 'RESERVED: emergency hotlines' },
+  { token: '--palette-green-700', source: 'public works and eco-tourism' },
+  { token: '--palette-cyan-700', source: 'port, sea and marine sanctuaries' },
+  { token: '--palette-sky-700', source: 'links and interactive text' },
+  { token: '--palette-purple-600', source: 'education and youth sector' },
 ]
 
 const SPACES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -90,7 +101,7 @@ const waveFor = (s: SeaState) => (s === 'calm' ? 0.3 : s === 'moderate' ? 1.0 : 
     <div style="display:flex;flex-direction:column;gap:var(--space-3)">
       <p style="font-family:var(--font-display);font-size:var(--text-4xl)">Ngayon sa Tumbod</p>
       <p style="font-size:var(--text-base);max-width:var(--measure)">
-        Source Sans 3 — katawan. Ang mga titik na may tuldik: á é í ó ú ñ Ñ.
+        Inter — katawan. Ang mga titik na may tuldik: á é í ó ú ñ Ñ.
         Sinusubok sa Filipino dahil iyon ang kanonikal na wika ng site na ito.
       </p>
       <p class="figure" style="font-size:var(--text-lg)">

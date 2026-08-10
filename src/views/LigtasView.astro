@@ -14,8 +14,9 @@ import Alert from '@/components/Alert.astro'
 import Icon from '@/components/Icon.astro'
 import Placeholder from '@/components/Placeholder.astro'
 import PhoneNumber from '@/components/PhoneNumber.astro'
-import { getDictionary, type Locale } from '@/lib/i18n'
-import { HOTLINES, CHECKLIST as TYPHOON_CHECKLIST, EVACUATION_SITES } from '@/lib/content/active'
+import { getDictionary, type Locale, prefix } from '@/lib/i18n'
+import { CHECKLIST as TYPHOON_CHECKLIST, EVACUATION_SITES } from '@/lib/content/active'
+import { getHotlines } from '@/lib/content/live-collections'
 import { isPlaceholder, needsData } from '@/lib/content/placeholder'
 
 interface Props {
@@ -23,9 +24,10 @@ interface Props {
 }
 
 const { locale } = Astro.props
+const HOTLINES = (await getHotlines()).items
 const t = getDictionary(locale)
 const fil = locale === 'fil'
-const p = fil ? '' : '/en'
+const p = prefix(locale)
 
 /** How word spreads on the island when the network is down. Not guessable. */
 const NO_SIGNAL_METHOD = needsData(

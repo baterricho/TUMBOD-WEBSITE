@@ -21,58 +21,52 @@
 
 Full primitive table with physical sources and measured contrast: `DESIGN-PLAN.md` §2.2–2.3. Not duplicated here.
 
-### 1.1 Semantic layer (light)
+### 1.1 Semantic layer
 
-```css
-:root {
-  --surface:            #EFF1EC;   --surface-raised:    #F7F8F4;
-  --surface-sunken:     #DCE6E0;   --surface-inverse:   #0B3B54;
+**Rewritten 2026-08-07 — Deep Coastal Oceanic.** This section used to hold a
+paper-white "hydrographic chart" palette plus a separate dark theme for night
+use. Both are gone. The site ships ONE theme, dark, applied unconditionally,
+and `src/lib/tokens/tokens.css` is the authority.
 
-  --ink:                #12211B;   --ink-muted:         #3D5145;
-  --ink-inverse:        #EFF1EC;
+The hex values are deliberately **not** duplicated here. Duplicating them into
+this document is how the old table came to disagree with the code — it still
+listed `--interactive: #1F6796` months after links became green. Read the file.
 
-  --line:               #C3CFC7;   --line-strong:       #8AA096;
+What belongs outside the code is the reasoning:
 
-  --accent:             #F5B301;   --accent-ink:        #12211B;
+- **Four accent hues, one meaning each.** Teal = interactive. Emerald =
+  confirmed / open / complete. Red = emergency, and nothing else, ever. Amber =
+  pending / advisory / rating. A fifth hue, or a link that is not teal, is a bug.
+- **Two inks.** `--ink-strong` (white) for headings, `--ink` (slate-300) for
+  body. That gap is what carries hierarchy on a dark canvas; on the old paper
+  canvas weight alone did the job and one ink was enough.
+- **Bright fills take dark ink.** White on teal-500 measures 2.49:1. Every
+  saturated mid-tone fill in this theme pairs with `--accent-ink`, not white.
+  The exceptions are emergency red and the dangerous sea state, which carry
+  white — and they are as dark as they are *because* of that requirement.
+- **Painted surfaces own their ink.** Anything setting its own background resets
+  `--ink` / `--ink-strong` / `--ink-muted` to `currentColor`. The list lives in
+  `oceanic.css`; extend it rather than writing a one-off override. Skipping this
+  is what put white text on a near-white slab at 1.17:1 for one test run.
+- **`--line` is decorative, `--line-strong` is structural.** Only the second
+  clears 1.4.11's 3:1, so only the second may bound a form field.
 
-  --interactive:        #1F6796;   --interactive-hover: #17527A;
-  --interactive-visited:#5B4A7A;
-  --focus-ring:         #B3160C;
+### 1.2 Theme switching
 
-  --sea-calm:      #16697A;  --sea-calm-ink:      #FFFFFF;
-  --sea-moderate:  #F5B301;  --sea-moderate-ink:  #12211B;
-  --sea-rough:     #E2711D;  --sea-rough-ink:     #12211B;
-  --sea-dangerous: #D6382B;  --sea-dangerous-ink: #FFFFFF;
+There isn't any. No `prefers-color-scheme` branch, no `[data-theme]` attribute,
+no toggle. One theme, one block — which also retires the trap this document used
+to warn about, where the dark palette was declared twice and the copies drifted.
 
-  --status-open:    #16697A; --status-closed:  #6B7A72; --status-limited: #E2711D;
+The `:root:not([data-theme='light'])` selectors still in `components.css` and
+`polish.css` are now unconditional matches. Harmless, and the next cleanup.
 
-  --alert-info:      #1F6796; --alert-advisory:  #F5B301;
-  --alert-warning:   #E2711D; --alert-emergency: #B3160C;
+The cost is real and was accepted deliberately: dark is harder to read in direct
+sunlight, and this site gets opened outdoors at noon in Palawan. Reverting to a
+light default means restoring a light semantic block in `tokens.css`; nothing
+else in the codebase encodes the choice.
 
-  --chart-contour-1: #DCE6E0;  --chart-contour-2: #B9CFD4;
-  --chart-contour-3: #8FB4C1;  --chart-contour-4: #4E7E95;
-  --chart-contour-5: #0B3B54;
-
-  --error-ink: #A82318;
-}
-```
-
-### 1.2 Dark
-
-Applied via `@media (prefers-color-scheme: dark)` **and** `:root[data-theme="dark"]`, with the attribute winning in both directions.
-
-```css
---surface: #0C1614;  --surface-raised: #14211D;  --surface-sunken: #081110;
---ink: #E4EAE4;      --ink-muted: #9FB0A6;       --ink-inverse: #0C1614;
---line: #2C3A34;     --line-strong: #4A5E54;
---interactive: #6FB3DC;  --interactive-hover: #96CBEA;
---focus-ring: #FF5A4D;
---alert-emergency: #E33F32;
---accent: #F5B301;                        /* survives unchanged */
-/* contour bands invert: 1 = darkest, 5 = most luminous */
-```
-
-**Forbidden:** `filter: invert()`, reduced-opacity text as a dark-mode strategy, dimming the chart into a photograph.
+**Forbidden:** `filter: invert()`, reduced-opacity text as a contrast strategy,
+`backdrop-filter` on surfaces that nothing scrolls behind.
 
 ### 1.3 Enforcement
 - CI computes every foreground/background pair used in the built CSS and fails below 4.5:1 (body) / 3:1 (large, UI boundaries), **in both themes**.
@@ -86,9 +80,11 @@ Applied via `@media (prefers-color-scheme: dark)` **and** `:root[data-theme="dar
 Faces and rationale: `DESIGN-PLAN.md` §3.
 
 ```css
---font-display: "Archivo Narrow", system-ui, sans-serif;
---font-body:    "Source Sans 3", system-ui, sans-serif;
---font-mono:    "IBM Plex Mono", ui-monospace, monospace;
+/* Metric-matched fallbacks omitted here for readability; the real stacks are
+   in tokens.css and every one of them carries a *-Fallback face. */
+--font-display: "Plus Jakarta Sans", system-ui, sans-serif;   /* 700 */
+--font-body:    "Inter", system-ui, sans-serif;               /* 400, 600, 400i */
+--font-mono:    "IBM Plex Mono", ui-monospace, monospace;     /* 400 */
 
 --text-2xs:  0.6875rem;  /* 11px — chart labels, legal. FORBIDDEN in body copy */
 --text-xs:   0.75rem;    /* 12px — captions, timestamps */

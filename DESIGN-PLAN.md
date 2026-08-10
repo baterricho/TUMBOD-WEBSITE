@@ -149,13 +149,28 @@ Three roles. Self-hosted, WOFF2, subset to Latin + Filipino diacritics + the pun
 
 | Role | Face | Weights | Why this face belongs here |
 |---|---|---|---|
-| **Display** | **Archivo Narrow** (SIL OFL, Omnibus-Type) | 600 | A grotesque drawn for signage and small-space labelling — the same job chart lettering does. Condensed without being a fashion statement, and it holds its shape at poster size on the emergency banner. |
-| **Body** | **Source Sans 3** (SIL OFL, Adobe) | 400, 600 | Complete Filipino diacritic coverage, high x-height, drawn for UI legibility. It survives a cracked 4-year-old LCD at 16px, which is the actual test (persona P1). |
+| **Display** | **Plus Jakarta Sans** (SIL OFL, Tokotype) | 700 | Geometric with wide apertures, and it keeps its counters at display size on a near-black canvas where a lighter face silts up. Drawn for Jakarta's city identity, so its diacritic coverage was never an afterthought. |
+| **Body** | **Inter** (SIL OFL, Rasmus Andersson) | 400, 600, 400i | Complete Filipino diacritic coverage, high x-height, drawn specifically for UI text on screens. It survives a cracked 4-year-old LCD at 16px, which is the actual test (persona P1). |
 | **Figures** | **IBM Plex Mono** (SIL OFL, IBM) | 400 | Slashed zero, unambiguous `1/l/I`, true tabular figures. Fees, ordinance numbers, boat departures, reference numbers, coordinates and depth soundings all need to align in a column and be read aloud over a phone. |
 
-**Deliberately rejected:** Inter (SaaS default), Public Sans (US-government default — on-the-nose and sterile), any editorial serif (§8.3 explicitly steers away), Bebas/Anton (no lowercase, no diacritics).
+> **REVERSED 2026-08-07.** This table used to specify Archivo Narrow + Source Sans 3,
+> and the line below used to read *"Deliberately rejected: Inter (SaaS default)…"*.
+> That rejection was sound for the palette it was written against: the faces were
+> chosen to imitate hydrographic chart lettering, and Archivo Narrow's condensed
+> signage character only made sense inside that metaphor.
+>
+> The Deep Coastal Oceanic theme retired the chart metaphor, which retired the
+> argument. Inter being a common choice was the objection, and "common" is not a
+> defect when the requirement is legibility at 16px on bad hardware — which is the
+> exact problem Inter was drawn for. The original call is recorded rather than
+> deleted because the reasoning was good and someone will otherwise re-litigate it.
+>
+> **Cost:** the new set is 97.8 KiB against the old 72.2 KiB — 25.6 KiB more over
+> 2G, inside the ≤100 KiB budget but no longer comfortably.
 
-**Subsetting plan:** IBM Plex Mono is subset to **digits, currency, punctuation and uppercase only** — it never sets prose, so the payload is tiny. Archivo Narrow is one weight. Source Sans 3 carries both text weights and the full diacritic set. Only Source Sans 3 400 is preloaded.
+**Still rejected:** Public Sans (US-government default — on-the-nose and sterile), any editorial serif (§8.3 explicitly steers away), Bebas/Anton (no lowercase, no diacritics).
+
+**Subsetting plan:** IBM Plex Mono is subset to **digits, currency, punctuation and uppercase only** — it never sets prose, so the payload is tiny. Plus Jakarta Sans is one weight. Inter carries both text weights plus the italic used by `.is-water`, and the full diacritic set. Only Inter 400 is preloaded.
 
 **Scale** — `clamp()`-based tokens, per §8.3. `--text-base` is **16px and never smaller**; `--text-2xs` (11px) is restricted to chart labels and legal metadata and is forbidden in body copy by lint.
 

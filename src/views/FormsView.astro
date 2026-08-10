@@ -14,7 +14,7 @@
 import Section from '@/components/Section.astro'
 import Icon from '@/components/Icon.astro'
 import { FORMS } from '@/lib/content/active'
-import type { Locale } from '@/lib/i18n'
+import { prefix, type Locale } from '@/lib/i18n'
 
 interface Props {
   locale: Locale
@@ -22,7 +22,7 @@ interface Props {
 
 const { locale } = Astro.props
 const fil = locale === 'fil'
-const p = fil ? '' : '/en'
+const p = prefix(locale)
 ---
 
 <Section divider={false} class="section--airy">

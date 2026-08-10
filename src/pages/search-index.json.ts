@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro'
-import { SERVICE_DETAILS, HOTLINES } from '@/lib/content/active'
+import { SERVICE_DETAILS } from '@/lib/content/active'
+import { getHotlines } from '@/lib/content/live-collections'
 
 /**
  * Prebuilt search index, emitted as a static JSON file at build time.
@@ -19,7 +20,10 @@ interface Entry {
   readonly k: string // extra keywords, space-separated
 }
 
-export const GET: APIRoute = () => {
+export const GET: APIRoute = async () => {
+  // Hotlines come from the CMS, so search finds the numbers the barangay
+  // actually published rather than the checked-in fallback set.
+  const HOTLINES = (await getHotlines()).items
   const entries: Entry[] = [
     {
       t: 'Mga numerong pang-emergency',

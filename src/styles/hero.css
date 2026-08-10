@@ -89,7 +89,7 @@
 .hero__poster {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, var(--palette-sound-deep) 0%, #0e3a47 100%);
+  background: linear-gradient(180deg, var(--palette-sound-deep) 0%, #1e293b 100%);
   transition: opacity 600ms var(--ease-standard);
 }
 
@@ -106,13 +106,13 @@
 
 .hero__contour {
   fill: none;
-  stroke: rgb(126 231 135 / 0.14);
+  stroke: rgb(251 191 36 / 0.14);
   stroke-width: 0.8;
 }
 
 .hero__island {
-  fill: rgb(126 231 135 / 0.1);
-  stroke: #7ee787;
+  fill: rgb(251 191 36 / 0.1);
+  stroke: #fbbf24;
   stroke-width: 1.4;
 }
 
@@ -136,7 +136,7 @@
 }
 
 .hero__map .leaflet-control-attribution {
-  background: rgb(6 22 26 / 0.72);
+  background: rgb(15 23 42 / 0.72);
   color: #dfe7e2;
   font-size: 10px;
   padding: 2px 6px;
@@ -182,7 +182,7 @@
 }
 
 .hero__mapbadge svg {
-  color: #7ee787;
+  color: #fbbf24;
   filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.9));
 }
 
@@ -256,9 +256,9 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   padding: 3px;
   border-radius: var(--r-inner);
   border: 1px solid rgb(255 255 255 / 0.28);
-  background: rgb(6 22 26 / 0.5);
-  backdrop-filter: blur(10px);
+  background: rgb(15 23 42 / 0.5);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 /* One glass control, used by the basemap summary and the three round buttons. */
@@ -271,9 +271,9 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   padding-inline: var(--space-3);
   border-radius: var(--r-inner);
   border: 1px solid rgb(255 255 255 / 0.28);
-  background: rgb(6 22 26 / 0.5);
-  backdrop-filter: blur(10px);
+  background: rgb(15 23 42 / 0.5);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   color: #fff;
   font-family: var(--font-display);
   font-size: var(--text-sm);
@@ -288,8 +288,8 @@ html:not([data-reveal-ready]) .hero__mapbadge {
 .hero__zoom .hero__glassbtn {
   border: 0;
   background: transparent;
-  backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .hero__glassbtn--icon {
@@ -300,7 +300,7 @@ html:not([data-reveal-ready]) .hero__mapbadge {
 
 .hero__glassbtn:hover:not(:disabled),
 .hero__glassbtn:focus-visible {
-  background: rgb(6 22 26 / 0.78);
+  background: rgb(15 23 42 / 0.78);
   border-color: rgb(255 255 255 / 0.6);
 }
 
@@ -337,9 +337,9 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   padding: var(--space-1);
   border-radius: var(--r-inner);
   border: 1px solid rgb(255 255 255 / 0.28);
-  background: rgb(6 22 26 / 0.86);
-  backdrop-filter: blur(14px);
+  background: rgb(15 23 42 / 0.86);
   -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   box-shadow: 0 12px 28px -10px rgb(0 0 0 / 0.6);
 }
 
@@ -364,7 +364,7 @@ html:not([data-reveal-ready]) .hero__mapbadge {
 /* Selected state is not colour alone — it carries a tick. */
 .hero__basemap-panel button[aria-pressed='true']::after {
   content: ' ✓';
-  color: #7ee787;
+  color: #fbbf24;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -392,7 +392,7 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   display: grid;
   place-items: center;
   background:
-    linear-gradient(155deg, rgb(22 105 122 / 0.55) 0%, rgb(11 59 84 / 0.9) 100%),
+    linear-gradient(155deg, rgb(30 41 59 / 0.55) 0%, rgb(15 23 42 / 0.92) 100%),
     var(--palette-sound-deep);
 }
 
@@ -431,9 +431,9 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   place-items: center;
   border-radius: var(--radius-full);
   border: 1px solid rgb(255 255 255 / 0.35);
-  background: rgb(6 22 26 / 0.45);
-  backdrop-filter: blur(10px);
+  background: rgb(15 23 42 / 0.45);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   box-shadow: 0 8px 24px -10px rgb(0 0 0 / 0.7);
   color: #fff;
   cursor: pointer;
@@ -446,7 +446,7 @@ html:not([data-reveal-ready]) .hero__mapbadge {
 
 .hero__chev:hover:not(:disabled),
 .hero__chev:focus-visible {
-  background: rgb(6 22 26 / 0.72);
+  background: rgb(15 23 42 / 0.72);
   border-color: rgb(255 255 255 / 0.8);
   scale: 1.08;
   box-shadow:
@@ -500,6 +500,24 @@ html:not([data-reveal-ready]) .hero__mapbadge {
    the scrim so the imagery behind it stays dark enough for the borders and
    the dots to read. */
 
+/*
+ * `min-height` IS A LAYOUT-SHIFT FIX, not spacing.
+ *
+ * The homepage measured CLS 0.174 against a 0.05 budget on Slow 4G, and the
+ * single largest shift — 0.161 of it, at ~8.9s — was `.hero__inner` moving
+ * because the HERO grew from 628px to 652px late in the load. The hero is
+ * `min-height` plus content, so anything inside it that settles late pushes
+ * every section below it down the page.
+ *
+ * The strip's final height is deterministic once everything has resolved:
+ *   8rem thumb + 2×space-1 padding + space-4 gap + 8px dots + space-5 bottom
+ * — but it reaches that height in stages as the thumbnail backgrounds decode,
+ * and each stage is a shift. Reserving the finished height up front means the
+ * intermediate states happen inside a box that never changes size.
+ *
+ * If you change the thumb height, the gap, or the dot size, change this too.
+ * The arithmetic is written out above so the next person can redo it.
+ */
 .hero__filmstrip {
   position: relative;
   z-index: 2;
@@ -507,9 +525,11 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   max-width: 1280px;
   margin-inline: auto;
   padding: 0 var(--space-4) var(--space-5);
+  min-height: calc(8rem + (2 * var(--space-1)) + var(--space-4) + 8px + var(--space-5));
   display: grid;
   gap: var(--space-4);
   justify-items: center;
+  align-content: end;
 }
 
 /* ── Thumbnails ─────────────────────────────────────────────────
@@ -550,7 +570,7 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   border-radius: var(--r-card);
   border: 2px solid rgb(255 255 255 / 0.25);
   background:
-    linear-gradient(155deg, rgb(22 105 122 / 0.5) 0%, rgb(11 59 84 / 0.85) 100%),
+    linear-gradient(155deg, rgb(30 41 59 / 0.5) 0%, rgb(15 23 42 / 0.88) 100%),
     var(--palette-sound-deep);
   color: rgb(255 255 255 / 0.9);
   text-decoration: none;
@@ -569,10 +589,10 @@ html:not([data-reveal-ready]) .hero__mapbadge {
 }
 
 .hero__thumb.is-active {
-  border-color: #7ee787;
+  border-color: #fbbf24;
   transform: translateY(-4px);
   box-shadow:
-    0 0 0 1px rgb(126 231 135 / 0.5),
+    0 0 0 1px rgb(251 191 36 / 0.5),
     0 12px 28px -12px rgb(0 0 0 / 0.75);
 }
 
@@ -642,7 +662,7 @@ html:not([data-reveal-ready]) .hero__mapbadge {
 
 .hero__dot.is-active {
   width: 28px;
-  background: #7ee787;
+  background: #fbbf24;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -698,12 +718,12 @@ html:not([data-reveal-ready]) .hero__mapbadge {
     background:
       linear-gradient(
         100deg,
-        rgb(6 22 26 / 0.95) 0%,
-        rgb(6 22 26 / 0.86) 30%,
-        rgb(6 22 26 / 0.3) 58%,
-        rgb(6 22 26 / 0.08) 100%
+        rgb(15 23 42 / 0.95) 0%,
+        rgb(15 23 42 / 0.86) 30%,
+        rgb(15 23 42 / 0.3) 58%,
+        rgb(15 23 42 / 0.08) 100%
       ),
-      linear-gradient(0deg, rgb(6 22 26 / 0.72) 0%, rgb(6 22 26 / 0) 30%);
+      linear-gradient(0deg, rgb(15 23 42 / 0.72) 0%, rgb(15 23 42 / 0) 30%);
   }
 
   /* Oversized, and wrapped to two lines the way the reference sets it. */
@@ -722,7 +742,7 @@ html:not([data-reveal-ready]) .hero__mapbadge {
 /* ── Supporting bits ────────────────────────────────────────────── */
 
 .hero__eyebrow {
-  color: #7ee787;
+  color: #fbbf24;
   text-transform: none;
   letter-spacing: 0.01em;
   font-size: var(--text-lg);
@@ -802,9 +822,9 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   align-items: center;
   border-radius: var(--radius-full);
   border: 1px solid rgb(255 255 255 / 0.35);
-  background: rgb(6 22 26 / 0.55);
-  backdrop-filter: blur(8px);
+  background: rgb(15 23 42 / 0.55);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: #fff;
   font-family: var(--font-display);
   font-size: var(--text-sm);
@@ -825,7 +845,7 @@ html:not([data-reveal-ready]) .hero__mapbadge {
 
 .hero__videobtn:hover,
 .hero__videobtn:focus-visible {
-  background: rgb(6 22 26 / 0.78);
+  background: rgb(15 23 42 / 0.78);
   border-color: rgb(255 255 255 / 0.7);
 }
 
@@ -848,7 +868,7 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgb(6 22 26 / 0.1) 40%, rgb(6 22 26 / 0.8) 100%);
+  background: linear-gradient(180deg, rgb(15 23 42 / 0.1) 40%, rgb(15 23 42 / 0.8) 100%);
 }
 
 .hero__thumb--image .hero__thumblabel {

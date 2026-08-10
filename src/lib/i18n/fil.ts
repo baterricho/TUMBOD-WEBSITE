@@ -77,6 +77,40 @@ export const dictionaryFil = {
     readHistory: 'Basahin ang kasaysayan',
   },
 
+  /*
+   * SEA SAFETY ADVISORY. The wording is here, not in the database, so that the
+   * dangerous-state message is identical every time and exists in both
+   * languages by construction. See lib/content/sea-advisory.ts.
+   *
+   * `action` is the sentence a person acts on, so it names the specific things
+   * they were about to do — sail, fish, go far from shore, enter deep water —
+   * rather than saying "be careful". "Mag-ingat" is advice; "huwag lumaot" is
+   * a decision.
+   */
+  advisory: {
+    heading: 'Kalagayan ng dagat',
+    safeTitle: 'Maganda ang lagay ng dagat',
+    safeMessage: 'Kaayos ang kalagayan ng dagat sa ngayon.',
+    safeAction:
+      'Maaaring magbiyahe ang bangka nang may karaniwang pag-iingat. Sundin pa rin ang abiso ng barangay at ang lagay ng panahon.',
+    cautionTitle: 'Mag-ingat sa paglaot',
+    cautionMessage: 'Kailangan ng dagdag na pag-iingat ang mga maliliit na bangka.',
+    cautionAction:
+      'Magtanong muna sa barangay bago lumayo sa dalampasigan. Iwasan ang malayong biyahe at ang malalim na bahagi ng dagat.',
+    dangerTitle: 'HUWAG LUMAOT',
+    dangerMessage: 'Delikado ang kalagayan ng dagat ngayon.',
+    dangerAction:
+      'Huwag maglayag, huwag mangisda, huwag lumayo sa dalampasigan, at huwag pumasok sa laot o sa malalim na tubig.',
+    unknownTitle: 'Walang kasalukuyang impormasyon sa dagat',
+    unknownMessage: 'Walang napatunayang abiso tungkol sa lagay ng dagat sa ngayon.',
+    unknownAction:
+      'Magtanong muna sa barangay bago lumaot. Huwag ituring na ligtas ang dagat dahil lang walang nakasulat na babala.',
+    updated: 'Huling update',
+    source: 'Pinagkunan',
+    staleNote: 'Lipas na ang huling sukat, kaya hindi ito maaaring ituring na kasalukuyan.',
+    noDataNote: 'Wala pang naitatalang abiso sa sistema ng barangay.',
+    localNote: 'Paalala ng barangay',
+  },
   sea: {
     calm: 'MAHINAY',
     moderate: 'KATAMTAMAN',

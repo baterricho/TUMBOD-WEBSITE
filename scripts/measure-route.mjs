@@ -83,7 +83,7 @@ for (const route of ROUTES) {
 }
 
 console.log(
-  '\nFont column counts the PRELOADED face only (Source Sans 3 400). The other four\n' +
+  '\nFont column counts the PRELOADED face only (Inter 400). The other four\n' +
     'faces load on demand and are cached by the service worker. Images are not yet\n' +
     'in the build; the 40KB image allocation on / is unspent.',
 )

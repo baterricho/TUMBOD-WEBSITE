@@ -1,0 +1,32 @@
+---
+/**
+ * A single event.
+ *
+ * Past events are built too, not only upcoming ones. A link to an event that
+ * has happened must keep working — that is the whole reason the events index
+ * keeps a past section, and a shared link should not rot the day after.
+ */
+import type { GetStaticPaths } from 'astro'
+import Base from '@/layouts/Base.astro'
+import ArticleView from '@/views/ArticleView.astro'
+import { getEvents } from '@/lib/content/articles'
+
+export const getStaticPaths = (async () => {
+  const { items } = await getEvents()
+  return items.map((article) => ({
+    params: { slug: article.slug },
+    props: { article },
+  }))
+}) satisfies GetStaticPaths
+
+const { article } = Astro.props
+---
+
+<Base
+  locale="fil"
+  pathname={`/kaganapan/${article.slug}`}
+  title={article.titleFil}
+  description={article.leadFil}
+>
+  <ArticleView article={article} locale="fil" />
+</Base>

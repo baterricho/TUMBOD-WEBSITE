@@ -5,41 +5,140 @@
  * The target of the always-visible emergency control, and precache tier 1.
  * This page must open with no signal, no JavaScript, and no third-party
  * anything. It is the single most important URL on the site.
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * REBUILT AS CARDS, 2026-08-07, to the owner's reference design.
+ *
+ * TWO THINGS FROM THE REFERENCE WERE DELIBERATELY NOT COPIED.
+ *
+ * 1. THE NUMBERS. The reference is Barangay Semirara's page (Caluya, Antique)
+ *    and every number on it is theirs. Copying them here would publish another
+ *    barangay's emergency contacts as Tumbod's — a resident dialling during a
+ *    typhoon would reach a municipality 300 km away. This page renders only
+ *    what Tumbod has verified, which today is two numbers, with the rest
+ *    honestly marked as missing.
+ *
+ * 2. THE AGENCY SEALS. The reference shows official PNP, Coast Guard and BFP
+ *    crests. Those are government identifiers; reproducing them on a site that
+ *    is not theirs implies an endorsement that does not exist. The cards carry
+ *    our own category icons instead — a shield for police, an anchor for the
+ *    Coast Guard, and so on — which say the same thing and claim nothing.
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * THE WHOLE CARD IS THE CALL TARGET where a number exists. Not the small
+ * button: a person using this page is frightened, possibly in the dark, and
+ * possibly one-handed. A 300px target that cannot be missed beats a tidy 90px
+ * one. The button is the affordance inside it, not a second link — two links
+ * to the same number would make a screen reader announce it twice.
  */
 import Section from '@/components/Section.astro'
 import Icon from '@/components/Icon.astro'
-import PhoneNumber from '@/components/PhoneNumber.astro'
+import Placeholder from '@/components/Placeholder.astro'
 import { getDictionary, type Locale } from '@/lib/i18n'
-import { HOTLINES } from '@/lib/content/active'
+import { getHotlines } from '@/lib/content/live-collections'
+import { isPlaceholder } from '@/lib/content/placeholder'
+import { IS_DEMO } from '@/lib/content/active'
+import { formatDay } from '@/lib/time'
 
 interface Props {
   locale: Locale
 }
 
 const { locale } = Astro.props
+const HOTLINES = (await getHotlines()).items
 const t = getDictionary(locale)
 const fil = locale === 'fil'
+
+/** Category → icon. Our own set, never an agency crest. */
+const CATEGORY_ICON = {
+  barangay: 'megaphone',
+  disaster: 'warning',
+  health: 'health',
+  maritime: 'anchor',
+  police: 'shield',
+} as const
+
+/**
+ * Display keeps the hyphens; the `tel:` href strips them.
+ *
+ * RFC 3966 permits visual separators and mainline Android dialers cope, but
+ * feature phones and older WebViews are squarely in this audience, some
+ * mis-parse them, and the failure mode is a dialer that opens blank during an
+ * emergency. Stripping costs nothing. (Same rule as PhoneNumber.astro.)
+ */
+const dialable = (n: string) => n.replace(/[^\d+]/g, '')
 ---
 
 <Section divider={false} class="section--airy">
   <h1 class="page-title">{t.nav.emergencyLabel}</h1>
-  <p style="margin-top:var(--space-3);color:var(--ink-muted);max-width:var(--measure)">
-    {t.safety.mayBeNewer}
-  </p>
+  <p class="section-lede">{t.safety.mayBeNewer}</p>
 </Section>
 
 <Section>
-  <ul style="list-style:none;padding:0;margin:0">
+  <ul class="hotgrid">
     {
-      HOTLINES.map((line) => (
-        <li style="min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);border-bottom:1px solid var(--line);flex-wrap:wrap">
-          <span style="display:flex;align-items:center;gap:var(--space-2)">
-            <Icon name="phone" size={20} />
-            <strong>{fil ? line.labelFil : line.labelEn}</strong>
-          </span>
-          <PhoneNumber number={line.number} locale={locale} large />
-        </li>
-      ))
+      HOTLINES.map((line) => {
+        const label = fil ? line.labelFil : line.labelEn
+        const icon = CATEGORY_ICON[line.category] ?? 'phone'
+        const missing = isPlaceholder(line.number)
+
+        /*
+         * A card is only a link when the number is REAL and the build is not a
+         * demo. `demo.ts` rule 4 and `check-demo.mjs` both forbid making an
+         * unassigned sample number dialable, and `critical-paths.spec.ts` 7c
+         * checks the rendered DOM for it. A missing number renders as a card
+         * with no target at all, which is honest: there is nothing to call.
+         */
+        const callable = !missing && !IS_DEMO
+
+        const inner = (
+          <>
+            <span class="hotcard__icon" aria-hidden="true">
+              <Icon name={icon} size={22} />
+            </span>
+            <span class="hotcard__body">
+              <span class="hotcard__label">{label}</span>
+              {missing ? (
+                <Placeholder value={line.number} />
+              ) : (
+                <span class="hotcard__number figure">{line.number}</span>
+              )}
+              {line.verifiedAt && !missing && (
+                <span class="hotcard__verified">
+                  {fil ? 'Na-verify noong ' : 'Verified '}
+                  <time datetime={line.verifiedAt.toISOString().slice(0, 10)}>
+                    {formatDay(line.verifiedAt, locale)}
+                  </time>
+                </span>
+              )}
+            </span>
+            {callable ? (
+              <span class="hotcard__cta">
+                <Icon name="phone" size={16} />
+                {fil ? 'Tumawag' : 'Call now'}
+              </span>
+            ) : (
+              <span class="hotcard__cta hotcard__cta--off">
+                {IS_DEMO
+                  ? fil ? 'Demo' : 'Demo'
+                  : fil ? 'Wala pa' : 'Not yet'}
+              </span>
+            )}
+          </>
+        )
+
+        return (
+          <li>
+            {callable ? (
+              <a class="hotcard" href={`tel:${dialable(line.number as string)}`} data-plain>
+                {inner}
+              </a>
+            ) : (
+              <div class="hotcard hotcard--missing">{inner}</div>
+            )}
+          </li>
+        )
+      })
     }
   </ul>
 </Section>

@@ -1,0 +1,149 @@
+---
+/**
+ * SEA SAFETY ADVISORY — the decision, not the datum.
+ *
+ * The old sea band reported a MEASUREMENT ("KATAMTAMAN · 1.2 m") and left the
+ * reader to work out what to do about it. This reports a DECISION first and
+ * the measurement second, because the question being asked at the shoreline is
+ * not "what is the wave height" but "do I go".
+ *
+ * ── STRUCTURE, and why it is in this order ──────────────────────────
+ *   1. STATUS WORD    — what the sea is doing
+ *   2. ACTION         — what to do about it, in plain language
+ *   3. PROVENANCE     — when it was read and by whom
+ * A reader who stops after line one still has the answer. A reader who stops
+ * after line two has the answer and the reason. Only someone checking the
+ * barangay's work needs line three.
+ *
+ * ── NEVER COLOUR ALONE (§2.4) ───────────────────────────────────────
+ * Every state carries an icon AND a word AND a sentence. The danger state is
+ * legible in greyscale, in forced-colours mode, and read aloud in order. The
+ * fill is the last of four signals, not the first.
+ *
+ * ── NO JAVASCRIPT, NO MOTION, NO DISCLOSURE ─────────────────────────
+ * This is server-rendered static markup. It does not animate, it does not
+ * flash, and it is never behind a tooltip, a carousel or a <details>. A safety
+ * warning that requires an interaction to read is not a warning. That also
+ * makes it correct under prefers-reduced-motion by construction, and it
+ * survives the offline cache like any other markup.
+ *
+ * ── ARIA ────────────────────────────────────────────────────────────
+ * `role="status"` (polite), not `role="alert"`. The page is not changing under
+ * the reader — the advisory is part of the document when it loads — so an
+ * assertive live region would interrupt for no reason. The heading is a real
+ * <h2>, so it appears in the heading outline where someone navigating by
+ * heading will find it.
+ */
+import Icon from './Icon.astro'
+import type { IconName } from './Icon.astro'
+import { getDictionary, type Locale } from '@/lib/i18n'
+import { advisoryNote, type SeaAdvisory } from '@/lib/content/sea-advisory'
+import { formatAbsolute, isoAttr } from '@/lib/time'
+
+interface Props {
+  advisory: SeaAdvisory
+  locale: Locale
+}
+
+const { advisory, locale } = Astro.props
+const t = getDictionary(locale)
+const a = t.advisory
+
+/**
+ * State → presentation. One table, so a new state cannot be added without
+ * someone deciding what it says and how it looks.
+ *
+ * `unknown` takes the INFO icon and a neutral treatment on purpose. Dressing
+ * missing data as a warning would cry wolf; dressing it as calm would imply
+ * permission. Neutral-plus-explicit-text is the honest middle.
+ */
+const STATE: Record<
+  SeaAdvisory['status'],
+  { icon: IconName; title: string; message: string; action: string }
+> = {
+  safe: { icon: 'wave-calm', title: a.safeTitle, message: a.safeMessage, action: a.safeAction },
+  caution: {
+    icon: 'wave-moderate',
+    title: a.cautionTitle,
+    message: a.cautionMessage,
+    action: a.cautionAction,
+  },
+  danger: {
+    icon: 'wave-dangerous',
+    title: a.dangerTitle,
+    message: a.dangerMessage,
+    action: a.dangerAction,
+  },
+  unknown: {
+    icon: 'info',
+    title: a.unknownTitle,
+    message: a.unknownMessage,
+    action: a.unknownAction,
+  },
+}
+
+const s = STATE[advisory.status]
+const note = advisoryNote(advisory, locale)
+
+/* Why the reading is unavailable — shown only when it is, and only as a quiet
+   line. A resident does not need to know the mechanism, but a barangay staff
+   member reading their own site should be able to tell "nobody has entered
+   this" from "what was entered has expired". */
+const whyUnknown =
+  advisory.unknownReason === 'stale'
+    ? a.staleNote
+    : advisory.unknownReason === 'no-data' || advisory.unknownReason === 'sample'
+      ? a.noDataNote
+      : null
+
+const observedDate =
+  advisory.status !== 'unknown' && advisory.observedAt ? new Date(advisory.observedAt) : null
+const observed =
+  observedDate && Number.isFinite(observedDate.getTime())
+    ? formatAbsolute(observedDate, locale)
+    : null
+---
+
+<section
+  class={`advisory advisory--${advisory.status}`}
+  role="status"
+  aria-labelledby="sea-advisory-title"
+>
+  <div class="advisory__inner">
+    <div class="advisory__icon" aria-hidden="true">
+      <Icon name={s.icon} size={40} />
+    </div>
+
+    <div class="advisory__body">
+      <p class="advisory__eyebrow">{a.heading}</p>
+      <h2 class="advisory__title" id="sea-advisory-title">{s.title}</h2>
+      <p class="advisory__message">{s.message}</p>
+      <p class="advisory__action">{s.action}</p>
+
+      {note && (
+        <p class="advisory__note">
+          <strong>{a.localNote}:</strong> {note}
+        </p>
+      )}
+
+      {whyUnknown && <p class="advisory__why">{whyUnknown}</p>}
+
+      {
+        observed && (
+          <p class="advisory__meta">
+            <span>
+              {a.updated}: <time datetime={isoAttr(observedDate!)}>{observed}</time>
+            </span>
+            {advisory.source && <span>· {a.source}: {advisory.source}</span>}
+            {advisory.waveHeightM !== null && (
+              <span class="figure">· {t.sea.waveHeight} {advisory.waveHeightM} m</span>
+            )}
+            {advisory.windKph !== null && (
+              <span class="figure">· {t.sea.wind} {advisory.windKph} kph</span>
+            )}
+          </p>
+        )
+      }
+    </div>
+  </div>
+</section>

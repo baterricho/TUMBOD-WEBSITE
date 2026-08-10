@@ -40,8 +40,12 @@ export interface MenuLink {
   readonly noteEn?: string
 }
 
-/** Prefixes a locale-relative path. `''` for Filipino, `/en` for English. */
-export const prefix = (locale: Locale) => (locale === 'fil' ? '' : '/en')
+/**
+ * Re-exported so existing callers keep working. The definition moved to
+ * `lib/i18n` on 2026-08-07 — it is a routing rule, not menu content. Import it
+ * from `@/lib/i18n` in new code.
+ */
+export { prefix } from '@/lib/i18n'
 
 export const label = (locale: Locale, item: { labelFil: string; labelEn: string }) =>
   locale === 'fil' ? item.labelFil : item.labelEn

@@ -1,0 +1,173 @@
+---
+/**
+ * The visit counter — first-party, cookie-free, and silent about people.
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * WHY NOT GOOGLE ANALYTICS, PLAUSIBLE, OR ANY HOSTED TAG.
+ *
+ * Two independent reasons, either one sufficient:
+ *
+ * 1. IT WOULD BREAK THE EMERGENCY GUARANTEE. `/ligtas` and `/ligtas/hotline`
+ *    must make zero requests to hosts we do not control — they are precache
+ *    tier 1, opened during typhoons on 2G or with no signal at all. A tag on
+ *    every page is a request on every page. `critical-paths.spec.ts` test 10
+ *    enforces this and names "an analytics beacon" as something that must
+ *    fail.
+ *
+ * 2. IT IS SOMEBODY ELSE'S DATA THEN. This is a government site for the
+ *    residents of one barangay. Handing a record of which resident read which
+ *    health service to an advertising company, in exchange for a chart, is not
+ *    a trade a barangay can make on their behalf.
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * WHAT IS RECORDED, AND WHAT IS DELIBERATELY NOT.
+ *
+ *   path            the route, query string stripped
+ *   locale          fil | en
+ *   device          phone | tablet | desktop, from viewport width only
+ *   referrer_host   the HOST that linked here — never the full URL, because a
+ *                   full referrer leaks the search terms someone typed
+ *   session_id      random, in sessionStorage, dead when the tab closes
+ *
+ * NOT recorded: IP address (no column exists), user agent (a fingerprint),
+ * cookies, localStorage, scroll depth, clicks, screen dimensions, or anything
+ * that survives closing the tab.
+ *
+ * The consequence is honest and the admin states it: "unique visitors" here
+ * means SESSIONS. One person visiting on Monday and Thursday counts twice.
+ * That is the price of not tracking people, and it is the right price.
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * WHERE IT DOES NOT RUN.
+ *
+ *   - /ligtas and /ligtas/hotline — the absolute guarantee, no exceptions.
+ *   - /admin — staff, and not the public we are counting.
+ *   - When the visitor has Do Not Track or Global Privacy Control set. Both
+ *     are honoured. A stated preference not to be counted is a preference not
+ *     to be counted, whatever the law currently requires.
+ *   - With JavaScript disabled, which is a supported way to read this site.
+ *     Those readers are simply uncounted; the page is unaffected.
+ * ═══════════════════════════════════════════════════════════════════
+ */
+import { liveConfig } from '@/lib/cms/live'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+  pathname: string
+}
+
+const { locale, pathname } = Astro.props
+
+/**
+ * Emergency routes are excluded HERE, at build time, not by a runtime check.
+ *
+ * A runtime `if (path.startsWith('/ligtas')) return` would still ship the
+ * script and still be one refactor away from firing. Not emitting the element
+ * at all means there is nothing on the page to go wrong: the guarantee is
+ * structural rather than conditional.
+ */
+const EXCLUDED = ['/ligtas', '/en/ligtas', '/admin']
+const excluded = EXCLUDED.some((p) => pathname === p || pathname.startsWith(p + '/'))
+
+const enabled = Boolean(liveConfig.url && liveConfig.key) && !excluded
+---
+
+{
+  /*
+   * `define:vars` with a RAW script body — not `{\`…\`}`.
+   *
+   * The first version wrapped the source in a JSX expression holding a
+   * template literal. Astro emitted that verbatim, so the browser received
+   * `<script>{`;(function(){…})()`}</script>` — a block statement containing an
+   * unused template literal. Perfectly valid JavaScript that does absolutely
+   * nothing, with no parse error and no console warning to notice. The beacon
+   * "worked" for one build and wrote zero rows.
+   *
+   * `define:vars` is the pattern LiveContent.astro already uses: it serialises
+   * the values into `const` declarations ahead of the body, so there is no
+   * expression wrapper to be emitted as text.
+   */
+  enabled && (
+    <script
+      is:inline
+
+      define:vars={{
+        endpoint: `${liveConfig.url}/rest/v1/page_views`,
+        key: liveConfig.key,
+        pageLocale: locale,
+      }}
+    >
+      ;(function () {
+  /* Honour a stated preference not to be counted. */
+  try {
+    if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl) return
+  } catch (e) {}
+
+  /* Per-TAB id. sessionStorage, never localStorage: this must not survive the
+     tab closing, or it becomes a way to follow somebody across days. */
+  var sid
+  try {
+    sid = sessionStorage.getItem('tumbod:sid')
+    if (!sid) {
+      sid = (Date.now().toString(36) + Math.random().toString(36).slice(2, 10)).slice(0, 32)
+      sessionStorage.setItem('tumbod:sid', sid)
+    }
+  } catch (e) {
+    /* Storage blocked (private mode, or a locked-down browser). Count the view
+       under a throwaway id rather than not at all — it inflates the session
+       count slightly and records nothing extra about anyone. */
+    sid = 'nostore-' + Math.random().toString(36).slice(2, 12)
+  }
+
+  /* HOST only. A full referrer would carry the search terms that led here. */
+  var ref = null
+  try {
+    if (document.referrer) {
+      var h = new URL(document.referrer).hostname
+      if (h && h !== location.hostname) ref = h.slice(0, 120)
+    }
+  } catch (e) {}
+
+  var w = window.innerWidth || 0
+  var device = w < 640 ? 'phone' : w < 1024 ? 'tablet' : 'desktop'
+
+  var body = JSON.stringify({
+    path: location.pathname.slice(0, 200),
+    locale: pageLocale,
+    device: device,
+    referrer_host: ref,
+    session_id: sid
+  })
+
+  function send() {
+    /* fetch with keepalive, not sendBeacon: sendBeacon cannot set the apikey
+       header PostgREST requires. keepalive lets the request outlive the page,
+       which is the one property sendBeacon was wanted for.
+
+       Failure is silent and total. An analytics call that surfaces an error to
+       a resident, or that delays anything on the page, is worse than no
+       analytics. */
+    try {
+      fetch(endpoint, {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: key,
+          Authorization: 'Bearer ' + key,
+          Prefer: 'return=minimal'
+        },
+        body: body
+      }).catch(function () {})
+    } catch (e) {}
+  }
+
+  /* AFTER the page is usable, never during. requestIdleCallback keeps it off
+     the critical path entirely on the phones this site is built for. */
+  if ('requestIdleCallback' in window) requestIdleCallback(send, { timeout: 4000 })
+  else setTimeout(send, 1200)
+})()
+    </script>
+  )
+}

@@ -27,7 +27,7 @@ import MegaServices from './mega/MegaServices.astro'
 import MegaNews from './mega/MegaNews.astro'
 import MegaSafety from './mega/MegaSafety.astro'
 import MegaContact from './mega/MegaContact.astro'
-import { getDictionary, alternateHref, type Locale } from '@/lib/i18n'
+import { getDictionary, alternateHref, type Locale, prefix } from '@/lib/i18n'
 
 interface Props {
   locale: Locale
@@ -38,7 +38,7 @@ const { locale, pathname } = Astro.props
 const t = getDictionary(locale)
 const fil = locale === 'fil'
 const other: Locale = fil ? 'en' : 'fil'
-const p = fil ? '' : '/en'
+const p = prefix(locale)
 const homeHref = fil ? '/' : '/en'
 
 /**
@@ -122,6 +122,25 @@ const isCurrent = (href: string) => pathname === href
     </a>
 
     <div style="margin-left:auto;display:flex;align-items:center;gap:var(--space-2)">
+      {/*
+        The clock.
+
+        `hidden` in the markup and revealed by script, which is the opposite of
+        this site's usual rule — normally content ships rendered and JS only
+        enhances it. A clock is the exception: server-rendering a time bakes
+        the BUILD time into a static page, so a resident opening the site on
+        Thursday would be told it is Tuesday afternoon. A wrong clock is worse
+        than no clock, so with JavaScript off there simply isn't one.
+
+        `Asia/Manila` explicitly, not the device's zone: this is the barangay's
+        local time, and it should read the same to a relative checking from
+        abroad as it does to someone standing at the hall.
+      */}
+      <p class="siteclock" id="siteclock" hidden>
+        <time class="siteclock__time" id="siteclock-time"></time>
+        <span class="siteclock__date" id="siteclock-date"></span>
+      </p>
+
       <a
         href={alternateHref(pathname, other)}
         hreflang={other === 'fil' ? 'fil' : 'en'}
@@ -145,7 +164,12 @@ const isCurrent = (href: string) => pathname === href
       {/* 44px minimum on every nav target (A11Y-PLAN.md §3). These were 22px
           and were caught by the touch-target test — small nav links are hard
           to hit on a cracked screen with wet hands, which is the real context. */}
-      <ul class="mainnav">
+      {/* `role="list"` is redundant on a <ul> everywhere except one place, and
+          that place is this nav: polish.css sets `display: contents` on it at
+          phone widths so all six items wrap as one flow, and dissolving the box
+          makes several engines drop the implicit list semantics. The explicit
+          role keeps "list, 6 items" being announced. */}
+      <ul class="mainnav" role="list">
         <li>
           <MegaMenu
             id="today"
@@ -207,8 +231,23 @@ const isCurrent = (href: string) => pathname === href
         </li>
       </ul>
 
-      {/* No JavaScript. <details> is the disclosure. */}
-      <details class="navmore" style="margin-left:auto;position:relative">
+      {/*
+        No JavaScript. <details> is the disclosure.
+
+        `data-mega` is on it too, and that is a fix rather than a decoration.
+        The behaviour script selects `[data-mega]`, so while this element lacked
+        the attribute the More menu was the one disclosure in the header that
+        did not close on Escape, did not close on an outside click, and did not
+        participate in "only one panel open at a time" — it could sit open
+        underneath a full-screen mega panel. It is a disclosure in the same nav
+        bar and it gets the same four behaviours.
+      */}
+      {/* `margin-left:auto` moved out of this inline style and into polish.css,
+          scoped to the desktop grid. Inline styles beat stylesheets, so leaving
+          it here would have pinned "Higit pa" to the right edge of the FIRST
+          row once the nav starts wrapping on phones — stranding it alone on a
+          line with five items crammed beside it. */}
+      <details class="navmore" data-mega style="position:relative">
         <summary
           style="display:flex;align-items:center;gap:var(--space-2);min-height:44px;white-space:nowrap;font-size:var(--text-sm);cursor:pointer;list-style:none"
         >
@@ -293,9 +332,20 @@ const isCurrent = (href: string) => pathname === href
      * otherwise flicking the overlay scrolls the article underneath and the
      * reader loses their place. `overflow: hidden` on <html> rather than a
      * fixed-position body, which would jump the scroll position to the top.
+     *
+     * ONLY THE FULL-SCREEN PANELS LOCK. The More menu is a `[data-mega]`
+     * disclosure too — it wants the closing behaviours — but it is a small
+     * dropdown anchored to the bar, not an overlay. Locking the document for it
+     * would freeze the page behind a menu that covers a corner of it, which
+     * reads as the site having hung. `.mega__panel` is what makes a disclosure
+     * an overlay, so that is what the test asks about.
      */
+    var overlays = menus.filter(function (m) {
+      return !!m.querySelector('.mega__panel')
+    })
+
     var lock = function () {
-      var open = menus.some(function (m) { return m.open })
+      var open = overlays.some(function (m) { return m.open })
       document.documentElement.style.overflow = open ? 'hidden' : ''
     }
 
@@ -350,6 +400,75 @@ const isCurrent = (href: string) => pathname === href
       if (!inside) {
         closeAll(null)
         lock()
+      }
+    })
+  })()
+</script>
+
+{/*
+  Clock. ~450 bytes, no dependency, and it never touches the network.
+
+  `Intl.DateTimeFormat` with an explicit `timeZone` does the whole job —
+  including the Philippine 12-hour convention and the Filipino weekday names —
+  so there is no date library and no hand-rolled formatting to get wrong.
+
+  Updated every 10 seconds rather than every second: the display has no seconds
+  in it, so a per-second tick would wake the CPU sixty times a minute to render
+  an identical string. On the four-year-old phones this site is built for that
+  is battery spent on nothing.
+*/}
+<script is:inline define:vars={{ fil: locale === 'fil' }}>
+  ;(function () {
+    var box = document.getElementById('siteclock')
+    var tEl = document.getElementById('siteclock-time')
+    var dEl = document.getElementById('siteclock-date')
+    if (!box || !tEl || !dEl) return
+
+    var loc = fil ? 'fil-PH' : 'en-PH'
+    var TZ = 'Asia/Manila'
+
+    var time, date
+    try {
+      time = new Intl.DateTimeFormat(loc, {
+        timeZone: TZ,
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+      date = new Intl.DateTimeFormat(loc, {
+        timeZone: TZ,
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      })
+    } catch (e) {
+      /* An engine without full ICU would print something misleading rather
+         than something wrong-looking. Leave the clock hidden. */
+      return
+    }
+
+    function tick() {
+      var now = new Date()
+      tEl.textContent = time.format(now)
+      // `datetime` carries the machine-readable instant for assistive tech and
+      // for anything that parses the page.
+      tEl.setAttribute('datetime', now.toISOString())
+      dEl.textContent = date.format(now)
+    }
+
+    tick()
+    box.hidden = false
+
+    var timer = setInterval(tick, 10000)
+
+    /* A backgrounded tab does not need a running clock, and it must be correct
+       the instant it comes back — not up to ten seconds stale. */
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') {
+        tick()
+        if (!timer) timer = setInterval(tick, 10000)
+      } else {
+        clearInterval(timer)
+        timer = null
       }
     })
   })()

@@ -67,6 +67,34 @@ export const dictionaryEn: Dictionary = {
     readHistory: 'Read our history',
   },
 
+  /*
+   * SEA SAFETY ADVISORY. Mirrors fil.ts — see the note there for why the copy
+   * lives in the dictionary rather than in an editable database field.
+   */
+  advisory: {
+    heading: 'Sea conditions',
+    safeTitle: 'Sea conditions are favourable',
+    safeMessage: 'Conditions at sea are currently favourable.',
+    safeAction:
+      'Boat travel may proceed with normal caution. Keep watching the barangay advisory and the weather.',
+    cautionTitle: 'Sea conditions require caution',
+    cautionMessage: 'Small boats should take extra care.',
+    cautionAction:
+      'Check with the barangay before travelling farther from shore. Avoid long trips and deep water.',
+    dangerTitle: 'DO NOT HEAD OUT TO SEA',
+    dangerMessage: 'Sea conditions are dangerous.',
+    dangerAction:
+      'Do not sail, do not fish, do not travel far from shore, and do not enter open or deep water.',
+    unknownTitle: 'Sea condition information unavailable',
+    unknownMessage: 'There is no verified advisory for sea conditions right now.',
+    unknownAction:
+      'Check with the barangay before heading out to sea. No warning does not mean the sea is safe.',
+    updated: 'Last updated',
+    source: 'Source',
+    staleNote: 'The last reading is out of date, so it cannot be treated as current.',
+    noDataNote: 'No advisory has been recorded in the barangay system yet.',
+    localNote: 'Barangay note',
+  },
   sea: {
     calm: 'CALM',
     moderate: 'MODERATE',

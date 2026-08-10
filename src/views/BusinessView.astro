@@ -8,7 +8,7 @@
  * here"), never an endorsement, and the page says so.
  */
 import Section from '@/components/Section.astro'
-import { BUSINESSES } from '@/lib/content/active'
+import { getBusinesses } from '@/lib/content/live-collections'
 import type { Locale } from '@/lib/i18n'
 
 interface Props {
@@ -16,6 +16,7 @@ interface Props {
 }
 
 const { locale } = Astro.props
+const BUSINESSES = (await getBusinesses()).items
 const fil = locale === 'fil'
 
 // Alphabetical, so ordering carries no judgement.

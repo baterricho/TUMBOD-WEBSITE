@@ -5,12 +5,18 @@
  * pipeline. That is deliberate: the admin is a staff tool and nothing in it may
  * change a single byte of what a resident downloads on a metered connection.
  *
- * THE PALETTE IS THE SITE'S PALETTE. Same mangrove ink, same reef green, same
- * signal red — an admin that looks like a different product makes it harder to
- * predict what an edit will do to the page. What changes is the DENSITY: this
- * is a tool someone works in for twenty minutes, not a page they glance at, so
- * the type is smaller, the rows are tighter, and the whitespace does the
- * separating instead of rules and boxes.
+ * THE PALETTE IS THE SITE'S PALETTE — the civic light theme of 2026-08-08:
+ * slate ink, official gold, signal red. An admin that looks like a different
+ * product makes it harder to predict what an edit will do to the page. What
+ * changes is the DENSITY: this is a tool someone works in for twenty minutes,
+ * not a page they glance at, so the type is smaller, the rows are tighter, and
+ * the whitespace does the separating instead of rules and boxes.
+ *
+ * The values are COPIED rather than imported. This sheet is served from
+ * /public and deliberately does not go through the site's CSS pipeline (see
+ * above), so it cannot read tokens.css. When the site palette moves, this
+ * block moves with it by hand — that is the cost of the isolation, and it is
+ * cheaper than shipping the whole token file to residents.
  *
  * Structure below:
  *   1. Tokens          6. Tables
@@ -23,28 +29,36 @@
 /* ── 1. Tokens ──────────────────────────────────────────────── */
 
 :root {
-  /* Ink and surface. Two greys only; more than that and every panel starts
-     looking like a different depth for no reason. */
-  --ink: #101c17;
-  --ink-2: #46564d;
-  --ink-3: #75857b;
-  --surface: #f6f8f6;
+  /* Ink and surface — the site's slate ramp. Two greys only; more than that
+     and every panel starts looking like a different depth for no reason. */
+  --ink: #0f172a;
+  --ink-2: #334155;
+  --ink-3: #64748b;
+  --surface: #f8fafc;
   --panel: #ffffff;
-  --panel-2: #fbfcfb;
-  --line: #e3e9e4;
-  --line-2: #cfd8d1;
+  --panel-2: #f8fafc;
+  --line: #e2e8f0;
+  --line-2: #cbd5e1;
 
-  /* The site's own signals, unchanged. Green = confirmed and "you are here".
-     Red = emergency, and nothing else. Amber = provisional / sample. */
-  --green: #1f7a45;
-  --green-ink: #17603a;
-  --green-wash: #eaf5ee;
-  --red: #b3160c;
-  --red-wash: #fdecea;
-  --amber: #b06f00;
-  --amber-wash: #fdf3e0;
-  --blue: #1f6796;
-  --blue-wash: #eaf2f8;
+  /*
+   * The site's own signals. Green = confirmed. Red = emergency, and nothing
+   * else. Amber = provisional / sample, AND the government accent.
+   *
+   * Every `--*-ink`-grade value here is a DARKENED stop, not the brief's fill
+   * value, for the same reason tokens.css darkens them: #16a34a is 3.30:1 on
+   * white and #f59e0b is 2.15:1, and this sheet uses these as label colours on
+   * white panels. The washes are the fill halves of the same hues.
+   */
+  --green: #15803d;
+  --green-ink: #14532d;
+  --green-wash: #ecfdf5;
+  --red: #dc2626;
+  --red-wash: #fef2f2;
+  --amber: #b45309;
+  --amber-wash: #fffbeb;
+  --gold: #f59e0b;        /* the seal accent — FILL AND EDGE ONLY, never text */
+  --blue: #0369a1;
+  --blue-wash: #f0f9ff;
 
   /* 8px grid. Everything below is a multiple. */
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
@@ -57,9 +71,9 @@
   --r-full: 999px;
 
   /* Tinted rather than black — depth on warm paper, not grey haze. */
-  --sh-1: 0 1px 2px rgb(16 28 23 / 0.04), 0 1px 3px rgb(16 28 23 / 0.06);
-  --sh-2: 0 2px 4px rgb(16 28 23 / 0.04), 0 8px 20px -6px rgb(16 28 23 / 0.10);
-  --sh-3: 0 8px 16px -4px rgb(16 28 23 / 0.08), 0 24px 48px -12px rgb(16 28 23 / 0.18);
+  --sh-1: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+  --sh-2: 0 2px 4px rgb(15 23 42 / 0.04), 0 8px 20px -6px rgb(15 23 42 / 0.10);
+  --sh-3: 0 8px 16px -4px rgb(15 23 42 / 0.08), 0 24px 48px -12px rgb(15 23 42 / 0.18);
 
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --sidebar-w: 268px;
@@ -128,6 +142,10 @@ ul, ol { padding: 0; list-style: none; }
   z-index: 2;
 }
 
+/* Gold ring, matching the seal in the site header — the one element of the
+   admin a resident would also recognise. The ring is amber-600 rather than the
+   amber-500 fill for the same 1.4.11 reason the site's is; the letters inside
+   stay on the ink, because gold cannot carry text. */
 .a-seal {
   display: grid;
   place-items: center;
@@ -135,8 +153,9 @@ ul, ol { padding: 0; list-style: none; }
   height: 36px;
   flex-shrink: 0;
   border-radius: var(--r-full);
-  border: 2px solid var(--green);
-  color: var(--green);
+  border: 2px solid #d97706;
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -240,8 +259,8 @@ ul, ol { padding: 0; list-style: none; }
   padding: 0 var(--s6);
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel) 85%, transparent);
-  backdrop-filter: blur(12px) saturate(1.3);
   -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -348,7 +367,7 @@ a.a-stat:hover, a.a-stat:focus-visible {
   width: 100%;
   max-width: 44px;
   border-radius: var(--r-sm) var(--r-sm) 0 0;
-  background: linear-gradient(180deg, var(--green) 0%, #2f9459 100%);
+  background: linear-gradient(180deg, var(--green) 0%, #16a34a 100%);
   min-height: 3px;
   animation: a-grow 500ms var(--ease) backwards;
   animation-delay: calc(var(--i, 0) * 45ms);
@@ -356,6 +375,35 @@ a.a-stat:hover, a.a-stat:focus-visible {
 }
 .a-barlabel { font-size: 11px; color: var(--ink-3); }
 .a-barvalue { font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* ── Meter — a horizontal proportion bar ────────────────────────
+   Used by the visitors screen for device / language / referrer splits, where
+   the question is "what share" rather than "how many over time". It is
+   deliberately NOT a pie chart: comparing angles is measurably harder than
+   comparing lengths, and three of these stack in the space one pie would take.
+
+   The percentage is printed beside every bar. The bar is the quick read; the
+   number is the answer. Length alone would put the whole panel out of reach of
+   anyone who cannot judge small differences in width. */
+.a-meter {
+  flex: 1;
+  height: 8px;
+  min-width: 60px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.a-meterfill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--green) 0%, #16a34a 100%);
+  animation: a-meter-grow 480ms var(--ease) backwards;
+}
+@keyframes a-meter-grow { from { width: 0 } }
+
+@media (prefers-reduced-motion: reduce) {
+  .a-meterfill { animation: none; }
+}
 
 @keyframes a-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 
@@ -562,7 +610,39 @@ a.a-stat:hover, a.a-stat:focus-visible {
 .a-legend { font-size: 13px; font-weight: 650; color: var(--ink); }
 
 .a-field { display: grid; gap: var(--s2); }
-.a-field--inline { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--s3); }
+.a-field--inline { gap: var(--s2); }
+
+/* Checkbox and its text as one clickable row. The checkbox is a CHILD of the
+   label now, so this only has to line them up — it can no longer separate
+   them. `min-height` because a 13px box is not a usable target on a phone. */
+.a-checkline {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 40px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.a-checkline input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+/*
+ * The field the editor must act on before the save can go through.
+ *
+ * Amber, not red: nothing is broken and nothing was rejected — a step is
+ * outstanding. Red here would read as an error the editor caused.
+ */
+.a-field--needs {
+  outline: 2px solid #d97706;
+  outline-offset: 6px;
+  border-radius: 6px;
+}
 
 .a-label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
 .a-req { color: var(--red); }
@@ -601,7 +681,7 @@ a.a-stat:hover, a.a-stat:focus-visible {
   border-radius: var(--r-sm);
   background: var(--amber-wash);
   border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
-  color: #7a4d00;
+  color: #b45309;
 }
 
 .a-switch { display: flex; align-items: center; gap: var(--s3); cursor: pointer; }
@@ -617,8 +697,8 @@ a.a-stat:hover, a.a-stat:focus-visible {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: color-mix(in srgb, var(--panel) 92%, transparent);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   box-shadow: var(--sh-2);
 }
 .a-formbar .a-btn--primary { margin-left: auto; }
@@ -699,6 +779,28 @@ a.a-stat:hover, a.a-stat:focus-visible {
   border: 0;
   padding: 0;
   cursor: zoom-in;
+  /* Anchors the VIDEO badge below. */
+  position: relative;
+}
+
+/* A video's poster is a still frame, so without a badge it is indistinguishable
+   from a photograph in the grid — and an editor picking a hero image would
+   choose a clip by mistake. */
+.a-mediakind {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.72);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  pointer-events: none;
 }
 
 .a-mediameta { padding: var(--s2) var(--s3) var(--s3); display: grid; gap: 2px; }
@@ -733,9 +835,9 @@ a.a-stat:hover, a.a-stat:focus-visible {
   display: grid;
   place-items: center;
   padding: var(--s6);
-  background: rgb(16 28 23 / 0.86);
-  backdrop-filter: blur(6px);
+  background: rgb(15 23 42 / 0.86);
   -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   animation: a-fade 160ms var(--ease);
 }
 .a-lightbox img { max-width: 100%; max-height: 80vh; border-radius: var(--r-md); box-shadow: var(--sh-3); }
@@ -776,9 +878,9 @@ a.a-stat:hover, a.a-stat:focus-visible {
   display: grid;
   place-items: center;
   padding: var(--s5);
-  background: rgb(16 28 23 / 0.5);
-  backdrop-filter: blur(4px);
+  background: rgb(15 23 42 / 0.5);
   -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   animation: a-fade 160ms var(--ease);
 }
 
@@ -827,7 +929,7 @@ a.a-stat:hover, a.a-stat:focus-visible {
   border-radius: var(--r-md);
   background: var(--blue-wash);
   border: 1px solid color-mix(in srgb, var(--blue) 22%, transparent);
-  color: #124e73;
+  color: #075985;
   font-size: 13px;
 }
 
@@ -836,7 +938,7 @@ a.a-stat:hover, a.a-stat:focus-visible {
   border-radius: var(--r-md);
   background: var(--amber-wash);
   border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
-  color: #7a4d00;
+  color: #b45309;
   font-size: 13px;
   font-weight: 550;
 }

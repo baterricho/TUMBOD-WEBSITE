@@ -25,11 +25,35 @@ import { getDictionary, type Locale } from '@/lib/i18n'
 
 interface Props {
   locale: Locale
+  /**
+   * Turns the chart into the POSTER for a real, zoomable tile map.
+   *
+   * Off by default, and that default is the whole design of this component.
+   * The chart is inline SVG: it costs zero requests, paints on the first frame,
+   * works with JavaScript off and works offline. On the homepage — the page
+   * most likely to be opened on a metered connection during a storm — that is
+   * exactly what is wanted and a tile map would be a regression.
+   *
+   * On `/kontak` the question being asked is different. Someone on the contact
+   * page is trying to find the place, and "where is this, and what is around
+   * it" is a question a fixed-extent schematic cannot answer at any zoom. So
+   * there, and only there, the chart becomes a tap target that swaps itself for
+   * Leaflet. Still zero third-party bytes until the tap.
+   */
+  interactive?: boolean
 }
 
-const { locale } = Astro.props
+const { locale, interactive = false } = Astro.props
 const t = getDictionary(locale)
 const g = CHART_GEOMETRY
+
+/**
+ * Barangay Tumbod centroid — the same PSA figures LocationMap uses, and the
+ * same caveat applies: this is the barangay's recorded centre, not the hall.
+ */
+const LAT = 10.9856
+const LON = 119.2773
+const ZOOM = 13
 
 const label =
   locale === 'fil'
@@ -37,9 +61,155 @@ const label =
     : 'Chart of Tuluran (Tumbod) Island at the mouth of Malampaya Sound, with Blockade Strait to the west and Endeavor Strait to the east.'
 
 const bands = [...g.contours].map((d, i) => ({ d, band: i + 1 })).reverse()
+
+/*
+ * CHART -> LIVE MAP, as a raw source string injected with `set:html`.
+ *
+ * IT CANNOT BE WRITTEN AS AN ORDINARY `<script is:inline>` HERE, and the reason
+ * is worth recording because the failure is silent. Inside a JSX conditional
+ * (`{interactive && (<script>...)}`) Astro does not evaluate the expression
+ * inside a script tag — it emits it verbatim. The shipped page contained
+ * literally `{` + a template literal + `}`, which is a block statement wrapping
+ * an unused string: perfectly valid JavaScript that does nothing at all. No
+ * parse error, no console warning, no button, nothing to grep for.
+ *
+ * `set:html` with a frontmatter string injects the real source, and the
+ * conditional still keeps it off every page that does not ask for it.
+ */
+const MAP_SCRIPT = String.raw`
+;(function () {
+  var host = document.getElementById('chartmap')
+  if (!host) return
+
+  var lat = parseFloat(host.getAttribute('data-lat'))
+  var lon = parseFloat(host.getAttribute('data-lon'))
+  var zoom = parseInt(host.getAttribute('data-zoom'), 10)
+  var fil = document.documentElement.lang !== 'en'
+
+  /*
+   * NO BUTTON. The map opens by itself.
+   *
+   * It used to sit behind an "Open interactive map" control that named its own
+   * cost, so nobody spent tiles without choosing to. The owner removed it: a
+   * contact page exists to answer "where is this", and making someone press a
+   * button to see a map they came for is a toll on the answer.
+   *
+   * The cost did not vanish, it moved — every /kontak visit now fetches Leaflet
+   * and a screen of tiles. Two things keep that honest:
+   *
+   *   1. SAVE-DATA STILL WINS. A reader whose browser is asking sites to
+   *      economise, or who is on 2g, keeps the inline SVG chart and spends
+   *      nothing. The chart is a complete answer on its own — it names the
+   *      island and both straits — and the "View in Google Maps" and
+   *      "OpenStreetMap" links further down the page work for everyone.
+   *   2. IT IS STILL ONLY THIS PAGE. The interactive prop is opt-in per call
+   *      site and only /kontak passes it; the homepage band is untouched.
+   *
+   * (No backticks in this comment, on purpose. The whole script is a
+   * String.raw template literal in the frontmatter, so one backtick here ends
+   * the literal and the build fails with a bare "expected a semicolon".)
+   *
+   * /ligtas is unaffected either way. Its zero-third-party guarantee is about
+   * what the BROWSER requests on the emergency routes, and there is no map
+   * there.
+   */
+  var conn = navigator.connection
+  if (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || ''))) return
+
+  function asset(href, kind) {
+    return new Promise(function (res, rej) {
+      var el
+      if (kind === 'css') {
+        el = document.createElement('link')
+        el.rel = 'stylesheet'
+        el.href = href
+      } else {
+        el = document.createElement('script')
+        el.src = href
+      }
+      el.onload = res
+      el.onerror = rej
+      document.head.appendChild(el)
+    })
+  }
+
+  ;(function open() {
+    Promise.all([
+      asset('/vendor/leaflet/leaflet.css', 'css'),
+      asset('/vendor/leaflet/leaflet.js', 'js'),
+    ])
+      .then(function () {
+        var L = window.L
+        var svg = host.querySelector('svg')
+        var legend = host.querySelector('p')
+        if (svg) svg.remove()
+        if (legend) legend.remove()
+
+        var el = document.createElement('div')
+        el.className = 'chartmap__live'
+        el.style.height = 'clamp(320px, 45vh, 520px)'
+        el.setAttribute('role', 'application')
+        el.setAttribute('aria-label', fil ? 'Mapa ng Barangay Tumbod' : 'Map of Barangay Tumbod')
+        host.appendChild(el)
+
+        var map = L.map(el, { scrollWheelZoom: false }).setView([lat, lon], zoom)
+
+        var satellite = L.tileLayer(
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          { maxZoom: 19,
+          crossOrigin: true, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics' }
+        )
+        var streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          crossOrigin: true,
+          attribution: '&copy; OpenStreetMap contributors',
+        })
+        satellite.addTo(map)
+
+        var base = {}
+        base['Satellite'] = satellite
+        base[fil ? 'Kalsada' : 'Streets'] = streets
+        L.control.layers(base, null, { collapsed: window.innerWidth < 640 }).addTo(map)
+
+        L.marker([lat, lon])
+          .addTo(map)
+          .bindPopup(
+            '<strong>Barangay Tumbod</strong><br>Taytay, Palawan<br><span style="opacity:.75">' +
+              (fil
+                ? 'Gitna ng barangay (PSA) \u2014 hindi ang barangay hall.'
+                : 'Barangay centre (PSA) \u2014 not the barangay hall.') +
+              '</span>',
+            { maxWidth: 240 }
+          )
+
+        map.once('click', function () {
+          map.scrollWheelZoom.enable()
+        })
+
+        requestAnimationFrame(function () {
+          map.invalidateSize()
+        })
+      })
+      /*
+       * Failure is SILENT, and deliberately so. With no button there is nothing
+       * to put an error on, and the reader has lost nothing: the SVG chart is
+       * still sitting there showing where Tumbod is, and the Google Maps and
+       * OpenStreetMap links below still work. Announcing "the map failed" would
+       * describe a problem they do not have.
+       */
+      .catch(function () {})
+  })()
+})()
+`
 ---
 
-<div style="position:relative;background-color:var(--surface-sunken);border-bottom:1px solid var(--chart-rule)">
+<div
+  id={interactive ? 'chartmap' : undefined}
+  data-lat={interactive ? LAT : undefined}
+  data-lon={interactive ? LON : undefined}
+  data-zoom={interactive ? ZOOM : undefined}
+  style="position:relative;background-color:var(--surface-sunken);border-bottom:1px solid var(--chart-rule)"
+>
   <svg
     viewBox={g.viewBox}
     role="img"
@@ -132,3 +302,5 @@ const bands = [...g.contours].map((d, i) => ({ d, band: i + 1 })).reverse()
     <dd>{g.attribution}</dd>
   </dl>
 </div>
+
+{interactive && <script is:inline set:html={MAP_SCRIPT} />}

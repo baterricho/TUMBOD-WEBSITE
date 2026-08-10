@@ -1,0 +1,244 @@
+---
+/**
+ * Article detail — one view for both a news story and an event.
+ *
+ * WHY ONE VIEW AND NOT TWO. A story and an event differ by exactly three
+ * facts: when it starts, how long it runs, and where. Everything else — the
+ * header, the photograph, the body, the back link, the sample notice — is
+ * identical. Two templates would have been two places to fix every future
+ * change to any of that, and they would have drifted the way the news list and
+ * the news panel drifted before they were given a shared card vocabulary.
+ *
+ * So the event facts are a block that renders when `startsAt` is present, and
+ * the rest of the page does not know which kind it is showing.
+ *
+ * THE SAMPLE NOTICE IS NOT OPTIONAL. This page is the exact shape of a thing
+ * that gets screenshotted and quoted — a dated headline, a photograph, an
+ * official-looking URL. It carries the chip in the header AND a standing
+ * notice above the body, in the reader's language. See sample-news.ts.
+ */
+import Section from '@/components/Section.astro'
+import Icon from '@/components/Icon.astro'
+import SampleChip from '@/components/SampleChip.astro'
+import { type Locale, prefix } from '@/lib/i18n'
+import { formatDay, isoAttr } from '@/lib/time'
+import { type Article, isUpcoming, articleHref } from '@/lib/content/sample-news'
+import { getAllArticles } from '@/lib/content/articles'
+
+interface Props {
+  article: Article
+  locale: Locale
+}
+
+const { article: a, locale } = Astro.props
+
+/*
+ * Read from the ARTICLE, not from a set-level prop.
+ *
+ * A detail page shows exactly one article, so it can and must be exact: the
+ * chip and the standing notice appear if and only if THIS piece is
+ * demonstration content. The list pages take a pessimistic set-level flag
+ * because a heading cannot describe a mixed list; a single page has no such
+ * excuse, and stamping "SAMPLE DATA" on something the barangay really
+ * published would be worse than not stamping it at all.
+ */
+const isSample = a.isSample === true
+const fil = locale === 'fil'
+const p = prefix(locale)
+
+const isEvent = a.kind === 'event'
+const upcoming = isEvent && isUpcoming(a)
+
+/** Where "back" goes: to the list this article came from, not to history. A
+ *  reader who arrived from a shared link has no history to go back to. */
+const indexHref = isEvent ? `${p}/kaganapan` : `${p}/balita`
+const indexLabel = isEvent
+  ? fil ? 'Lahat ng kaganapan' : 'All events'
+  : fil ? 'Lahat ng balita' : 'All news'
+
+const title = fil ? a.titleFil : a.titleEn
+const body = fil ? a.bodyFil : a.bodyEn
+const category = fil ? a.categoryFil : a.categoryEn
+const alt = a.image ? (fil ? a.image.altFil : a.image.altEn) : ''
+const place = fil ? a.locationFil : a.locationEn
+
+/** Related: same kind, not this one. Three is enough to offer a next step
+ *  without turning the foot of the article into a second index page.
+ *  Drawn from the RESOLVED set, so a live article never links to samples. */
+const related = (await getAllArticles())
+  .filter((o) => o.kind === a.kind && o.slug !== a.slug)
+  .slice(0, 3)
+---
+
+<Section divider={false} class="section--airy">
+  <p class="article__crumb">
+    <a href={indexHref}>
+      <Icon name="chevron-left" size={16} />
+      {indexLabel}
+    </a>
+  </p>
+
+  <p class="article__kicker">
+    <span class="chip">{category}</span>
+    {
+      isEvent && (
+        <span class={`chip ${upcoming ? 'chip--success' : 'chip--muted'}`}>
+          {upcoming
+            ? fil ? 'Paparating' : 'Upcoming'
+            : fil ? 'Nakaraan na' : 'Past'}
+        </span>
+      )
+    }
+    {isSample && <SampleChip locale={locale} />}
+  </p>
+
+  <h1 class="page-title">{title}</h1>
+  <p class="section-lede">{fil ? a.leadFil : a.leadEn}</p>
+
+  <p class="article__meta">
+    <Icon name="calendar" size={16} />
+    <time datetime={isoAttr(a.publishedAt)}>{formatDay(a.publishedAt, locale)}</time>
+  </p>
+</Section>
+
+<Section>
+  <article class="article">
+    {/*
+      OPTIONAL. A CMS event has no image column, and an announcement can be
+      published without one — rendering an <img> with an empty src would show a
+      broken-image glyph on a government page.
+
+      When present: the ratio is locked in CSS so the box is reserved before a
+      byte arrives (CLS stays 0.000), and width/height are passed through when
+      known. `eager` because this is the LCP element of this page; lazy-loading
+      the thing the reader came to see is a measurable loss.
+    */}
+    {
+      a.image && (
+        <figure class="article__figure">
+          <img
+            src={a.image.src}
+            alt={alt}
+            width={a.image.width}
+            height={a.image.height}
+            loading="eager"
+            decoding="async"
+          />
+          {alt && <figcaption>{alt}</figcaption>}
+        </figure>
+      )
+    }
+
+    {
+      isEvent && (
+        <dl class="eventfacts">
+          <div class="eventfacts__item">
+            <dt>{fil ? 'Petsa' : 'Date'}</dt>
+            <dd>
+              <time datetime={isoAttr(a.startsAt!)}>
+                {formatDay(a.startsAt!, locale)}
+              </time>
+            </dd>
+          </div>
+          {a.timeLabel && (
+            <div class="eventfacts__item">
+              <dt>{fil ? 'Oras' : 'Time'}</dt>
+              <dd class="figure">{a.timeLabel}</dd>
+            </div>
+          )}
+          {place && (
+            <div class="eventfacts__item">
+              <dt>{fil ? 'Lugar' : 'Place'}</dt>
+              <dd>{place}</dd>
+            </div>
+          )}
+        </dl>
+      )
+    }
+
+    {/*
+      The standing notice, on SAMPLE articles only.
+
+      Deliberately BEFORE the body: a reader who stops after two paragraphs
+      must already have been told this is not a barangay announcement. And
+      deliberately gated — leaving it on real published content would be a
+      false disclaimer on a government page, and would teach readers that the
+      warning means nothing.
+    */}
+    {
+      isSample && (
+        <p class="article__notice">
+          <Icon name="warning" size={18} />
+          <span>
+            {fil
+              ? 'Halimbawang nilalaman ito, ginamit upang maipakita ang anyo ng pahina. Hindi ito anunsyo ng Barangay Tumbod.'
+              : 'This is sample content, used to show what the page looks like. It is not an announcement by Barangay Tumbod.'}
+          </span>
+        </p>
+      )
+    }
+
+    {
+      body.length > 0 ? (
+        <div class="prose">
+          {body.map((para) => (
+            <p>{para}</p>
+          ))}
+        </div>
+      ) : (
+        /* An event published from /admin carries no body — the schema has no
+           column for one. The facts above ARE the answer, so say that rather
+           than leaving a headline hanging over white space. */
+        <p style="color:var(--ink-muted);max-width:var(--measure)">
+          {isEvent
+            ? fil
+              ? 'Nasa itaas ang petsa, oras at lugar. Magtanong sa barangay hall para sa iba pang detalye.'
+              : 'The date, time and place are above. Ask at the barangay hall for anything further.'
+            : fil
+              ? 'Wala pang karagdagang detalye.'
+              : 'No further detail has been published yet.'}
+        </p>
+      )
+    }
+  </article>
+</Section>
+
+{
+  related.length > 0 && (
+    <Section
+      title={
+        isEvent
+          ? fil ? 'Iba pang kaganapan' : 'Other events'
+          : fil ? 'Iba pang balita' : 'More news'
+      }
+      titleId="related"
+    >
+      <ul class="grid-cards">
+        {related.map((r) => (
+          <li>
+            <a href={articleHref(r, locale)} class="fcard" data-plain>
+              {r.image && (
+                <img
+                  class="fcard__media"
+                  src={r.image.thumb}
+                  alt=""
+                  width={r.image.width}
+                  height={r.image.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+              <span class="fcard__meta">
+                {fil ? r.categoryFil : r.categoryEn} ·{' '}
+                <time datetime={isoAttr(r.startsAt ?? r.publishedAt)}>
+                  {formatDay(r.startsAt ?? r.publishedAt, locale)}
+                </time>
+              </span>
+              <span class="fcard__title">{fil ? r.titleFil : r.titleEn}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  )
+}

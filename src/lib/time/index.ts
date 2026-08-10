@@ -52,6 +52,76 @@ const dateOnlyFil = new Intl.DateTimeFormat('fil-PH', {
   month: 'long',
 })
 
+/*
+ * Day-level formatters, added 2026-08-07 for articles and events.
+ *
+ * `formatAbsolute` prints the time and the "(PHT)" suffix, which is right for a
+ * sea-state reading — the hour is the whole point and the timezone must not be
+ * guessed. On an event card it is noise: the card already prints "8:00 AM –
+ * 12:00 NN" from `timeLabel`, so the full form rendered "Agosto 15, 2026 nang
+ * 8:00 AM (PHT) · 8:00 AM – 12:00 NN" and wrapped over four lines on a phone.
+ *
+ * Weekday included on purpose. "Sabado, Agosto 15" answers "can I go?" in a way
+ * that "Agosto 15" does not.
+ */
+const dayFil = new Intl.DateTimeFormat('fil-PH', {
+  timeZone: TIMEZONE,
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+const dayEn = new Intl.DateTimeFormat('en-PH', {
+  timeZone: TIMEZONE,
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+/** A calendar day, no clock time. For dated content rather than readings. */
+export function formatDay(date: Date, locale: 'fil' | 'en'): string {
+  return locale === 'fil' ? dayFil.format(date) : dayEn.format(date)
+}
+
+/**
+ * Three-letter month abbreviations for the stacked date tiles.
+ *
+ * ─────────────────────────────────────────────────────────────────
+ * CONSOLIDATED HERE 2026-08-07 (ARCHITECTURE-REVIEW.md §3.4). These two arrays
+ * were written out in `EventsView.astro`, `mega/MegaNews.astro` and inside the
+ * client script of `LiveContent.astro` — three copies, so a Filipino
+ * abbreviation fix needed three correct edits and would silently half-land.
+ *
+ * NOT DERIVED FROM `Intl`. `Intl.DateTimeFormat('fil-PH', { month: 'short' })`
+ * does not reliably produce the forms Filipino readers expect — HUN/HUL for
+ * Hunyo/Hulyo, SET for Setyembre — and its output varies by ICU version, which
+ * means the same build could render differently on two machines. A date tile
+ * that says one thing locally and another in CI is worse than a hard-coded
+ * table that is simply correct.
+ * ─────────────────────────────────────────────────────────────────
+ */
+const MONTHS_FIL = [
+  'ENE', 'PEB', 'MAR', 'ABR', 'MAY', 'HUN',
+  'HUL', 'AGO', 'SET', 'OKT', 'NOB', 'DIS',
+] as const
+
+const MONTHS_EN = [
+  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+] as const
+
+/** The month table for a locale — for handing to a client script. */
+export function monthNames(locale: 'fil' | 'en'): readonly string[] {
+  return locale === 'fil' ? MONTHS_FIL : MONTHS_EN
+}
+
+/** e.g. `AGO` for 15 August, in Filipino. */
+export function monthAbbrev(date: Date, locale: 'fil' | 'en'): string {
+  return monthNames(locale)[date.getMonth()] ?? ''
+}
+
 /** Absolute, with timezone stated. Used alongside — never instead of — relative. */
 export function formatAbsolute(date: Date, locale: 'fil' | 'en'): string {
   const base = locale === 'fil' ? absoluteFil.format(date) : absoluteEn.format(date)

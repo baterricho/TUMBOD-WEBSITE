@@ -1,8 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Barangay Tumbod">
-  <!-- Maskable: all meaningful content inside the 80% safe zone (centre 410px). -->
-  <rect width="512" height="512" fill="#dce6e0"/>
-  <path d="M116 292 Q180 252 256 248 Q332 252 396 292 Q332 320 256 324 Q180 320 116 292 Z" fill="#e4e7dd" stroke="#8aa096" stroke-width="6"/>
-  <circle cx="256" cy="286" r="18" fill="#b3160c"/>
-  <circle cx="256" cy="286" r="34" fill="none" stroke="#b3160c" stroke-width="8"/>
-  <text x="256" y="376" text-anchor="middle" font-family="system-ui, sans-serif" font-size="46" font-weight="700" letter-spacing="3" fill="#12211b">TUMBOD</text>
+  <!-- Maskable: all meaningful content inside the 80% safe zone (centre 410px).
+       Recoloured with icon.svg, 2026-08-07. Android crops this to a circle or
+       squircle depending on the launcher, so nothing outside that zone may
+       carry meaning — which is why the strait bands are absent here. -->
+  <rect width="512" height="512" fill="#0f172a"/>
+  <path d="M116 292 Q180 252 256 248 Q332 252 396 292 Q332 320 256 324 Q180 320 116 292 Z" fill="#1e293b" stroke="#2dd4bf" stroke-width="6"/>
+  <circle cx="256" cy="286" r="18" fill="#2dd4bf"/>
+  <circle cx="256" cy="286" r="34" fill="none" stroke="#2dd4bf" stroke-width="8"/>
+  <text x="256" y="376" text-anchor="middle" font-family="system-ui, sans-serif" font-size="46" font-weight="700" letter-spacing="3" fill="#e2e8f0">TUMBOD</text>
 </svg>

@@ -27,7 +27,8 @@
 import Icon from '../Icon.astro'
 import PhoneNumber from '../PhoneNumber.astro'
 import SampleChip from '../SampleChip.astro'
-import { HOTLINES, ACTIVE_ADVISORY, IS_DEMO } from '@/lib/content/active'
+import { ACTIVE_ADVISORY, IS_DEMO } from '@/lib/content/active'
+import { getHotlines } from '@/lib/content/live-collections'
 import { isPlaceholder } from '@/lib/content/placeholder'
 import { SAMPLE_EMERGENCY, SAMPLE_WEATHER, SAMPLE_EVAC } from '@/lib/content/sample'
 import { PROCEDURES, prefix, label, note } from '@/lib/content/menu'
@@ -40,6 +41,7 @@ interface Props {
 }
 
 const { locale } = Astro.props
+const HOTLINES = (await getHotlines()).items
 const fil = locale === 'fil'
 const p = prefix(locale)
 const t = getDictionary(locale)

@@ -33,13 +33,22 @@
   display: grid;
   align-items: end;
   overflow: hidden;
-  /* Deep water → shallow reef → sand. Derived from the existing palette, not
-     a new one: the redesign changes the treatment, not the identity. */
+  /*
+   * The hero bed, and it stays DARK on a light site — the brief's "deep navy
+   * hero overlay". It is what the white headline is measured against, so it
+   * cannot follow the canvas.
+   *
+   * Three slate stops rather than the old water ramp (navy → green → sand):
+   * that one ended LIGHT at the bottom, which was fine under a light headline
+   * only because the scrim reached 0.9 there. A gradient whose legibility
+   * depends entirely on the layer above it is a gradient waiting to break the
+   * next time the scrim is tuned.
+   */
   background: linear-gradient(
     180deg,
-    var(--palette-sound-deep) 0%,
-    var(--sea-calm) 55%,
-    var(--palette-shoal) 100%
+    var(--palette-slate-950) 0%,
+    var(--palette-slate-900) 55%,
+    var(--palette-slate-800) 100%
   );
 }
 
@@ -66,9 +75,9 @@
      BRIGHTEST frame in the carousel, not the average one. */
   background: linear-gradient(
     180deg,
-    rgb(6 22 26 / 0.5) 0%,
-    rgb(6 22 26 / 0.72) 55%,
-    rgb(6 22 26 / 0.9) 100%
+    rgb(15 23 42 / 0.5) 0%,
+    rgb(15 23 42 / 0.72) 55%,
+    rgb(15 23 42 / 0.9) 100%
   );
 }
 
@@ -179,9 +188,11 @@
   cursor: pointer;
 }
 
+/* Base definition; oceanic.css adds the gold edge and the hover. Kept on the
+   same `--action-*` tokens so the two never disagree about the fill. */
 .btn--primary {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--action);
+  color: var(--action-ink);
 }
 
 .btn--ghost {
@@ -311,7 +322,10 @@ a.fcard:focus-visible {
 .fcard__media {
   aspect-ratio: 16 / 10;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--sea-calm), var(--palette-mangrove));
+  /* A dark bed, because the label on it is white. It was `--sea-calm` →
+     mangrove, and green-600 under white is 3.30:1 — it passed on the old dark
+     palette only because both stops were dark there. */
+  background: linear-gradient(135deg, var(--palette-slate-700), var(--palette-slate-900));
   display: grid;
   place-items: center;
   color: #fff;

@@ -4,11 +4,19 @@
     Not a seal on a gradient. The wide gap is Blockade Strait (1.1 km, west),
     the narrow one is Endeavor Strait (0.2 km, east) — the barangay's real
     defining geography (RESEARCH.md §1).
+
+    RECOLOURED 2026-08-07 for the Deep Coastal Oceanic theme. The geometry is
+    unchanged; only the palette moved. The old icon was drawn in the retired
+    paper-chart colours (#dce6e0 sand, #b3160c signal red), which on a phone
+    home screen sat beside a near-black app and read as a different product.
+
+    The marker is TEAL, not red. Red is reserved site-wide for emergencies, and
+    an app icon is not an emergency — it is a location pin.
   -->
-  <rect width="512" height="512" fill="#dce6e0"/>
-  <path d="M56 300 Q140 236 256 232 Q372 236 456 300 Q372 340 256 344 Q140 340 56 300 Z" fill="#b9cfd4" opacity="0.7"/>
-  <path d="M104 288 Q168 244 256 240 Q344 244 408 288 Q344 316 256 320 Q168 316 104 288 Z" fill="#e4e7dd" stroke="#8aa096" stroke-width="6"/>
-  <circle cx="256" cy="280" r="20" fill="#b3160c"/>
-  <circle cx="256" cy="280" r="38" fill="none" stroke="#b3160c" stroke-width="8"/>
-  <text x="256" y="404" text-anchor="middle" font-family="system-ui, sans-serif" font-size="62" font-weight="700" letter-spacing="4" fill="#12211b">TUMBOD</text>
+  <rect width="512" height="512" fill="#0f172a"/>
+  <path d="M56 300 Q140 236 256 232 Q372 236 456 300 Q372 340 256 344 Q140 340 56 300 Z" fill="#14505a" opacity="0.75"/>
+  <path d="M104 288 Q168 244 256 240 Q344 244 408 288 Q344 316 256 320 Q168 316 104 288 Z" fill="#1e293b" stroke="#2dd4bf" stroke-width="6"/>
+  <circle cx="256" cy="280" r="20" fill="#2dd4bf"/>
+  <circle cx="256" cy="280" r="38" fill="none" stroke="#2dd4bf" stroke-width="8"/>
+  <text x="256" y="404" text-anchor="middle" font-family="system-ui, sans-serif" font-size="62" font-weight="700" letter-spacing="4" fill="#e2e8f0">TUMBOD</text>
 </svg>

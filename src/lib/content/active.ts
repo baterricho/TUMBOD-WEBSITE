@@ -1,10 +1,6 @@
 /**
  * The active dataset — the single switch between honest-empty and demo.
  *
- * Pages import from HERE, never from `fallback.ts` or `demo.ts` directly, so
- * there is exactly one place where the choice is made and exactly one thing to
- * audit.
- *
  * Default is the honest dataset: real facts where we have them, visible
  * [[NEEDS DATA]] placeholders where we do not (BUILD-PROMPT.md §0.2).
  *
@@ -12,6 +8,37 @@
  *   - `scripts/check-demo.mjs` fails the build if demo output escapes,
  *   - every page renders an undismissable "not real data" banner,
  *   - demo phone numbers are plain text, never `tel:` links.
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * WHICH MODULE DOES A PAGE IMPORT? (ARCHITECTURE-REVIEW.md §3.1)
+ *
+ * There are now three content modules and the precedence was not written down
+ * anywhere, which cost weeks: `/proyekto` rendered an empty list for as long as
+ * it did because it imported `PROJECTS` from here — an array that is `[]`
+ * outside demo mode — while the barangay's five published projects sat in the
+ * database. It compiled. It passed every test. It was simply always blank.
+ *
+ * The order, and it is not negotiable:
+ *
+ *   1. `content/articles.ts`         news + events. Database first, samples
+ *                                    second. Has slugs and detail pages.
+ *   2. `content/live-collections.ts` projects, hotlines, tourism, businesses,
+ *                                    FAQs, gallery. Database first,
+ *                                    checked-in content second.
+ *   3. THIS FILE                     only for what neither of those covers:
+ *                                    services, evacuation sites, the checklist,
+ *                                    stats, history, vision, officials, forms.
+ *
+ * A page that wants published content calls a `getX()` from 1 or 2. It does
+ * NOT read the arrays below, because those are the FALLBACK INPUTS that 1 and
+ * 2 consume — reading them directly is reading the answer the CMS was supposed
+ * to override.
+ *
+ * The superseded exports are marked `@deprecated` individually so an editor
+ * strikes them through at the call site. They are not deleted: they are still
+ * the fallback that `live-collections.ts` imports when the database is
+ * unreachable, which is the whole reason /ligtas survives a CMS outage.
+ * ═══════════════════════════════════════════════════════════════════
  */
 
 import {
@@ -42,6 +69,8 @@ import type {
 /** Off unless explicitly switched on. */
 export const IS_DEMO = import.meta.env['PUBLIC_DEMO_MODE'] === 'true'
 
+/** @deprecated Fallback input only — call `getHotlines()` from
+ *  `content/live-collections.ts`. Reading this skips the CMS. */
 export const HOTLINES: readonly Hotline[] = IS_DEMO ? demo.DEMO_HOTLINES : REAL_HOTLINES
 
 export const EVACUATION_SITES: readonly EvacuationSite[] = IS_DEMO
@@ -54,13 +83,20 @@ export const SERVICE_DETAILS: readonly ServiceDetail[] = IS_DEMO
   ? REAL_SERVICE_DETAILS.map(demo.demoService)
   : REAL_SERVICE_DETAILS
 
+/** @deprecated Superseded by `getNews()` in `content/articles.ts`. This is `[]`
+ *  outside demo mode and always will be — nothing writes to it. */
 export const ANNOUNCEMENTS: readonly Announcement[] = IS_DEMO ? demo.DEMO_ANNOUNCEMENTS : []
 
 export const ACTIVE_ADVISORY: Advisory | null = IS_DEMO ? demo.DEMO_ADVISORY : null
 
 export const CHECKLIST: readonly ChecklistItem[] = TYPHOON_CHECKLIST
 
+/** @deprecated Fallback input only — call `getProjects()` from
+ *  `content/live-collections.ts`. THIS is the export that made /proyekto render
+ *  an empty list while five projects sat published in the database. */
 export const PROJECTS = IS_DEMO ? demo.DEMO_PROJECTS : []
+
+/** @deprecated Superseded by `getUpcomingEvents()` in `content/articles.ts`. */
 export const CALENDAR = IS_DEMO ? demo.DEMO_CALENDAR : []
 export const HEALTH_OUTREACH = IS_DEMO ? demo.DEMO_HEALTH_OUTREACH : null
 /**
@@ -81,9 +117,16 @@ export const STATS = demoPages.REAL_STATS
 
 export const HISTORY = IS_DEMO ? demoPages.DEMO_HISTORY : []
 export const VISION = IS_DEMO ? demoPages.DEMO_VISION : null
+
+/** @deprecated Fallback input only — call `getAttractions()`. */
 export const ATTRACTIONS = IS_DEMO ? demoPages.DEMO_ATTRACTIONS : []
+/** @deprecated Fallback input only — call `getBusinesses()`. */
 export const BUSINESSES = IS_DEMO ? demoPages.DEMO_BUSINESSES : []
+/** @deprecated Fallback input only — call `getFaqs()`. */
 export const FAQ = IS_DEMO ? demoPages.DEMO_FAQ : []
+
+/** Not superseded: `forms` is a CMS collection but no public page reads it
+ *  live yet. Wire it the same way when /porma needs to be editable. */
 export const FORMS = IS_DEMO ? demoPages.DEMO_FORMS : []
 
 export function seaCondition(now: Date): SeaCondition {

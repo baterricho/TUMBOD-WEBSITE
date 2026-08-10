@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { ARTICLE_ROUTES } from './routes'
 
 /**
  * Progressive enhancement — every route renders complete and readable with
@@ -29,6 +30,12 @@ const FIL_ROUTES = [
   '/faq',
   '/porma',
   '/proyekto',
+  // Article and event pages, 2026-08-07. Static routes with no client script at
+  // all, so they should pass trivially — which is exactly why they belong here:
+  // the day someone adds a share button or a lazy body, this notices.
+  '/kaganapan',
+  // Discovered from the build — CMS slugs are not constants. See routes.ts.
+  ...ARTICLE_ROUTES,
 ]
 
 const ROUTES = [...FIL_ROUTES, ...FIL_ROUTES.map((r) => (r === '/' ? '/en' : `/en${r}`))]

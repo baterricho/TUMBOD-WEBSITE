@@ -5,12 +5,32 @@
  * origin, never from a CDN (§22.3). Files come from Fontsource (SIL OFL),
  * copied into /public/fonts at build-prep time.
  *
- * MEASURED TOTAL: 72.2 KB across 5 files, against a 100 KB budget.
- *   Archivo Narrow  600 normal   12.1 KB   display
- *   Source Sans 3   400 normal   15.7 KB   body            ← the only preload
- *   Source Sans 3   600 normal   15.7 KB   body strong
- *   Source Sans 3   400 italic   15.8 KB   water labels (the chart rule)
- *   IBM Plex Mono   400 normal   14.7 KB   figures
+ * ─────────────────────────────────────────────────────────────────
+ * TYPEFACE CHANGE, 2026-08-07 — Deep Coastal Oceanic theme.
+ *
+ * Archivo Narrow + Source Sans 3 are gone. They were chosen to imitate
+ * hydrographic chart lettering, and the chart metaphor left with the light
+ * palette. The replacements are the two the brief names:
+ *
+ *   Plus Jakarta Sans 700  display   geometric, wide apertures, holds up at
+ *                                    the display sizes a dark canvas wants
+ *   Inter 400/600/400i     body      designed for screen UI at small sizes,
+ *                                    which is still the real test here
+ *
+ * IBM Plex Mono stays. Nothing about the palette changes the fact that fees,
+ * ordinance numbers and coordinates must align in a column and survive being
+ * read aloud over a phone.
+ *
+ * MEASURED TOTAL: 97.8 KiB across 5 files, against a 100 KiB budget.
+ *   Plus Jakarta Sans 700 normal   12.0 KiB   display
+ *   Inter             400 normal   23.1 KiB   body            ← the only preload
+ *   Inter             600 normal   23.9 KiB   body strong
+ *   Inter             400 italic   24.5 KiB   water labels (see below)
+ *   IBM Plex Mono     400 normal   14.4 KiB   figures
+ *
+ * That is 25.6 KiB heavier than the outgoing set — Inter's larger glyph
+ * complement costs real bytes on 2G. It fits the budget, but it is the one
+ * place this theme is measurably more expensive than what it replaced.
  *
  * The `latin` subset carries the Filipino diacritics we need — á é í ó ú ñ Ñ —
  * so no custom subsetting is required. Filipino is the canonical language, so
@@ -20,55 +40,57 @@
  * far more than text that does not arrive at all.
  */
 
-/* ── Display: Archivo Narrow ─────────────────────────────────
-   A grotesque drawn for signage and small-space labelling — the same job
-   chart lettering does. One weight only. */
+/* ── Display: Plus Jakarta Sans ──────────────────────────────
+   One weight, and it is 700 rather than the 600 Archivo Narrow shipped:
+   headings on a near-black canvas need more stroke to hold their edge than
+   the same headings did on paper-white. */
 @font-face {
-  font-family: 'Archivo Narrow';
+  font-family: 'Plus Jakarta Sans';
   font-style: normal;
-  font-weight: 600;
+  font-weight: 700;
   font-display: swap;
-  src: url('/fonts/archivo-narrow-latin-600-normal.woff2') format('woff2');
+  src: url('/fonts/plus-jakarta-sans-latin-700-normal.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* ── Body: Source Sans 3 ─────────────────────────────────────
+/* ── Body: Inter ─────────────────────────────────────────────
    High x-height, complete Filipino diacritics, drawn for UI legibility. It
    has to survive a cracked four-year-old LCD at 16px — that is the real test
-   (persona P1). */
+   (persona P1), and it is the test Inter was drawn for. */
 @font-face {
-  font-family: 'Source Sans 3';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/source-sans-3-latin-400-normal.woff2') format('woff2');
+  src: url('/fonts/inter-latin-400-normal.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
-  font-family: 'Source Sans 3';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('/fonts/source-sans-3-latin-600-normal.woff2') format('woff2');
+  src: url('/fonts/inter-latin-600-normal.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Italic is not decorative here. Hydrographic charts set water features in
-   italic, and we adopt that: the sea, the straits, sea state and boat routes
-   all render `.is-water` (DESIGN-PLAN.md §1). */
+/* Italic is not decorative here. Nine places in the templates set the sea,
+   the straits, sea state and boat routes in `.is-water` — a convention
+   inherited from the chart design and kept, because it still separates "the
+   water" from "the land" at a glance without spending a colour. */
 @font-face {
-  font-family: 'Source Sans 3';
+  font-family: 'Inter';
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/source-sans-3-latin-400-italic.woff2') format('woff2');
+  src: url('/fonts/inter-latin-400-italic.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
@@ -92,21 +114,75 @@
 /* ── Fallback metric matching ────────────────────────────────
    Holds layout still while the webfont loads, so CLS stays at 0 rather than
    the page jumping under someone's thumb on a slow connection.
-   Values tuned against Arial/Helvetica metrics. */
+   Derived from each face's real metrics against Arial's:
+
+     Inter  upm 2816, asc 2728, desc 680, x-height 1536 (0.545 of em)
+     Arial  upm 2048,                     x-height 1062 (0.519 of em)
+       size-adjust      0.545 / 0.519           = 105%
+       ascent-override  (2728/2816) / 1.05      =  92%
+       descent-override  (680/2816) / 1.05      =  23%
+
+     Plus Jakarta Sans  upm 1000, asc 964, desc 252, x-height ~0.520
+       size-adjust matches Arial almost exactly = 100%
+
+   These are computed, not eyeballed — but the thing that actually proves them
+   is the CLS assertion in perf.spec.ts. If it moves off 0.000, tune here. */
+/*
+ * ═══════════════════════════════════════════════════════════════
+ * `font-weight: 100 900` IS THE WHOLE FIX. Do not drop it.
+ *
+ * These two faces carried no `font-weight` descriptor, and the spec default is
+ * `font-weight: normal` — so each @font-face matched ONLY weight 400. Every
+ * heading on the site is 600 or 700, which meant the metric-matched fallback
+ * silently did not apply to a single heading. Headings fell through to the
+ * browser's default sans instead, at whatever width that happened to be.
+ *
+ * Measured: the display fallback rendered a headline 6.0% NARROWER than the
+ * real face (1323px vs 1407px at 100px). When the webfont arrived the headline
+ * grew, re-wrapped, and the hero grew with it — pushing every section below it
+ * down the page. That was the homepage's CLS 0.174 against a 0.05 budget: the
+ * largest single shift was 0.161, `.hero__inner`, at ~8.9s on Slow 4G, which is
+ * exactly when the display face finishes downloading.
+ *
+ * The size-adjust numbers below were right all along. They were being applied
+ * to body copy only, where the shift is small and nobody noticed.
+ *
+ * The lesson worth keeping: a metric-matched fallback that omits the weight
+ * range is not a partial fix, it is an absent one for every weight it does not
+ * name — and it fails silently, because the page still renders.
+ * ═══════════════════════════════════════════════════════════════
+ */
 @font-face {
-  font-family: 'Source Sans 3 Fallback';
+  font-family: 'Inter Fallback';
   src: local('Arial'), local('Helvetica'), local('Roboto');
-  size-adjust: 96.5%;
-  ascent-override: 103%;
-  descent-override: 29%;
+  font-weight: 100 900;
+  font-style: normal;
+  size-adjust: 105%;
+  ascent-override: 92%;
+  descent-override: 23%;
+  line-gap-override: 0%;
+}
+
+/* Italic body copy has its own real face, so the fallback needs an italic
+   sibling or `<em>` drops out of metric matching the same way headings did. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial Italic'), local('Helvetica Oblique'), local('Arial');
+  font-weight: 100 900;
+  font-style: italic;
+  size-adjust: 105%;
+  ascent-override: 92%;
+  descent-override: 23%;
   line-gap-override: 0%;
 }
 
 @font-face {
-  font-family: 'Archivo Narrow Fallback';
-  src: local('Arial Narrow'), local('Arial'), local('Roboto Condensed');
-  size-adjust: 91%;
-  ascent-override: 108%;
-  descent-override: 28%;
+  font-family: 'Plus Jakarta Sans Fallback';
+  src: local('Arial'), local('Helvetica'), local('Roboto');
+  font-weight: 100 900;
+  font-style: normal;
+  size-adjust: 100%;
+  ascent-override: 96.4%;
+  descent-override: 25.2%;
   line-gap-override: 0%;
 }

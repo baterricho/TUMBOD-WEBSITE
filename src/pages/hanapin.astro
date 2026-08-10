@@ -14,9 +14,11 @@ import Base from '@/layouts/Base.astro'
 import Section from '@/components/Section.astro'
 import Icon from '@/components/Icon.astro'
 import { getDictionary, DEFAULT_LOCALE } from '@/lib/i18n'
-import { SERVICE_DETAILS, HOTLINES } from '@/lib/content/active'
+import { SERVICE_DETAILS } from '@/lib/content/active'
+import { getHotlines } from '@/lib/content/live-collections'
 
 const locale = DEFAULT_LOCALE
+const HOTLINES = (await getHotlines()).items
 const t = getDictionary(locale)
 
 const groups = [
@@ -73,9 +75,18 @@ const groups = [
     </form>
   </Section>
 
-  {/* Results appear here when JS is available. */}
+  {/*
+    Results appear here when JS is available.
+
+    THE LIST AND ITS HEADING MUST NOT SHARE AN ID. `titleId` renders the
+    section heading as `<h2 id="...">` and `Section` points its
+    `aria-labelledby` at it, so `id="results"` on both the heading and the
+    list shipped a duplicate ID on this page — invalid HTML, and an
+    `aria-labelledby` whose target is ambiguous. The heading keeps `results`
+    because that is the id the section is named by; the list takes its own.
+  */}
   <Section title="Resulta" titleId="results" divider={false}>
-    <ul id="results" class="list-reset" hidden></ul>
+    <ul id="results-list" class="list-reset" hidden></ul>
   </Section>
 
   {/* The full directory. Always present, always complete, never hidden by JS. */}
@@ -103,7 +114,7 @@ const groups = [
   <script is:inline>
     ;(function () {
       var input = document.getElementById('q')
-      var out = document.getElementById('results')
+      var out = document.getElementById('results-list')
       var status = document.getElementById('q-status')
       if (!input || !out) return
 

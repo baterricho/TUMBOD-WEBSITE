@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 /**
  * The critical paths from BUILD-PROMPT.md §33. These must never break.
@@ -8,18 +10,45 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('critical paths', () => {
-  test('1. home shows sea condition, office status and emergency contacts', async ({ page }) => {
+  /*
+   * REWRITTEN 2026-08-07, and the change is a real weakening — say so plainly.
+   *
+   * This test used to assert the sea state and the next boat were on the
+   * homepage with NO interaction. The sea band and boat strip were removed
+   * from the homepage that day at the owner's request (HomeView.astro), so
+   * that is no longer true: both readings now live in the Today mega panel,
+   * one click away, in the header of every page.
+   *
+   * BUILD-PROMPT.md §33 wanted "the today answer without interaction". What
+   * ships now is "the today answer in one click, from anywhere on the site".
+   * That is a deliberate trade the owner made, not a regression that slipped
+   * through — but the test must describe what the site does, so it asserts
+   * reachability rather than pretending the old guarantee still holds.
+   *
+   * Office status and the emergency contacts are UNCHANGED: still on the page
+   * itself, still with no interaction. Those two assertions are the ones that
+   * matter during a typhoon and they have not moved.
+   */
+  test('1. home reaches sea condition and the boat, and shows office status and emergency contacts', async ({
+    page,
+  }) => {
     await page.goto('/')
 
-    // The "today" answer must be present without interaction.
-    await expect(page.getByRole('heading', { name: /dagat ngayon/i })).toBeVisible()
-    await expect(page.getByRole('heading', { name: /susunod na biyahe/i })).toBeVisible()
-
-    // Office status: one of the three states, never blank.
+    // Still on the page, still no interaction required.
     await expect(page.getByText(/BUKAS ANG OPISINA|SARADO ANG OPISINA|LIMITADO/)).toBeVisible()
-
     await expect(
       page.getByRole('heading', { name: /mga numerong pang-emergency/i }),
+    ).toBeVisible()
+
+    // The today answer, one click away. Opening <details> is what a click
+    // does; the panel needs no script, so this holds with JS disabled too.
+    await page.evaluate(() =>
+      document.querySelector('#mega-today')?.setAttribute('open', ''),
+    )
+    const today = page.locator('#mega-today')
+    await expect(today.getByText(/MAHINAY|KATAMTAMAN|MALAKAS|DELIKADO/)).toBeVisible()
+    await expect(
+      today.getByRole('heading', { name: /susunod na biyahe/i }),
     ).toBeVisible()
   })
 
@@ -171,10 +200,52 @@ test.describe('critical paths', () => {
    *     on 2G, or with no signal at all. Nothing there may depend on a host we
    *     do not control.
    *   - The homepage may request map TILES and nothing else. An allowlist, not
-   *     an amnesty: a font CDN, an analytics beacon or an embed would still
-   *     fail this test.
+   *     an amnesty: a font CDN or an embed would still fail this test.
+   *
+   * ─────────────────────────────────────────────────────────────────
+   * WIDENED ONCE, 2026-08-07, and the previous wording named exactly what
+   * changed: it read "a font CDN, AN ANALYTICS BEACON or an embed would still
+   * fail this test."
+   *
+   * The owner asked for visitor figures in the admin. Every hosted analytics
+   * product was refused — they would ship residents' reading habits to a
+   * company with no accountability to them — so the counter is first-party,
+   * writing to the same Supabase project the CMS already uses. That is one
+   * more origin the browser contacts on ordinary pages, and pretending
+   * otherwise by leaving the test unchanged would be the dishonest option.
+   *
+   * WHAT IS NOT WIDENED, AND MUST NEVER BE: the emergency routes above. The
+   * beacon is not rendered at all on /ligtas — `VisitCounter.astro` omits the
+   * element at build time rather than checking a path at runtime, so there is
+   * nothing on those pages to misfire. Test 10 stays absolute and test 10c
+   * below proves the omission rather than trusting it.
+   *
+   * The allowlist is still an allowlist. Google Analytics, a font CDN, an
+   * embedded map, a chat widget — all still fail.
+   * ─────────────────────────────────────────────────────────────────
    */
-  const TILE_HOSTS = ['server.arcgisonline.com']
+  /*
+   * The project host comes from `.env`, read here directly.
+   *
+   * `process.env['PUBLIC_SUPABASE_URL']` is empty in this process: Astro loads
+   * `.env` when it builds, Playwright's node process does not, and the first
+   * version of this allowlist therefore fell back to a placeholder and failed
+   * both runs. Reading the file is the honest fix.
+   *
+   * When there is no `.env` — CI — the site is built without a CMS, emits no
+   * beacon, and the allowlist is simply the tile host. Nothing to permit.
+   */
+  const supabaseHost = (() => {
+    try {
+      const env = readFileSync(join(process.cwd(), '.env'), 'utf8')
+      const url = env.match(/^PUBLIC_SUPABASE_URL\s*=\s*"?([^"\r\n]+)"?/m)?.[1]
+      return url ? [new URL(url).hostname] : []
+    } catch {
+      return []
+    }
+  })()
+
+  const TILE_HOSTS = ['server.arcgisonline.com', ...supabaseHost]
 
   for (const route of ['/ligtas', '/ligtas/hotline']) {
     test(`10. no third-party origin is requested on ${route}`, async ({ page }) => {
@@ -203,5 +274,44 @@ test.describe('critical paths', () => {
       disallowed,
       `unexpected third-party requests: ${disallowed.join(', ')}`,
     ).toHaveLength(0)
+  })
+
+  /**
+   * 10c. THE VISIT COUNTER IS NOT ON THE EMERGENCY PAGES — proved, not assumed.
+   *
+   * Test 10 already asserts zero third-party requests there, which would catch
+   * a beacon that FIRED. This is stricter and checks the markup: the script
+   * must not be in the document at all.
+   *
+   * The distinction matters. A beacon present but not firing passes test 10
+   * today and starts firing the first time someone changes a guard, reorders a
+   * condition, or adds a retry. `VisitCounter.astro` omits the element at
+   * build time; this is what stops that omission being quietly reverted.
+   *
+   * Asserted on the ENDPOINT STRING rather than on an element id. Astro's
+   * `define:vars` rewrites the tag and drops other attributes, so an
+   * `#visit-counter` selector silently matched nothing and the test would have
+   * passed for the wrong reason. The `/rest/v1/page_views` URL is the thing
+   * that actually matters: if it is in the document, the page can beacon.
+   */
+  for (const route of ['/ligtas', '/ligtas/hotline', '/en/ligtas', '/en/ligtas/hotline']) {
+    test(`10c. no visit counter is present in the markup of ${route}`, async ({ page }) => {
+      await page.goto(route)
+      const html = await page.content()
+      expect(html, `${route} must not reference page_views`).not.toContain('page_views')
+    })
+  }
+
+  /**
+   * 10d. …and it IS present on an ordinary page.
+   *
+   * Without this, 10c passes forever if the counter is deleted entirely or
+   * never renders — a test suite that proves a feature is absent everywhere is
+   * not testing the feature.
+   */
+  test('10d. the visit counter is present on an ordinary page', async ({ page }) => {
+    await page.goto('/serbisyo')
+    const html = await page.content()
+    expect(html, 'ordinary pages should carry the beacon').toContain('/rest/v1/page_views')
   })
 })

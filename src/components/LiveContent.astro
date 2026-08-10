@@ -18,7 +18,8 @@
  * NO-JS: nothing here runs, and the page is already correct.
  */
 import { liveConfig } from '@/lib/cms/live'
-import type { Locale } from '@/lib/i18n'
+import { prefix, type Locale } from '@/lib/i18n'
+import { monthNames } from '@/lib/time'
 
 interface Props {
   locale: Locale
@@ -27,7 +28,22 @@ interface Props {
 const { locale } = Astro.props
 ---
 
-<script is:inline define:vars={{ cfg: liveConfig, fil: locale === 'fil' }}>
+{/*
+  `localePrefix` is computed at BUILD time by the one helper that knows the
+  rule, and handed to the client rather than recomputed here. The script used
+  to carry its own `(fil ? '' : '/en')` twice — the same duplication the other
+  sixteen files had, just hidden inside a string of JavaScript where no
+  refactor would ever find it.
+*/}
+<script
+  is:inline
+  define:vars={{
+    cfg: liveConfig,
+    fil: locale === 'fil',
+    localePrefix: prefix(locale),
+    months: monthNames(locale),
+  }}
+>
   ;(function () {
     if (!cfg.url || !cfg.key) return
 
@@ -74,7 +90,7 @@ const { locale } = Astro.props
       news: function (row) {
         var a = document.createElement('a')
         a.className = 'mega-row'
-        a.href = (fil ? '' : '/en') + '/balita'
+        a.href = localePrefix + '/balita'
 
         var thumb = document.createElement('span')
         thumb.className = 'mega-row__thumb'
@@ -104,13 +120,10 @@ const { locale } = Astro.props
       /* Event cards — matches `.mega-event`. */
       events: function (row) {
         var d = new Date(row.starts_at)
-        var months = fil
-          ? ['ENE', 'PEB', 'MAR', 'ABR', 'MAY', 'HUN', 'HUL', 'AGO', 'SET', 'OKT', 'NOB', 'DIS']
-          : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
         var a = document.createElement('a')
         a.className = 'mega-event'
-        a.href = (fil ? '' : '/en') + '/balita'
+        a.href = localePrefix + '/balita'
 
         var date = document.createElement('span')
         date.className = 'mega-event__date'

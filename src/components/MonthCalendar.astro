@@ -1,0 +1,209 @@
+---
+/**
+ * A month grid with real dates, and the events that fall in it.
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ * A <table>, DELIBERATELY.
+ *
+ * A month view IS tabular — days across, weeks down — and the header cells
+ * genuinely label their columns. A grid of divs would render identically and
+ * tell a screen-reader user nothing: no "row 3", no "Miyerkules", no way to
+ * navigate by column. `scope="col"` on the weekday headers is what makes
+ * "Miyerkules, 20" possible, and that is the whole reason to reach for a table
+ * rather than CSS grid here.
+ *
+ * BUILT AT BUILD TIME, WHICH IS A REAL LIMITATION.
+ *
+ * "This month" and "today" are fixed when the site is built, not when it is
+ * read. A site rebuilt weekly can highlight the wrong day for up to a week,
+ * and on the 1st of a month it will still be showing the previous one.
+ *
+ * That is why the event list beside the grid states each date in full rather
+ * than relying on the highlight, and why `--today` is a ring rather than the
+ * only way to locate the current date. When the deploy hook lands and the site
+ * rebuilds daily, this becomes accurate; until then the grid is a layout of
+ * the month, and the list is the fact.
+ * ═══════════════════════════════════════════════════════════════════
+ */
+import { type Locale } from '@/lib/i18n'
+import { formatDay, isoAttr } from '@/lib/time'
+import type { Article } from '@/lib/content/sample-news'
+import { articleHref } from '@/lib/content/sample-news'
+
+interface Props {
+  locale: Locale
+  events: readonly Article[]
+}
+
+const { locale, events } = Astro.props
+const fil = locale === 'fil'
+
+const TZ = 'Asia/Manila'
+
+/**
+ * "Now" in Manila, not in the timezone of whatever machine ran the build.
+ *
+ * A build on a UTC CI runner after 4pm Manila time is already the next day
+ * there. Without this the calendar would open on the wrong month roughly a
+ * third of every day.
+ */
+const nowParts = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TZ,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+}).format(new Date())
+const [nowY, nowM, nowD] = nowParts.split('-').map(Number) as [number, number, number]
+
+/** The month shown: the one the soonest upcoming event is in, else this one.
+ *  An empty grid for August is less useful than September's, where the events
+ *  actually are. */
+const soonest = events
+  .filter((e) => e.startsAt)
+  .sort((a, b) => (a.startsAt!.getTime() ?? 0) - (b.startsAt!.getTime() ?? 0))[0]
+
+const focusDate = soonest?.startsAt ?? new Date(nowY, nowM - 1, nowD)
+const year = focusDate.getFullYear()
+const month = focusDate.getMonth() // 0-indexed
+
+const first = new Date(year, month, 1)
+const daysInMonth = new Date(year, month + 1, 0).getDate()
+/** 0 = Sunday, matching the column order below. */
+const startWeekday = first.getDay()
+
+/** Events in the displayed month, keyed by day-of-month. */
+const byDay = new Map<number, Article[]>()
+for (const e of events) {
+  if (!e.startsAt) continue
+  if (e.startsAt.getFullYear() !== year || e.startsAt.getMonth() !== month) continue
+  const d = e.startsAt.getDate()
+  const list = byDay.get(d)
+  if (list) list.push(e)
+  else byDay.set(d, [e])
+}
+
+/** Rows of seven. Leading blanks pad to the first weekday. */
+const cells: (number | null)[] = [
+  ...Array.from({ length: startWeekday }, () => null),
+  ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+]
+while (cells.length % 7 !== 0) cells.push(null)
+const weeks: (number | null)[][] = []
+for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+
+const monthLabel = new Intl.DateTimeFormat(fil ? 'fil-PH' : 'en-PH', {
+  timeZone: TZ,
+  month: 'long',
+  year: 'numeric',
+}).format(first)
+
+/** Two-letter column heads. Hard-coded for the same reason the month
+ *  abbreviations are (see lib/time): `Intl` narrow weekdays vary by ICU
+ *  version, and a calendar whose columns differ between two machines is a bug
+ *  nobody can reproduce. */
+const DOW = fil
+  ? ['Li', 'Lu', 'Ma', 'Mi', 'Hu', 'Bi', 'Sa']
+  : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const DOW_FULL = fil
+  ? ['Linggo', 'Lunes', 'Martes', 'Miyerkules', 'Huwebes', 'Biyernes', 'Sabado']
+  : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+const isToday = (d: number) => year === nowY && month === nowM - 1 && d === nowD
+
+const monthEvents = [...byDay.entries()].sort((a, b) => a[0] - b[0])
+---
+
+<div class="calwrap">
+  <table class="calendar">
+    <caption>{monthLabel}</caption>
+    <thead>
+      <tr>
+        {
+          DOW.map((d, i) => (
+            <th scope="col">
+              {/* The two-letter head is for sighted scanning; the full name is
+                  what a screen reader should announce for the column. */}
+              <abbr title={DOW_FULL[i]}>{d}</abbr>
+            </th>
+          ))
+        }
+      </tr>
+    </thead>
+    <tbody>
+      {
+        weeks.map((week) => (
+          <tr>
+            {week.map((d) => {
+              if (d === null) return <td><span class="calday calday--empty" aria-hidden="true">·</span></td>
+
+              const dayEvents = byDay.get(d)
+              const today = isToday(d)
+              const cls = `calday${today ? ' calday--today' : ''}`
+
+              if (!dayEvents) {
+                return (
+                  <td>
+                    <span class={cls} aria-current={today ? 'date' : undefined}>
+                      {d}
+                    </span>
+                  </td>
+                )
+              }
+
+              /*
+               * The accessible name spells the day and the event out. A link
+               * whose only text is "20" is announced as "20, link" and is
+               * useless out of context — and a screen reader user navigating
+               * by link hears nothing but numbers.
+               */
+              const names = dayEvents.map((e) => (fil ? e.titleFil : e.titleEn)).join(', ')
+              return (
+                <td>
+                  <a
+                    class={cls}
+                    href={articleHref(dayEvents[0]!, locale)}
+                    aria-label={`${d} ${monthLabel} — ${names}`}
+                    aria-current={today ? 'date' : undefined}
+                  >
+                    {d}
+                  </a>
+                </td>
+              )
+            })}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  {/*
+    The list is not decoration beside the grid — it is the part that answers
+    "what is happening". A dot on a square says only that something is.
+  */}
+  {
+    monthEvents.length > 0 ? (
+      <ul class="calevents">
+        {monthEvents.map(([day, list]) =>
+          list.map((e) => (
+            <li class="calevent">
+              <span class="calevent__day" aria-hidden="true">{day}</span>
+              <span>
+                <a href={articleHref(e, locale)}>{fil ? e.titleFil : e.titleEn}</a>
+                <span class="fcard__meta" style="display:block">
+                  <time datetime={isoAttr(e.startsAt!)}>{formatDay(e.startsAt!, locale)}</time>
+                  {e.timeLabel ? ` · ${e.timeLabel}` : ''}
+                </span>
+              </span>
+            </li>
+          )),
+        )}
+      </ul>
+    ) : (
+      <p style="color:var(--ink-muted)">
+        {fil
+          ? 'Walang nakatakdang kaganapan sa buwang ito.'
+          : 'Nothing is scheduled this month.'}
+      </p>
+    )
+  }
+</div>

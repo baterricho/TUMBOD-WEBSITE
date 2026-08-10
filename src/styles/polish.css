@@ -15,11 +15,13 @@
  */
 
 :root {
-  /* Soft, layered elevation. Tinted with the mangrove hue rather than pure
-     black, so shadows read as depth on warm paper instead of grey haze. */
-  --shadow-sm: 0 1px 2px rgb(18 33 27 / 0.04), 0 1px 3px rgb(18 33 27 / 0.06);
-  --shadow-md: 0 2px 4px rgb(18 33 27 / 0.04), 0 6px 16px -4px rgb(18 33 27 / 0.1);
-  --shadow-lg: 0 4px 8px rgb(18 33 27 / 0.05), 0 16px 32px -8px rgb(18 33 27 / 0.14);
+  /* Soft, layered elevation, tinted slate rather than pure black so the shade
+     reads as cool paper depth instead of grey haze. oceanic.css redeclares
+     these — it loads last and its values are the ones that ship; these are the
+     fallback for anything that reads them before that file parses. */
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.08);
+  --shadow-md: 0 2px 4px rgb(15 23 42 / 0.04), 0 6px 16px -4px rgb(15 23 42 / 0.12);
+  --shadow-lg: 0 4px 8px rgb(15 23 42 / 0.05), 0 16px 32px -8px rgb(15 23 42 / 0.16);
 
   /* One radius family, applied consistently. */
   --r-card: 14px;
@@ -31,21 +33,16 @@
   --measure-row: 62rem;
 }
 
-/* Shadows do almost nothing on a dark surface; there, depth comes from the
-   border. Reduced rather than deepened. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-    --shadow-md: 0 4px 12px -4px rgb(0 0 0 / 0.45);
-    --shadow-lg: 0 12px 28px -10px rgb(0 0 0 / 0.55);
-  }
-}
-
-:root[data-theme='dark'] {
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-md: 0 4px 12px -4px rgb(0 0 0 / 0.45);
-  --shadow-lg: 0 12px 28px -10px rgb(0 0 0 / 0.55);
-}
+/*
+ * THE DARK-MODE SHADOW OVERRIDES ARE GONE, deleted rather than updated.
+ *
+ * They lived under `@media (prefers-color-scheme: dark)` and
+ * `:root[data-theme='dark']`, and they were the last theme fork in the
+ * stylesheets. The site now ships one theme; a visitor whose OS is set to dark
+ * was getting heavy black shadows painted onto a white page, which is the
+ * exact bug in reverse that the dark theme had with the light ones. If a
+ * second theme ever returns it returns in tokens.css, not here.
+ */
 
 /* ── Smooth scrolling ───────────────────────────────────────────
    `scroll-padding-top` stops an anchored heading landing underneath the
@@ -88,6 +85,15 @@ html {
   top: 0;
   z-index: 50;
   border-bottom: 1px solid var(--line);
+  /*
+   * THE GOLD RULE ALONG THE TOP. This is the government marker on the whole
+   * site — the brief's "official gold header accent" — and it is drawn as a
+   * 3px `border-top` rather than as a painted band because gold is a fill that
+   * cannot carry text (2.15:1 under white, 9.39:1 only under near-black). A
+   * gold band would have forced every word in the header to near-black on
+   * amber, which is a warning sign, not a masthead.
+   */
+  border-top: 3px solid var(--accent);
   /* Soft lift, so the header reads as a plane floating over the hero rather
      than a band painted on it. Small enough to stay invisible at the top of a
      white page. */
@@ -103,8 +109,40 @@ html {
   inset: 0;
   z-index: -1;
   background-color: color-mix(in srgb, var(--surface-raised) 88%, transparent);
-  backdrop-filter: blur(14px) saturate(1.4);
+  /*
+   * ═══════════════════════════════════════════════════════════════
+   * PREFIXED FIRST, STANDARD LAST. Do not "tidy" this back.
+   *
+   * Every `backdrop-filter` pair in this codebase was authored the other way
+   * round — standard first, `-webkit-` second — and that shipped a real bug for
+   * an unknown length of time.
+   *
+   * esbuild (Vite's default CSS minifier) treats `-webkit-backdrop-filter` as
+   * an ALIAS of `backdrop-filter` rather than as a separate property, and
+   * collapses the pair to whichever one comes LAST. With the old order the
+   * build emitted `-webkit-backdrop-filter` alone — 14 of them, verified in
+   * dist/index.html — which Firefox does not implement at all. Firefox got no
+   * blur, and worse, the `@supports` guards were still testing the prefixed
+   * form, so it did not get the opaque fallback either.
+   *
+   * There is no authoring order that keeps BOTH through esbuild; the only lever
+   * that would is switching Vite to `css.transformer: 'lightningcss'` with
+   * explicit targets, which was tried and is a much larger change to the
+   * pipeline than this bug is worth. So the choice is which single property to
+   * ship, and the standard one is correct:
+   *
+   *   Chrome / Edge / Android WebView   blur      (supports both)
+   *   Firefox 103+                      blur      (standard only — was broken)
+   *   Safari 18+                        blur
+   *   Safari < 18                       opaque fallback, via @supports not
+   *
+   * Every engine now lands on blur or on a designed fallback. Nothing lands in
+   * the gap. The cost is honest: Safari 17 and earlier lose the frosted look
+   * and get a solid surface, which is the more readable of the two anyway.
+   * ═══════════════════════════════════════════════════════════════
+   */
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
 }
 
 .siteheader__bar {
@@ -141,9 +179,14 @@ html {
   gap: var(--space-4);
 }
 
+/* Desktop only: the disclosure is pinned right in the three-column grid. On
+   phones the navbar is a wrapping flex row and this rule does not apply, which
+   is why `margin-left:auto` was removed from the element's inline style — see
+   SiteHeader.astro. */
 .siteheader__navbar > .navmore {
   grid-column: 3;
   justify-self: end;
+  margin-left: auto;
 }
 
 .mainnav {
@@ -191,10 +234,11 @@ html {
   height: 3px;
   width: 0;
   border-radius: 2px;
-  /* Green, not the bangka yellow: yellow is this site's ACTION colour (the
-     primary CTA, the alert fills) and spending it on a nav underline as well
-     made "where I am" and "what to press" the same signal. The green is the
-     one already carrying place on this site — the boundary on the map. */
+  /* The government gold, and the reason it can be gold now is that gold is no
+     longer the ACTION colour: the primary CTA is navy (see `--action` in
+     tokens.css), so "where I am" and "what to press" are two different
+     signals again. This underline is also why `--nav-indicator` is amber-600
+     rather than amber-500 — a 3px rule has to clear 1.4.11's 3:1. */
   background: var(--nav-indicator);
   translate: -50% 0;
   transition: width 200ms var(--ease-standard);
@@ -226,20 +270,140 @@ html {
   }
 }
 
+/*
+ * ═══════════════════════════════════════════════════════════════
+ * PHONE NAVIGATION — IT WRAPS. It used to scroll sideways.
+ *
+ * THE BUG. The six nav items measure 647px of content. In a 320px scroller
+ * that left two items visible, and "Ligtas" — Safety — was off-screen or
+ * half-cut at EVERY phone width tested (320/360/375/390/412/414). On a site
+ * whose reason for existing is that people can reach safety information during
+ * a typhoon, the safety section required a horizontal swipe inside a header,
+ * and nothing on screen said the header could be swiped.
+ *
+ * WHY NOT THE OBVIOUS FIXES.
+ *   - Icon-only below a breakpoint fits all six easily, and is forbidden here:
+ *     this project's own rule (§8.4) is that a nav icon NEVER appears without
+ *     its text, because the readers most likely to need the labels are the ones
+ *     least likely to decode a glyph.
+ *   - Shrinking the type until it fits trades one accessibility problem for
+ *     another, and the review asked explicitly that it not be done.
+ *   - Reordering so Ligtas comes earlier makes Safety visible and leaves
+ *     Kontak and Higit pa in the same hole.
+ *
+ * WRAPPING FIXES THE CLASS, not one item: at 320px the six items settle onto
+ * two rows and every one of them is visible, with no scrolling and nothing
+ * clipped. The cost is about 48px of sticky header, which is why the target
+ * height drops from 60px to 48px here — still comfortably past the 44px
+ * minimum, and cheaper than a row of content the reader cannot find.
+ *
+ * The mega panels re-measure `--header-h` on resize, so a two-row header still
+ * positions the full-screen overlays correctly.
+ * ═══════════════════════════════════════════════════════════════
+ */
 @media (max-width: 60rem) {
+  /*
+   * A GRID, NOT A WRAPPING FLEX ROW — and the reason is layout shift.
+   *
+   * Flex-wrap put the items wherever they happened to fit, which meant their
+   * row assignment depended on TEXT WIDTH. When the webfont swapped in, labels
+   * changed width, an item jumped from row one to row two, and everything after
+   * it moved: measured as the single largest layout shift on the homepage
+   * (0.0262 of a 0.044 total) at 7.2s on Slow 4G.
+   *
+   * `minmax(5.75rem, 1fr)` makes the column count a function of the CONTAINER
+   * only. The font can load, swap, or fail entirely and the six items stay in
+   * exactly the same cells — the shift is not reduced, it is impossible.
+   *
+   * It also settles the row count: three columns at every phone width, so six
+   * items are always two rows rather than the three or four that flex produced.
+   */
   .siteheader__navbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(5.75rem, 1fr));
+    align-items: stretch;
+    justify-items: stretch;
+    gap: 0 var(--space-2);
+    overflow-x: visible;
+  }
+
+  /* Fill the cell, so the tap target is the whole column rather than the width
+     of the word inside it. */
+  .siteheader__navbar > li,
+  .siteheader__navbar > .navmore {
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    overflow-x: auto;
+    min-width: 0;
   }
 
+  .siteheader__navbar > .navmore > summary,
+  .mainnav__link {
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  /*
+   * `display: contents` so all SIX items share ONE wrapping context.
+   *
+   * Wrapping the two containers independently gave three rows and a 207px
+   * sticky header: `.mainnav` filled two rows with its five items and left
+   * room on the second, then `.navmore` — a sibling, not a list item — was
+   * forced onto a third row of its own with 200px of empty space beside it.
+   * Dissolving the list box lets "Higit pa" flow into that gap, and six items
+   * settle onto two rows.
+   *
+   * The alternative was moving the disclosure into the <ul> in the markup,
+   * which is arguably more correct semantically and would have broken the
+   * three-column grid that centres the nav on desktop — a documented,
+   * deliberate behaviour. This keeps the DOM and confines the change to the
+   * phone breakpoint.
+   *
+   * `role="list"` is set on the element in SiteHeader.astro precisely because
+   * of this rule: `display: contents` removes the box, and several engines drop
+   * the list semantics with it, so a screen reader stops announcing "list, 6
+   * items". The explicit role puts that back. Do not remove one without the
+   * other.
+   */
   .mainnav {
-    gap: var(--space-3);
+    display: contents;
   }
 
+  /*
+   * TIGHTENED TO FIT TWO ROWS, and the numbers matter.
+   *
+   * Wrapping alone produced FOUR rows at 320px and a 255px sticky header — a
+   * quarter of the screen, permanently, which is a worse bug than the one it
+   * fixed. The six items measure 556px of content; two rows inside a 288px
+   * usable line needs an average item under ~92px, and the widest were 102 and
+   * 109.
+   *
+   * The width comes off the CHROME, not the words: 2px of icon gap, 2px each
+   * side of padding, and a 20px icon instead of 24px. The label keeps its size
+   * — shrinking text was explicitly ruled out, and it is the label that the
+   * readers this nav is built for actually use.
+   *
+   * The target stays 48px tall, past the 44px minimum.
+   */
   .mainnav__link {
     font-size: var(--text-sm);
+    min-height: 48px;
+    padding-block: var(--space-2);
+    padding-inline: 6px;
+    gap: 6px;
+  }
+
+  /* 20px, not 24px. The icon is decorative here — it is `aria-hidden` and never
+     appears without its label — so it is the right place to spend the pixels
+     that buy a shorter header. */
+  .mainnav__link svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* The underline sits 6px off the bottom of a 60px item; at 48px that reads
+     as floating. Pull it to the edge of the shorter target. */
+  .mainnav__link::after {
+    bottom: 2px;
   }
 }
 
@@ -254,6 +418,15 @@ html {
   text-decoration: none;
 }
 
+/*
+ * The seal ring is GOLD, and its text is not.
+ *
+ * amber-600 for the ring (3.19:1 on white — a 2px border is governed by
+ * 1.4.11 and needs 3:1; amber-500 would have been 2.15:1 and effectively a
+ * ring you cannot see), and the letters inside stay on the inherited body ink.
+ * This is the single clearest place the government gold appears at a glance,
+ * which is why the ring is the element that carries it rather than a fill.
+ */
 .brand__seal {
   width: 40px;
   height: 40px;
@@ -261,7 +434,9 @@ html {
   display: grid;
   place-items: center;
   border-radius: var(--radius-full);
-  border: 2px solid var(--line-strong);
+  border: 2px solid var(--nav-indicator);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--ink-strong);
   font-family: var(--font-display);
   font-size: var(--text-xs);
   letter-spacing: 0.02em;
@@ -434,8 +609,8 @@ a.fcard:focus-visible {
    contrast even where blur is unsupported. */
 .btn--ghost {
   background: rgb(255 255 255 / 0.14);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .btn--ghost:hover,
@@ -487,8 +662,8 @@ a.fcard:focus-visible {
 }
 
 .hero__seal {
-  backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   box-shadow: var(--shadow-md);
 }
 

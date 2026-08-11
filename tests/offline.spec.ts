@@ -109,7 +109,9 @@ test.describe('offline hero media', () => {
     const online = await page.evaluate(async () => {
       const v = document.querySelector('video')
       if (!v) return null
-      const s = v.querySelector('source[data-src]')
+      // Typed lookup: a bare querySelector returns Element, which has no
+      // `src`, and `astro check` runs as a CI blocker.
+      const s = v.querySelector<HTMLSourceElement>('source[data-src]')
       if (s && !s.src) s.src = s.getAttribute('data-src')!
       v.load()
       v.muted = true
@@ -137,7 +139,9 @@ test.describe('offline hero media', () => {
     const offline = await page.evaluate(async () => {
       const v = document.querySelector('video')
       if (!v) return null
-      const s = v.querySelector('source[data-src]')
+      // Typed lookup: a bare querySelector returns Element, which has no
+      // `src`, and `astro check` runs as a CI blocker.
+      const s = v.querySelector<HTMLSourceElement>('source[data-src]')
       if (s && !s.src) s.src = s.getAttribute('data-src')!
       v.load()
       v.muted = true

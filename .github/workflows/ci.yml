@@ -68,13 +68,13 @@ jobs:
       - name: Demo-data leak check
         run: npm run check:demo
 
+      # Was an inline grep over the raw HTML. It could not tell a RESOURCE the
+      # browser fetches from a LINK a human might click, so the "View in Google
+      # Maps" anchors on /kontak failed it on all 73 routes — a false positive
+      # nobody had seen, because every CI run so far was stopped before this
+      # step by an account billing lock. See the header of the script.
       - name: No third-party requests on public routes
-        run: |
-          if grep -rEl 'https?://(fonts\.googleapis|fonts\.gstatic|cdn\.|www\.google|connect\.facebook|platform\.twitter)' dist --include='*.html'; then
-            echo "FAIL: a public route references a third-party origin."
-            exit 1
-          fi
-          echo "PASS: no third-party origins referenced."
+        run: npm run check:third-party
 
       # Lighthouse works in CI (Linux). It cannot run on Windows dev machines —
       # chrome-launcher throws EPERM on teardown — which is why tests/perf.spec.ts

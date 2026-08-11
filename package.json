@@ -21,7 +21,8 @@
     "test:offline": "playwright test tests/offline.spec.ts --project=android-phone",
     "test:no-js": "playwright test --project=no-javascript",
     "test:perf": "playwright test --project=perf",
-    "chart:build": "node scripts/build-chart-geometry.mjs"
+    "chart:build": "node scripts/build-chart-geometry.mjs",
+    "check:third-party": "node scripts/check-third-party.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",

@@ -195,8 +195,6 @@ for (const route of ROUTES) {
 const DARK_SURFACES = [
   '.hero__inner',
   '.mega__hero',
-  '.seaband',
-  '.boatstrip',
   '.tile--doc',
   '.tile--list',
   '.tile--sos',

@@ -90,40 +90,6 @@ body::before {
     radial-gradient(50rem 34rem at 92% 8%, rgb(15 23 42 / 0.04), transparent 60%);
 }
 
-/* ── Painted surfaces own their ink ─────────────────────────────
- *
- * READ THIS BEFORE ADDING ANY GLOBAL `color:` RULE.
- *
- * The heading rule below sets every h1–h6 to --ink-strong (near-black). That
- * is correct on the page canvas and WRONG on every element that paints its own
- * background and picks its own ink to match — the sea band, the boat strip,
- * the quick-action tiles, the mega-panel hero.
- *
- * It shipped wrong for exactly one test run under the dark theme, when
- * `<h2 class="seaband__label">` inside the boat strip went white-on-#e2e8f0
- * and axe measured 1.17:1 on the homepage in both locales. The theme has since
- * flipped twice; the rule has survived both, because it is written in terms of
- * "the surface chose an ink" rather than in terms of which ink that was.
- *
- * The fix is a rule, not a patch: on a painted surface the ink tokens
- * collapse to whatever ink that surface chose. Add new painted surfaces to
- * this list, not to a one-off override.
- */
-
-.hero__inner,
-.seaband,
-.boatstrip,
-.tile--doc,
-.tile--sos,
-.tile--boat,
-.tile--list,
-.mega__hero,
-.btn--primary,
-.btn--solid {
-  --ink-strong: currentColor;
-  --ink: currentColor;
-  --ink-muted: currentColor;
-}
 
 /*
  * `.hero__inner` WAS MISSING FROM THAT LIST, and it cost the site its own
@@ -152,6 +118,38 @@ body::before {
  *    with the site's biggest headline unreadable. The heading-contrast probe in
  *    tests/contrast.spec.ts covers what axe abstains on.
  */
+
+/*
+ * PAINTED SURFACES OWN THEIR INK — restored 2026-08-10 after being deleted by
+ * accident, and the deletion is the most useful thing about this comment.
+ *
+ * A regex removing the dead `.seaband` / `.boatstrip` rules matched THIS rule
+ * too, because those two selectors appeared in its comma-separated list — and
+ * took `--ink-strong: currentColor` for every other painted surface with them.
+ * The homepage `<h1>` immediately went back to #020617 on the near-black hero:
+ * the same "Barangay Tumbod can't be seen clearly" bug the owner reported on
+ * 2026-08-08, reintroduced by a cleanup that never touched the hero.
+ *
+ * Caught by `tests/contrast.spec.ts` "text on dark panels is light ink", which
+ * was written for exactly this and earned its place within two days.
+ *
+ * The rule: on a surface that paints its own background, the ink tokens
+ * collapse to whatever ink that surface chose. Add new painted surfaces here —
+ * and to DARK_SURFACES in contrast.spec.ts — in the same commit that paints
+ * them. Never edit this selector list with a pattern match.
+ */
+.hero__inner,
+.tile--doc,
+.tile--sos,
+.tile--boat,
+.tile--list,
+.mega__hero,
+.btn--primary,
+.btn--solid {
+  --ink-strong: currentColor;
+  --ink: currentColor;
+  --ink-muted: currentColor;
+}
 
 /* ── Headings take the strong ink ───────────────────────────────
    The near-black/slate-700 split. Two inks rather than one because this site
@@ -1332,26 +1330,6 @@ a.calday:focus-visible::after {
   scrollbar-width: thin;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   CHART → LIVE MAP (LivingChartHeader, `interactive` only)
-
-   The open-map button and its byte-cost label used to live here. They are gone
-   with the control itself — the map now loads on its own, so there is nothing
-   left to style but the container it lands in.
-   ═══════════════════════════════════════════════════════════════ */
-
-/* Same stacking trap as `.mapcard__slot--live` — see the long note in
-   components.css. Leaflet's internal z-indexes reach 1000 and will paint over
-   the mega panels (z-index 60) unless the container isolates them. This map is
-   not currently mounted anywhere, but the rule travels with the component so it
-   cannot ship the bug if it is used again. */
-.chartmap__live {
-  width: 100%;
-  display: block;
-  position: relative;
-  z-index: 0;
-  isolation: isolate;
-}
 
 /* ═══════════════════════════════════════════════════════════════
    SEA SAFETY ADVISORY
@@ -1620,5 +1598,82 @@ a.calday:focus-visible::after {
    */
   .brand__place {
     font-size: var(--text-xs);
+  }
+}
+
+@media (max-width: 60rem) {
+  /*
+   * ── THE HERO STOPS OWNING THE FIRST SCREEN ────────────────────
+   *
+   * Measured at real phone heights, not the 1157px desktop-emulator default:
+   *   320x800  hero 686px = 86% of the first screen
+   *   412x915  hero 652px = 71%
+   * and the sea safety advisory sat 1.6-1.9 screens down. A resident opening
+   * this site during bad weather scrolled past a full screen of photography to
+   * reach the warning about whether to take a boat out. That is the wrong way
+   * round for a civic service.
+   *
+   * The height comes out of CHROME AND MEDIA, not out of the words. The
+   * headline, the lede and both call-to-action buttons keep their size; what
+   * shrinks is padding, gaps, and the filmstrip thumbnails, which are 128px of
+   * decoration at the bottom of every hero.
+   *
+   * THE FILMSTRIP STAYS. It is the no-JavaScript way to reach a specific slide
+   * (the thumbnails are plain anchors), so deleting it on phones would trade an
+   * accessibility guarantee for vertical space. Halving it does not.
+   */
+  .hero__inner {
+    padding-block: var(--space-4) var(--space-5);
+    gap: var(--space-3);
+  }
+
+  .hero__eyebrow {
+    font-size: var(--text-base);
+  }
+
+  /*
+   * The lede is capped at three lines. At 320px it ran to four and was the
+   * single tallest thing in the hero after the buttons. `line-clamp` degrades
+   * safely: where it is unsupported the text simply shows in full.
+   */
+  .hero__lede {
+    font-size: var(--text-base);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+  }
+
+  .hero__thumb {
+    height: 3.5rem;
+  }
+
+  /* Recomputed for the shorter thumb — see the note on this rule in hero.css.
+     3.5rem thumb + 2x space-1 padding + space-4 gap + 8px dots + space-3. */
+  .hero__filmstrip {
+    padding-bottom: var(--space-3);
+    min-height: calc(3.5rem + (2 * var(--space-1)) + var(--space-4) + 8px + var(--space-3));
+  }
+
+  /*
+   * RESERVE THE FINISHED HEIGHT. This is the CLS fix as well as a sizing one.
+   *
+   * `.hero` was `min-height: 46svh` — 368px at 800px tall — around content that
+   * measured 686px. The browser painted the small box first and grew it by
+   * ~300px once the markup streamed in, which moved every section below it.
+   * A reservation that matches the content means the box never changes size.
+   *
+   * Fixed rem, not a viewport unit, precisely so it does NOT track the screen:
+   * the content is the same height on every phone, so the reservation must be
+   * too, or tall devices over-reserve and short ones still grow.
+   */
+  .hero {
+    min-height: 27rem;
+  }
+
+  /* Calendar days measured 37px. They are links to a day's events. */
+  .calday {
+    min-height: 44px;
   }
 }

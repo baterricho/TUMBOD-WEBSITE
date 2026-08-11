@@ -12,16 +12,12 @@ import Icon from '@/components/Icon.astro'
 import Placeholder from '@/components/Placeholder.astro'
 import LastUpdated from '@/components/LastUpdated.astro'
 import OfficeStatusBadge from '@/components/OfficeStatusBadge.astro'
-import SeaConditionIndicator from '@/components/SeaConditionIndicator.astro'
-import BoatStatusRow from '@/components/BoatStatusRow.astro'
 import LivingChartHeader from '@/components/LivingChartHeader.astro'
 import { needsData } from '@/lib/content/placeholder'
-import type { SeaState, AlertLevel, BoatStatus } from '@/lib/content/types'
+import type { AlertLevel } from '@/lib/content/types'
 import type { IconName } from '@/components/Icon.astro'
 
-const SEA_STATES: SeaState[] = ['calm', 'moderate', 'rough', 'dangerous']
 const ALERT_LEVELS: AlertLevel[] = ['info', 'advisory', 'warning', 'emergency']
-const BOAT_STATES: BoatStatus[] = ['running', 'uncertain', 'cancelled']
 
 const ICONS: IconName[] = [
   'bangka', 'wave-calm', 'wave-moderate', 'wave-rough', 'wave-dangerous', 'wind',
@@ -63,7 +59,6 @@ const now = new Date('2026-08-04T05:00:00+08:00')
 const later = new Date('2026-08-04T14:00:00+08:00')
 const stale = new Date('2026-08-02T05:00:00+08:00')
 
-const waveFor = (s: SeaState) => (s === 'calm' ? 0.3 : s === 'moderate' ? 1.0 : s === 'rough' ? 2.0 : 3.5)
 ---
 
 <Base
@@ -157,49 +152,7 @@ const waveFor = (s: SeaState) => (s === 'calm' ? 0.3 : s === 'moderate' ? 1.0 : 
     </div>
   </Section>
 
-  <Section title="Sea condition — colour + word + icon" titleId="ds-sea">
-    <div style="display:flex;flex-direction:column;gap:var(--space-4)">
-      {
-        SEA_STATES.map((state) => (
-          <SeaConditionIndicator
-            locale="fil"
-            condition={{
-              state,
-              waveHeightM: waveFor(state),
-              windKph: 25,
-              windDirection: 'Habagat',
-              observedAt: now,
-              source: 'PAGASA (halimbawa lamang)',
-              manualOverride: false,
-            }}
-          />
-        ))
-      }
-    </div>
-  </Section>
 
-  <Section title="Boat status — statusReason distinguishes a binding ban" titleId="ds-boat">
-    <div style="display:flex;flex-direction:column;gap:var(--space-4)">
-      {
-        BOAT_STATES.map((status) => (
-          <BoatStatusRow
-            locale="fil"
-            trip={{
-              id: status,
-              route: 'Tumbod → Liminangcong',
-              operator: needsData('bangkero', 'Barangay'),
-              departureTime: '6:00 AM',
-              fare: needsData('pamasahe', 'Barangay'),
-              status,
-              statusReason:
-                status === 'cancelled' ? 'pcg_sailing_ban' : status === 'uncertain' ? 'sea_conditions' : null,
-              updatedAt: now,
-            }}
-          />
-        ))
-      }
-    </div>
-  </Section>
 
   <Section title="Alerts — colour AND icon AND leading word" titleId="ds-alerts">
     <div style="display:flex;flex-direction:column;gap:var(--space-3)">

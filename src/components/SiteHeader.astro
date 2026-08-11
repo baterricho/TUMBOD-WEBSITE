@@ -247,7 +247,18 @@ const isCurrent = (href: string) => pathname === href
           it here would have pinned "Higit pa" to the right edge of the FIRST
           row once the nav starts wrapping on phones — stranding it alone on a
           line with five items crammed beside it. */}
-      <details class="navmore" data-mega style="position:relative">
+      {/*
+        NO INLINE STYLE. `position: relative` used to live here and it silently
+        broke the mobile panel: redesign.css sets `.navmore { position: static }`
+        at narrow widths so the dropdown can span the viewport instead of being
+        trapped in this element's box — and an inline style beats a stylesheet,
+        so that rule had never once applied. The panel rendered 71px wide with
+        its 33 links spilling out of it and clipped.
+
+        Positioning now lives in redesign.css, where the media query can reach
+        it. See the note there.
+      */}
+      <details class="navmore" data-mega>
         <summary
           style="display:flex;align-items:center;gap:var(--space-2);min-height:44px;white-space:nowrap;font-size:var(--text-sm);cursor:pointer;list-style:none"
         >

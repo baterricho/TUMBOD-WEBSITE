@@ -33,19 +33,19 @@ const factRow = 'display:flex;justify-content:space-between;gap:var(--space-3);p
 <dl style="margin:0;border-top:1px solid var(--line-strong)">
   <div style={factRow}>
     <dt style="color:var(--ink-muted)">{t.services.fee}</dt>
-    <dd style="margin:0;font-weight:600">
+    <dd style="margin:0;font-weight:600;min-width:0">
       {isPlaceholder(service.fee) ? <Placeholder value={service.fee} /> : <span class="figure">{service.fee}</span>}
     </dd>
   </div>
   <div style={factRow}>
     <dt style="color:var(--ink-muted)">{t.services.processingTime}</dt>
-    <dd style="margin:0;font-weight:600">
+    <dd style="margin:0;font-weight:600;min-width:0">
       {isPlaceholder(service.processingTime) ? <Placeholder value={service.processingTime} /> : <span class="figure">{service.processingTime}</span>}
     </dd>
   </div>
   <div style={factRow}>
     <dt style="color:var(--ink-muted)">{t.services.approach}</dt>
-    <dd style="margin:0;font-weight:600">
+    <dd style="margin:0;font-weight:600;min-width:0">
       {isPlaceholder(service.responsibleOfficial) ? <Placeholder value={service.responsibleOfficial} /> : service.responsibleOfficial}
     </dd>
   </div>
@@ -66,7 +66,7 @@ const factRow = 'display:flex;justify-content:space-between;gap:var(--space-3);p
             data-service={service.slug}
             style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--sea-calm)"
           />
-          <label for={`req-${req.id}`} style="flex:1">
+          <label for={`req-${req.id}`} style="flex:1;min-width:0">
             {isPlaceholder(label) ? <Placeholder value={label} /> : label}
             {req.noteFil && fil && (
               <span style="display:block;font-size:var(--text-sm);color:var(--ink-muted)">{req.noteFil}</span>

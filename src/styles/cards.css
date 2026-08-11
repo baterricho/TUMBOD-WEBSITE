@@ -55,12 +55,36 @@
  * height in every card and could not be compared across a row, which is the
  * one thing that list is for.
  */
+/*
+ * `min-width: 0` IS A BUG FIX, not tidying. Do not remove it.
+ *
+ * FOUND: on the homepage at 1280px the fourth emergency card — Coast Guard —
+ * rendered 509px wide inside a 280px grid track and was clipped, cutting off
+ * the hotline placeholder. In the emergency section, at desktop width.
+ *
+ * The chain: `.placeholder` is `white-space: nowrap` with
+ * `max-width: min(26ch, 100%)`, and 26ch of the display face resolves to 459px.
+ * Flex and grid items default to `min-width: auto`, which refuses to shrink an
+ * item below its min-content size — so the 459px placeholder propagated up
+ * through `.fcard` and this `<li>`, and the card burst its own column.
+ *
+ * `min-width: 0` on both restores the intended behaviour: the card takes the
+ * track width and the placeholder does what it was built to do — clip itself
+ * with an ellipsis, which is why it carries `overflow: hidden` in the first
+ * place.
+ *
+ * This affects every card grid on the site, not just the one that surfaced it.
+ * Any long unbroken string — a URL, an email, a Filipino compound — would have
+ * produced the same blowout anywhere a card appears.
+ */
 .grid-cards > li {
   display: flex;
+  min-width: 0;
 }
 
 .grid-cards > li > .fcard {
   flex: 1;
+  min-width: 0;
 }
 
 /* ── Link colour on the title ───────────────────────────────────

@@ -511,6 +511,16 @@ a.fcard:focus-visible {
   display: none;
 }
 
+/*
+ * Positioning moved out of an inline style on the element (SiteHeader.astro).
+ * It has to be here so the narrow-width rule below can override it — an inline
+ * `position: relative` beat the stylesheet and kept the mobile panel trapped
+ * inside a 71px box.
+ */
+.navmore {
+  position: relative;
+}
+
 .navmore__panel {
   position: absolute;
   right: 0;
@@ -545,9 +555,17 @@ a.fcard:focus-visible {
   font-size: var(--text-sm);
 }
 
-@media (max-width: 46rem) {
+/*
+ * 60rem, not 46rem — the same breakpoint the navigation itself switches at
+ * (polish.css). They disagreed: between 736px and 960px the nav was already in
+ * its wrapping grid layout, where `.navmore` is a ~92px cell, while this panel
+ * was still using the desktop rule that anchors a 34rem-wide dropdown to the
+ * right edge of that cell. One breakpoint for one component.
+ */
+@media (max-width: 60rem) {
   .navmore {
-    /* Let the panel span the viewport instead of hanging off the right edge. */
+    /* Static, so the absolutely-positioned panel resolves against the header
+       instead of this element and can span the full viewport width. */
     position: static;
   }
 

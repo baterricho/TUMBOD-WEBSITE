@@ -1677,3 +1677,41 @@ a.calday:focus-visible::after {
     min-height: 44px;
   }
 }
+
+/*
+ * ── THE FOOTER META BLOCK MUST BE ABLE TO SHRINK ────────────────
+ *
+ * FOUND by a full-site render audit: on every one of the 73 routes, at every
+ * phone width, this block rendered 552px wide inside a 412px viewport and was
+ * clipped — taking the barangay's own address, office hours and the privacy
+ * link off the right edge of the screen.
+ *
+ * Same root cause as the card grid in cards.css. A `[[NEEDS DATA: ...]]`
+ * placeholder is `white-space: nowrap`, its `max-width: min(26ch, 100%)`
+ * resolves to 459px, and a grid track with the default `min-width: auto`
+ * refuses to shrink below its content — so one placeholder set the width of
+ * the whole block and every sibling paragraph inherited it.
+ *
+ * `minmax(0, 1fr)` lets the single column shrink to the container, which lets
+ * the placeholder's own `overflow: hidden` + ellipsis finally do its job.
+ *
+ * The general lesson is worth more than the fix: this site renders long
+ * unbroken strings by design — placeholders, coordinates, phone numbers — so
+ * any flex or grid container holding them needs an explicit `min-width: 0` or
+ * `minmax(0, …)`. Two separate components have now been bitten by it.
+ */
+.sitefooter__meta {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/*
+ * The office-status block is a wrapping flex row, and its children inherit the
+ * usual `min-width: auto`. On a phone that let the "SARADO ANG OPISINA · …"
+ * line and the next-open placeholder push to 448px inside a 380px column and
+ * get clipped. Same family as the card grid and the footer — see the note in
+ * cards.css. This is the third and, as far as a full-site render audit can
+ * tell, the last container with the weakness.
+ */
+.office > * {
+  min-width: 0;
+}

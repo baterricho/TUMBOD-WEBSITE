@@ -59,9 +59,33 @@ const Tag = display === 'block' ? 'p' : 'span'
    * Colour is not the only carrier — the italics and the dotted underline
    * remain, so it is still distinguishable without it.
    */
+  /*
+   * THE VIEWPORT CAP IS A BUG FIX, and it fixed the same bug in four places.
+   *
+   * A full-site render audit found this element forcing its container wider
+   * than the screen on 72 of 73 routes at phone widths — the site footer, the
+   * office-status block on the homepage, the fee and requirement lists on every
+   * /serbisyo page, and the address block on /kontak. All clipped.
+   *
+   * The mechanism: `white-space: nowrap` gives this span a large min-content
+   * width, `min(26ch, 100%)` resolves to 459px because the `100%` is measured
+   * against a container that is itself being sized by this content, and flex
+   * and grid items default to `min-width: auto` — which refuses to shrink below
+   * min-content. So one placeholder set the width of everything around it.
+   *
+   * `calc(100vw - 2rem)` is the backstop: 2rem is exactly the inline padding of
+   * `.wrap`, so the chip can never be wider than the page's content column no
+   * matter how deeply it is nested or what its ancestors' sizing does. The
+   * `overflow: hidden` and ellipsis below then do what they were always meant
+   * to — truncate the chip rather than the page.
+   *
+   * Two containers were also given explicit `min-width: 0` (cards.css,
+   * oceanic.css) because they had the same weakness for any long unbroken
+   * string. This rule is the one that generalises.
+   */
   .placeholder {
     display: inline-block;
-    max-width: min(26ch, 100%);
+    max-width: min(26ch, 100%, calc(100vw - 2rem));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

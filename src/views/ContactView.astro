@@ -55,7 +55,7 @@ const BOAT_ROUTES = needsData(
 */}
 
 <Section title={fil ? 'Saan kami' : 'Where we are'} titleId="location">
-  <div style="max-width:var(--measure);display:grid;gap:var(--space-3)">
+  <div style="max-width:var(--measure);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-3)">
     <p>
       Barangay Tumbod, {fil ? 'pulo ng Tuluran' : 'Tuluran Island'}, {SITE.municipality},{' '}
       {SITE.province}, {SITE.region}.
@@ -76,7 +76,7 @@ const BOAT_ROUTES = needsData(
 </Section>
 
 <Section title={fil ? 'Paano marating ang Tumbod' : 'How to reach Tumbod'} titleId="travel">
-  <div style="max-width:var(--measure);display:grid;gap:var(--space-3)">
+  <div style="max-width:var(--measure);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-3)">
     <Placeholder value={BOAT_ROUTES} display="block" />
     <p class="is-water">{t.safety.coastGuardRule}</p>
   </div>

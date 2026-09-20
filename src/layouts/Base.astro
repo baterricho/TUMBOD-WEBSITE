@@ -12,6 +12,7 @@ import SiteFooter from '@/components/SiteFooter.astro'
 import DemoBanner from '@/components/DemoBanner.astro'
 import LiveContent from '@/components/LiveContent.astro'
 import VisitCounter from '@/components/VisitCounter.astro'
+import IslandQuickDock from '@/components/IslandQuickDock.astro'
 import { getDictionary, htmlLang, alternateHref, type Locale } from '@/lib/i18n'
 import { SITE } from '@/lib/content/site'
 
@@ -149,6 +150,7 @@ const jsonLd = {
       <slot />
     </main>
     <SiteFooter locale={locale} />
+    {!pathname.startsWith('/admin') && <IslandQuickDock locale={locale} />}
 
     {/*
       Replaces any `[data-live]` list with what the barangay has actually

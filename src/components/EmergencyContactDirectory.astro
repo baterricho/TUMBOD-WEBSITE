@@ -1,0 +1,586 @@
+---
+/**
+ * EmergencyContactDirectory.astro
+ *
+ * Structured Emergency Contact Directory table within the Safety panel.
+ * Contains clickable phone numbers for local officials, coast guard, and rescue teams,
+ * optimized for mobile viewing on low-end devices with zero JavaScript overhead.
+ */
+import Icon from './Icon.astro'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+
+interface ContactEntry {
+  id: string
+  agencyFil: string
+  agencyEn: string
+  roleFil: string
+  roleEn: string
+  contactPerson?: string
+  number: string
+  displayNumber: string
+  channel?: string
+  category: 'official' | 'coastguard' | 'rescue' | 'health'
+  availabilityFil: string
+  availabilityEn: string
+  badgeFil: string
+  badgeEn: string
+  priority: boolean
+}
+
+const DIRECTORY: ContactEntry[] = [
+  {
+    id: 'pcg-taytay',
+    agencyFil: 'Philippine Coast Guard — Sub-station Taytay',
+    agencyEn: 'Philippine Coast Guard — Sub-station Taytay',
+    roleFil: 'Maritime Search & Rescue, Babala sa Dagat, No-Sail Directives',
+    roleEn: 'Maritime Search & Rescue, Gale Advisories, Vessel Clearance',
+    contactPerson: 'Officer of the Day',
+    number: '0917-842-7653',
+    displayNumber: '0917-842-7653',
+    channel: 'VHF Ch. 16 (156.8 MHz)',
+    category: 'coastguard',
+    availabilityFil: '24/7 Nakaantabay sa Radyo at Selpon',
+    availabilityEn: '24/7 Monitored on Radio & Mobile',
+    badgeFil: 'Coast Guard',
+    badgeEn: 'Coast Guard',
+    priority: true,
+  },
+  {
+    id: 'bdrrmc-tuluran',
+    agencyFil: 'BDRRMC Barangay Tumbod — Tuluran Sea Rescue',
+    agencyEn: 'BDRRMC Barangay Tumbod — Tuluran Sea Rescue',
+    roleFil: 'Lokal na Pagsaklolo sa Bangka, Evacuation Alert sa Isla',
+    roleEn: 'Local Banca Rescue, Island Evacuation & Early Warning',
+    contactPerson: 'Kgg. Natividad M. Gabriel / QRT Leader',
+    number: '0927-978-7629',
+    displayNumber: '0927-978-7629',
+    category: 'rescue',
+    availabilityFil: '24/7 Emergency Quick Response',
+    availabilityEn: '24/7 Emergency Quick Response',
+    badgeFil: 'Rescue QRT',
+    badgeEn: 'Rescue QRT',
+    priority: true,
+  },
+  {
+    id: 'captain',
+    agencyFil: 'Tanggapan ng Punong Barangay',
+    agencyEn: 'Office of the Punong Barangay',
+    roleFil: 'Punong Barangay & BDRRMC Incident Commander',
+    roleEn: 'Punong Barangay & Disaster Incident Commander',
+    contactPerson: 'Kgg. Natividad M. Gabriel',
+    number: '0928-284-0826',
+    displayNumber: '0928-284-0826',
+    category: 'official',
+    availabilityFil: 'Direktang Linyang Pang-emerhensya',
+    availabilityEn: 'Direct Emergency Line',
+    badgeFil: 'Opisyal',
+    badgeEn: 'Official',
+    priority: true,
+  },
+  {
+    id: 'kagawad-baterzal',
+    agencyFil: 'Barangay Kagawad — Peace & Order / Fishery',
+    agencyEn: 'Barangay Kagawad — Peace & Order / Fishery',
+    roleFil: 'Kagawad ng Barangay & Tagapag-ugnay sa Mangingisda',
+    roleEn: 'Barangay Kagawad & Fisherfolk Liaison Officer',
+    contactPerson: 'Kgg. Jacky C. Baterzal',
+    number: '0927-978-7629',
+    displayNumber: '0927-978-7629',
+    category: 'official',
+    availabilityFil: 'Available para sa Komunidad',
+    availabilityEn: 'Available for Community Calls',
+    badgeFil: 'Opisyal',
+    badgeEn: 'Official',
+    priority: false,
+  },
+  {
+    id: 'mdrrmo-taytay',
+    agencyFil: 'MDRRMO Taytay — Emergency Operations Center',
+    agencyEn: 'MDRRMO Taytay — Emergency Operations Center',
+    roleFil: 'Koordinasyon ng Kalamidad, Ambulansya, Bagyo at Baha',
+    roleEn: 'Disaster Operations, Municipal Dispatch, Evacuation',
+    contactPerson: 'MDRRMO Dispatcher',
+    number: '0920-951-8432',
+    displayNumber: '0920-951-8432',
+    category: 'rescue',
+    availabilityFil: '24 Oras na Operasyon',
+    availabilityEn: '24-Hour Municipal Dispatch',
+    badgeFil: 'MDRRMO',
+    badgeEn: 'MDRRMO',
+    priority: false,
+  },
+  {
+    id: 'rhu-taytay',
+    agencyFil: 'RHU Taytay — Municipal Health Clinic & Trauma',
+    agencyEn: 'Rural Health Unit Taytay — Clinic & Trauma Care',
+    roleFil: 'Pangunahing Medikal, Gamutan sa Nalunod, First Aid',
+    roleEn: 'Emergency Medical Services, Marine Trauma & First Aid',
+    contactPerson: 'Triage & Emergency Nurse',
+    number: '0919-482-1194',
+    displayNumber: '0919-482-1194',
+    category: 'health',
+    availabilityFil: '24/7 Emergency Triage',
+    availabilityEn: '24/7 Emergency Triage',
+    badgeFil: 'Medikal',
+    badgeEn: 'Medical',
+    priority: false,
+  },
+  {
+    id: 'pnp-taytay',
+    agencyFil: 'PNP Taytay — Police Station & Maritime Unit',
+    agencyEn: 'PNP Taytay — Police Station & Maritime Patrol',
+    roleFil: 'Kapayapaan, Kaayusan sa Baybayin, Bantay-Dagat',
+    roleEn: 'Law Enforcement, Coastal Security, Sea Patrol',
+    contactPerson: 'Desk Officer / Duty Investigator',
+    number: '0998-598-5832',
+    displayNumber: '0998-598-5832',
+    category: 'official',
+    availabilityFil: '24/7 Desk Hotline',
+    availabilityEn: '24/7 Desk Hotline',
+    badgeFil: 'Pulisya',
+    badgeEn: 'Police',
+    priority: false,
+  },
+]
+
+const defaultBadgeStyle = { bg: '#fef3c7', color: '#b45309', border: '#fcd34d' }
+const categoryBadgeStyles: Record<string, { bg: string; color: string; border: string }> = {
+  coastguard: { bg: '#e0f2fe', color: '#0369a1', border: '#7dd3fc' },
+  rescue: { bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
+  official: { bg: '#fef3c7', color: '#b45309', border: '#fcd34d' },
+  health: { bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+}
+---
+
+<div class="emergency-directory-wrap" id="emergency-directory">
+  <div class="directory-header">
+    <div class="header-left">
+      <div class="header-pill">
+        <Icon name="phone" size={14} />
+        <span>{fil ? 'Talaan ng Telepono' : 'Emergency Directory'}</span>
+      </div>
+      <h3 class="directory-title">
+        {fil ? 'Direktoryo ng mga Pang-emerhensyang Numero' : 'Emergency Contact Directory'}
+      </h3>
+      <p class="directory-subtitle">
+        {fil
+          ? 'Pindutin ang mga numero upang agad na makatawag sa mga opisyal ng barangay, Coast Guard, at rescue team kahit mahina ang internet signal.'
+          : 'Tap phone numbers to dial barangay officials, Coast Guard, and rescue responders immediately, optimized for low-end mobile devices.'}
+      </p>
+    </div>
+
+    {/* Radio Frequencies Highlight */}
+    <div class="marine-vhf-box">
+      <div class="vhf-icon">
+        <Icon name="radio" size={18} />
+      </div>
+      <div class="vhf-text">
+        <strong>{fil ? 'VHF Channel 16 (Distress)' : 'VHF Radio Ch. 16'}</strong>
+        <span>156.800 MHz — Taytay Coast Guard & Sea Patrol</span>
+      </div>
+    </div>
+  </div>
+
+  {/* Structured Directory Table / Mobile Cards */}
+  <div class="table-container">
+    <table class="directory-table" aria-label={fil ? 'Direktoryo ng Pang-emerhensyang Numero' : 'Emergency Contacts Table'}>
+      <thead>
+        <tr>
+          <th scope="col" style="width: 28%;">{fil ? 'Ahensya / Pangalan' : 'Agency / Official'}</th>
+          <th scope="col" style="width: 30%;">{fil ? 'Tungkulin at Saklaw' : 'Role & Jurisdiction'}</th>
+          <th scope="col" style="width: 22%;">{fil ? 'Oras / Antabay' : 'Availability'}</th>
+          <th scope="col" style="width: 20%; text-align: right;">{fil ? 'Tawagan (Click to Call)' : 'Action / Call'}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {DIRECTORY.map((item) => {
+          const badgeStyle = categoryBadgeStyles[item.category] ?? defaultBadgeStyle
+          return (
+            <tr class={item.priority ? 'row--priority' : ''}>
+              {/* Agency & Official Name */}
+              <td class="cell-agency" data-label={fil ? 'Ahensya' : 'Agency'}>
+                <div class="agency-cell-content">
+                  <span
+                    class="category-badge"
+                    style={`background-color:${badgeStyle.bg}; color:${badgeStyle.color}; border: 1px solid ${badgeStyle.border};`}
+                  >
+                    {fil ? item.badgeFil : item.badgeEn}
+                  </span>
+                  <strong class="agency-name">{fil ? item.agencyFil : item.agencyEn}</strong>
+                  {item.contactPerson && (
+                    <span class="contact-person">
+                      <Icon name="user" size={12} />
+                      <span>{item.contactPerson}</span>
+                    </span>
+                  )}
+                  {item.channel && (
+                    <span class="radio-channel-tag">
+                      <Icon name="radio" size={11} />
+                      <span>{item.channel}</span>
+                    </span>
+                  )}
+                </div>
+              </td>
+
+              {/* Role */}
+              <td class="cell-role" data-label={fil ? 'Tungkulin' : 'Role'}>
+                <span class="role-desc">{fil ? item.roleFil : item.roleEn}</span>
+              </td>
+
+              {/* Availability */}
+              <td class="cell-avail" data-label={fil ? 'Antabay' : 'Hours'}>
+                <span class="avail-badge">
+                  <span class="avail-dot"></span>
+                  <span>{fil ? item.availabilityFil : item.availabilityEn}</span>
+                </span>
+              </td>
+
+              {/* Clickable Phone Number */}
+              <td class="cell-action" data-label={fil ? 'Tawagan' : 'Call'}>
+                <div class="action-wrap">
+                  <a
+                    href={`tel:${item.number.replace(/[^0-9+]/g, '')}`}
+                    class={`call-button ${item.priority ? 'call-button--priority' : ''}`}
+                    aria-label={`${fil ? 'Tawagan ang' : 'Call'} ${fil ? item.agencyFil : item.agencyEn} sa ${item.displayNumber}`}
+                  >
+                    <Icon name="phone" size={14} />
+                    <span class="call-number">{item.displayNumber}</span>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  </div>
+
+  {/* Mobile Offline Tips Footer */}
+  <div class="directory-footer">
+    <div class="footer-tip">
+      <Icon name="shield" size={16} />
+      <span>
+        {fil
+          ? 'Tip sa Mahinang Signal: Kung walang data o load, direktang i-dial ang mga numerong ito sa cellular network. Gumagana ang voice call kahit walang 4G/LTE.'
+          : 'Low-Signal Tip: These numbers connect over 2G/3G voice even when mobile data or prepaid internet bundles are exhausted.'}
+      </span>
+    </div>
+  </div>
+</div>
+
+<style>
+.emergency-directory-wrap {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: var(--radius-xl, 16px);
+  padding: var(--space-4, 20px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  margin-top: var(--space-3, 16px);
+}
+
+.directory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-3, 14px);
+  margin-bottom: var(--space-4, 18px);
+  padding-bottom: var(--space-3, 14px);
+  border-bottom: 1px solid var(--line, #e2e8f0);
+}
+
+.header-left {
+  max-width: 650px;
+}
+
+.header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--palette-forest-50, #f0fdf4);
+  color: var(--palette-forest-700, #15803d);
+  border: 1px solid var(--palette-forest-200, #bbf7d0);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.directory-title {
+  margin: 0 0 6px;
+  font-size: var(--text-lg, 18px);
+  font-weight: 800;
+  color: var(--text-high, #0f172a);
+}
+
+.directory-subtitle {
+  margin: 0;
+  font-size: var(--text-sm, 13px);
+  color: var(--text-mid, #64748b);
+  line-height: 1.5;
+}
+
+.marine-vhf-box {
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #334155;
+}
+
+.vhf-icon {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.vhf-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.vhf-text strong {
+  font-size: 13px;
+  color: #38bdf8;
+}
+
+.vhf-text span {
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+/* Table Container */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.directory-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.directory-table th {
+  padding: 12px 14px;
+  background: var(--surface-bg-muted, #f8fafc);
+  color: var(--text-mid, #475569);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 2px solid var(--line, #cbd5e1);
+}
+
+.directory-table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  vertical-align: middle;
+}
+
+.directory-table tr:hover td {
+  background-color: var(--surface-bg-subtle, #f8fafc);
+}
+
+.row--priority td {
+  background-color: rgba(254, 242, 242, 0.35);
+}
+
+.agency-cell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.category-badge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.agency-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-high, #0f172a);
+}
+
+.contact-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-mid, #64748b);
+}
+
+.radio-channel-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.role-desc {
+  font-size: 13px;
+  color: var(--text-high, #334155);
+  line-height: 1.4;
+}
+
+.avail-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-mid, #475569);
+  font-weight: 600;
+}
+
+.avail-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #16a34a;
+  flex-shrink: 0;
+}
+
+/* Call Button */
+.action-wrap {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.call-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  min-height: 44px;
+  background: var(--palette-forest-600, #16a34a);
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.call-button:hover {
+  background: var(--palette-forest-700, #15803d);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
+}
+
+.call-button--priority {
+  background: var(--palette-coral-600, #dc2626);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.call-button--priority:hover {
+  background: var(--palette-coral-700, #b91c1c);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.call-number {
+  letter-spacing: 0.02em;
+}
+
+/* Footer note */
+.directory-footer {
+  margin-top: var(--space-3, 14px);
+  padding-top: var(--space-3, 12px);
+  border-top: 1px solid var(--line, #e2e8f0);
+}
+
+.footer-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-mid, #64748b);
+  line-height: 1.4;
+}
+
+/* MOBILE OPTIMIZATION for low-end devices:
+   Table cards layout on screens <= 680px */
+@media (max-width: 680px) {
+  .directory-table,
+  .directory-table thead,
+  .directory-table tbody,
+  .directory-table th,
+  .directory-table td,
+  .directory-table tr {
+    display: block;
+  }
+
+  .directory-table thead {
+    display: none; /* Hide header row on small screens */
+  }
+
+  .directory-table tr {
+    background: #ffffff;
+    border: 1px solid var(--line, #cbd5e1);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    padding: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .directory-table td {
+    padding: 6px 0;
+    border-bottom: none;
+  }
+
+  .cell-agency {
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    margin-bottom: 8px;
+  }
+
+  .cell-role {
+    font-size: 12px;
+    color: #475569;
+    margin-bottom: 6px;
+  }
+
+  .cell-avail {
+    margin-bottom: 12px;
+  }
+
+  .cell-action {
+    padding-top: 10px !important;
+    border-top: 1px solid #f1f5f9 !important;
+  }
+
+  .action-wrap {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .call-button {
+    width: 100%;
+    min-height: 48px; /* High-target tactile size for mobile */
+    font-size: 14px;
+  }
+}
+</style>

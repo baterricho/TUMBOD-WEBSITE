@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config'
 import tailwindcss from '@tailwindcss/vite'
 import sitemap from '@astrojs/sitemap'
+import react from '@astrojs/react'
 
 /**
  * Astro, chosen after measurement (PERF-PLAN.md §1b).
@@ -14,6 +15,7 @@ import sitemap from '@astrojs/sitemap'
  */
 export default defineConfig({
   site: 'https://barangaytumbod.gov.ph',
+  server: { host: '0.0.0.0', port: 3000 },
 
   // Filipino is canonical; the English mirror lives at /en/* as real routes.
   // The language toggle must be a plain anchor that works without JS.
@@ -39,6 +41,7 @@ export default defineConfig({
   devToolbar: { enabled: false },
 
   integrations: [
+    react(),
     sitemap({
       // The design system and the offline fallback are internal surfaces.
       // `/admin` joins the list: it is a staff tool, it is `noindex`, and a

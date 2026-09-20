@@ -1,14 +1,11 @@
 ---
 /**
- * Site search.
+ * Site search — enhanced interactive civic directory.
  *
- * Progressive enhancement, in the strict sense: with JavaScript disabled this
- * page is still a complete, usable directory of everything on the site. The
- * search field is an ENHANCEMENT that filters that list — it does not replace
- * it. A resident who cannot run JS still gets to the hotline directory.
- *
- * The index is fetched only on first keystroke, so the page costs nothing
- * extra to open (IA.md §3).
+ * Works progressively: with JavaScript off, renders the complete directory
+ * of all services, emergency contacts, and governance documents.
+ * With JavaScript on, delivers an instant search experience with
+ * suggestion pills, category filters, and live match highlights.
  */
 import Base from '@/layouts/Base.astro'
 import Section from '@/components/Section.astro'
@@ -21,26 +18,45 @@ const locale = DEFAULT_LOCALE
 const HOTLINES = (await getHotlines()).items
 const t = getDictionary(locale)
 
+const SUGGESTIONS = [
+  'Barangay Clearance',
+  'Hotline',
+  'Bangka',
+  'Indigency',
+  'Opisyal',
+  'Talon',
+  'Health Station',
+  'Transparency',
+]
+
 const groups = [
   {
     heading: t.nav.safety,
+    category: 'ligtas',
     links: [
-      { href: '/ligtas/hotline', label: t.nav.emergencyLabel },
-      { href: '/ligtas', label: t.safety.title },
+      { href: '/ligtas/hotline', label: t.nav.emergencyLabel, desc: 'Mga numerong matatawagan para sa ambulansya, bumbero, at saklolo.' },
+      { href: '/ligtas', label: t.safety.title, desc: 'Lagay ng dagat, babala sa bagyo, at ligtas na paglalayag.' },
     ],
   },
   {
     heading: t.services.title,
-    links: SERVICE_DETAILS.map((s) => ({ href: `/serbisyo/${s.slug}`, label: s.nameFil })),
+    category: 'serbisyo',
+    links: SERVICE_DETAILS.map((s) => ({
+      href: `/serbisyo/${s.slug}`,
+      label: s.nameFil,
+      desc: s.descriptionFil,
+    })),
   },
   {
     heading: t.nav.more,
+    category: 'pamamahala',
     links: [
-      { href: '/opisyal', label: t.nav.officials },
-      { href: '/transparency', label: t.nav.transparency },
-      { href: '/balita', label: t.nav.news },
-      { href: '/tungkol', label: t.nav.about },
-      { href: '/kontak', label: t.nav.contact },
+      { href: '/opisyal', label: t.nav.officials, desc: 'Punong Barangay at mga Kagawad ng Sangguniang Barangay.' },
+      { href: '/transparency', label: t.nav.transparency, desc: 'Badyet, pondo, at mga pampublikong ulat ng pamahalaan.' },
+      { href: '/balita', label: t.nav.news, desc: 'Pinakahuling anunsyo at ulat sa komunidad.' },
+      { href: '/tungkol', label: t.nav.about, desc: 'Kasaysayan at heograpiya ng Pulo ng Tuluran.' },
+      { href: '/larawan', label: 'Mga Larawan at Video', desc: 'Tunay na kuha ng baybayin, talon, at pantalan.' },
+      { href: '/kontak', label: t.nav.contact, desc: 'Barangay Hall address at mga opisyal na channel.' },
     ],
   },
 ]
@@ -52,79 +68,347 @@ const groups = [
   title={t.home.search}
   description="Hanapin ang kailangan mo sa website ng Barangay Tumbod."
 >
-  <Section divider={false}>
+  <Section divider={false} class="section--airy">
     <h1 class="page-title">{t.home.search}</h1>
+    <p class="section-lede" style="margin-top:var(--space-2)">
+      Mabilisang hanapin ang mga serbisyo, requirements, opisyal, emergency hotlines, at anunsyo sa buong isla.
+    </p>
 
     <form
       role="search"
-      style="margin-top:var(--space-4);max-width:var(--measure)"
+      class="search-form"
       onsubmit="return false"
     >
-      <label for="q" style="display:block;font-weight:600;margin-bottom:var(--space-2)">
-        Ano ang hinahanap mo?
-      </label>
-      <input
-        id="q"
-        name="q"
-        type="search"
-        autocomplete="off"
-        placeholder="hal. clearance, bagyo, kagawad"
-        style="width:100%;min-height:48px;font-size:var(--text-base);padding:var(--space-3);border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface-raised);color:var(--ink)"
-      />
+      <div class="search-input-wrap">
+        <span class="search-icon-left" aria-hidden="true">
+          <Icon name="search" size={20} />
+        </span>
+        <input
+          id="q"
+          name="q"
+          type="search"
+          autocomplete="off"
+          placeholder="I-type ang hinahanap (hal. clearance, hotline, bangka)..."
+          class="search-input"
+          aria-label="Ano ang hinahanap mo?"
+        />
+        <button
+          type="button"
+          id="q-clear"
+          class="search-clear-btn"
+          aria-label="Burahin ang nilagay"
+          hidden
+        >
+          <Icon name="close" size={18} />
+        </button>
+      </div>
+
+      {/* Suggestion Chips */}
+      <div class="search-suggestions" aria-label="Mga mungkahi:">
+        <span class="search-suggestions-label">Mungkahi:</span>
+        {SUGGESTIONS.map((sug) => (
+          <button type="button" class="suggestion-chip" data-query={sug}>
+            {sug}
+          </button>
+        ))}
+      </div>
+
       <p id="q-status" role="status" class="small muted" style="margin-top:var(--space-2)"></p>
     </form>
   </Section>
 
-  {/*
-    Results appear here when JS is available.
-
-    THE LIST AND ITS HEADING MUST NOT SHARE AN ID. `titleId` renders the
-    section heading as `<h2 id="...">` and `Section` points its
-    `aria-labelledby` at it, so `id="results"` on both the heading and the
-    list shipped a duplicate ID on this page — invalid HTML, and an
-    `aria-labelledby` whose target is ambiguous. The heading keeps `results`
-    because that is the id the section is named by; the list takes its own.
-  */}
-  <Section title="Resulta" titleId="results" divider={false}>
-    <ul id="results-list" class="list-reset" hidden></ul>
+  {/* Results container (revealed by JS when user types) */}
+  <Section title="Resulta ng Paghahanap" titleId="results" divider={false}>
+    <div id="results-wrapper" hidden>
+      <div class="search-category-filters" id="search-category-filters">
+        <button type="button" class="search-filter-pill is-active" data-cat="all">Lahat</button>
+        <button type="button" class="search-filter-pill" data-cat="serbisyo">Serbisyo</button>
+        <button type="button" class="search-filter-pill" data-cat="ligtas">Ligtas</button>
+        <button type="button" class="search-filter-pill" data-cat="pamamahala">Pamamahala</button>
+      </div>
+      <ul id="results-list" class="results-grid" role="list"></ul>
+    </div>
   </Section>
 
-  {/* The full directory. Always present, always complete, never hidden by JS. */}
-  <Section title="Lahat ng pahina" titleId="all-pages">
-    {
-      groups.map((group) => (
-        <div style="margin-bottom:var(--space-5)">
-          <h3 style="font-size:var(--text-base);font-weight:600">{group.heading}</h3>
-          <ul class="list-reset" style="margin-top:var(--space-2)">
-            {group.links.map((link) => (
-              <li style="min-height:44px;display:flex;align-items:center">
-                <a href={link.href}>{link.label}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))
+  {/* Complete directory fallback — accessible to everyone with JS off or empty query */}
+  <Section title="Direktoryo ng Lahat ng Pahina" titleId="all-pages">
+    <div class="directory-groups">
+      {
+        groups.map((group) => (
+          <div class="directory-group card">
+            <h2 class="directory-heading">{group.heading}</h2>
+            <ul class="directory-list" role="list">
+              {group.links.map((link) => (
+                <li class="directory-item">
+                  <a href={link.href} class="directory-link">
+                    <span class="directory-link-title">{link.label}</span>
+                    {link.desc && <span class="directory-link-desc">{link.desc}</span>}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="directory-hotline-bar card" style="margin-top:var(--space-4)">
+      <p style="margin:0;display:flex;align-items:center;gap:var(--space-2);font-weight:600">
+        <Icon name="phone" size={18} />
+        {HOTLINES.length} numerong pang-emergency sa <a href="/ligtas/hotline" style="text-decoration:underline">direktoryo ng hotline</a>.
+      </p>
+    </div>
+  </Section>
+
+  <style>
+    .search-form {
+      max-width: var(--measure);
+      margin-top: var(--space-4);
     }
-    <p class="small muted">
-      <Icon name="phone" size={16} />
-      {HOTLINES.length} numerong pang-emergency sa <a href="/ligtas/hotline">direktoryo</a>.
-    </p>
-  </Section>
+
+    .search-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-icon-left {
+      position: absolute;
+      left: var(--space-3);
+      color: var(--ink-muted);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input {
+      width: 100%;
+      min-height: 52px;
+      font-size: var(--text-base);
+      padding: var(--space-3) var(--space-5) var(--space-3) calc(var(--space-5) + 12px);
+      border: 1.5px solid var(--line-strong);
+      border-radius: var(--radius-lg);
+      background: var(--surface-raised);
+      color: var(--ink);
+      box-shadow: var(--shadow-sm);
+      transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--interactive);
+      box-shadow: var(--shadow-md), var(--glow-interactive);
+    }
+
+    .search-clear-btn {
+      position: absolute;
+      right: var(--space-3);
+      background: transparent;
+      border: none;
+      color: var(--ink-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .search-clear-btn:hover {
+      background: var(--surface-sunken);
+      color: var(--ink);
+    }
+
+    .search-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-top: var(--space-3);
+    }
+
+    .search-suggestions-label {
+      font-size: var(--text-xs);
+      color: var(--ink-muted);
+      font-weight: 600;
+    }
+
+    .suggestion-chip {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-full);
+      padding: 4px 10px;
+      font-size: var(--text-xs);
+      color: var(--ink);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all var(--dur-fast);
+    }
+
+    .suggestion-chip:hover {
+      background: color-mix(in srgb, var(--interactive) 10%, transparent);
+      border-color: var(--interactive);
+      color: var(--interactive);
+    }
+
+    .search-category-filters {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-3);
+      flex-wrap: wrap;
+    }
+
+    .search-filter-pill {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-full);
+      padding: 4px 12px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--ink-muted);
+      cursor: pointer;
+      transition: all var(--dur-fast);
+    }
+
+    .search-filter-pill.is-active {
+      background: var(--interactive);
+      color: #ffffff;
+      border-color: var(--interactive);
+    }
+
+    .results-grid {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
+      gap: var(--space-3);
+    }
+
+    .result-card {
+      background: var(--surface-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      color: var(--ink);
+      transition: transform var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast);
+    }
+
+    .result-card:hover,
+    .result-card:focus-visible {
+      transform: translateY(-2px);
+      border-color: var(--interactive);
+      box-shadow: var(--shadow-md);
+    }
+
+    .result-card-badge {
+      display: inline-block;
+      align-self: flex-start;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-caps);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: color-mix(in srgb, var(--interactive) 12%, transparent);
+      color: var(--interactive);
+      margin-bottom: var(--space-2);
+    }
+
+    .result-card-title {
+      font-size: var(--text-base);
+      font-weight: 700;
+      color: var(--interactive);
+      margin: 0 0 4px;
+    }
+
+    .result-card-desc {
+      font-size: var(--text-xs);
+      color: var(--ink-muted);
+      margin: 0;
+      line-height: var(--leading-normal);
+    }
+
+    .highlight {
+      background: color-mix(in srgb, var(--accent) 30%, transparent);
+      color: inherit;
+      font-weight: 700;
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    .directory-groups {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+      gap: var(--space-4);
+    }
+
+    .directory-group {
+      padding: var(--space-4);
+    }
+
+    .directory-heading {
+      font-size: var(--text-base);
+      font-weight: 700;
+      color: var(--ink-strong);
+      margin: 0 0 var(--space-3);
+      border-bottom: 1px solid var(--line);
+      padding-bottom: var(--space-2);
+    }
+
+    .directory-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .directory-link {
+      display: block;
+      padding: var(--space-1) 0;
+      text-decoration: none;
+    }
+
+    .directory-link-title {
+      display: block;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--interactive);
+    }
+
+    .directory-link-desc {
+      display: block;
+      font-size: var(--text-xs);
+      color: var(--ink-muted);
+      margin-top: 2px;
+    }
+  </style>
 
   <script is:inline>
     ;(function () {
       var input = document.getElementById('q')
+      var clearBtn = document.getElementById('q-clear')
+      var wrapper = document.getElementById('results-wrapper')
       var out = document.getElementById('results-list')
       var status = document.getElementById('q-status')
+      var chips = document.querySelectorAll('.suggestion-chip')
+      var filterPills = document.querySelectorAll('.search-filter-pill')
+
       if (!input || !out) return
 
       var index = null
       var loading = false
+      var currentCat = 'all'
+      var lastHits = []
 
-      function load() {
+      function loadIndex() {
         if (index || loading) return Promise.resolve()
         loading = true
-        // Fetched on first keystroke only — costs nothing to open the page.
         return fetch('/search-index.json')
           .then(function (r) { return r.json() })
           .then(function (data) { index = data })
@@ -132,53 +416,105 @@ const groups = [
       }
 
       function norm(s) {
-        return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      }
+
+      function highlight(text, terms) {
+        if (!text || !terms.length) return document.createTextNode(text || '')
+        var frag = document.createDocumentFragment()
+        var regex = new RegExp('(' + terms.map(function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }).join('|') + ')', 'gi')
+        var parts = text.split(regex)
+        parts.forEach(function (part) {
+          if (!part) return
+          if (terms.some(function (t) { return norm(t) === norm(part) })) {
+            var mark = document.createElement('mark')
+            mark.className = 'highlight'
+            mark.textContent = part
+            frag.appendChild(mark)
+          } else {
+            frag.appendChild(document.createTextNode(part))
+          }
+        })
+        return frag
+      }
+
+      function inferCategory(url, title) {
+        var u = url.toLowerCase()
+        if (u.indexOf('/serbisyo') !== -1) return 'serbisyo'
+        if (u.indexOf('/ligtas') !== -1) return 'ligtas'
+        if (u.indexOf('/opisyal') !== -1 || u.indexOf('/transparency') !== -1 || u.indexOf('/proyekto') !== -1) return 'pamamahala'
+        return 'komunidad'
       }
 
       function render(q) {
         var terms = norm(q).split(/\s+/).filter(Boolean)
+        if (clearBtn) clearBtn.hidden = !q
+
         if (!terms.length || !index) {
-          out.hidden = true
+          if (wrapper) wrapper.hidden = true
           out.innerHTML = ''
           if (status) status.textContent = ''
           return
         }
-        var hits = index
+
+        lastHits = index
           .map(function (e) {
-            var hay = norm(e.t + ' ' + e.d + ' ' + e.k)
+            var hay = norm((e.t || '') + ' ' + (e.d || '') + ' ' + (e.k || ''))
             var score = 0
             for (var i = 0; i < terms.length; i++) {
               if (hay.indexOf(terms[i]) === -1) return null
-              if (norm(e.t).indexOf(terms[i]) !== -1) score += 2
+              if (norm(e.t).indexOf(terms[i]) !== -1) score += 3
+              else if (norm(e.d).indexOf(terms[i]) !== -1) score += 2
               else score += 1
             }
-            return { e: e, score: score }
+            var cat = inferCategory(e.u || '', e.t || '')
+            return { e: e, score: score, cat: cat }
           })
           .filter(Boolean)
           .sort(function (a, b) { return b.score - a.score })
-          .slice(0, 12)
+
+        displayResults(terms)
+      }
+
+      function displayResults(terms) {
+        var filtered = lastHits.filter(function (h) {
+          return currentCat === 'all' || h.cat === currentCat
+        })
 
         out.innerHTML = ''
-        hits.forEach(function (h) {
+
+        filtered.forEach(function (h) {
           var li = document.createElement('li')
-          li.style.cssText = 'border-bottom:1px solid var(--line)'
           var a = document.createElement('a')
+          a.className = 'result-card'
           a.href = h.e.u
-          a.style.cssText = 'display:block;padding-block:var(--space-3);min-height:56px'
-          a.textContent = h.e.t
-          var p = document.createElement('span')
-          p.className = 'small muted'
-          p.style.cssText = 'display:block'
-          p.textContent = h.e.d
-          a.appendChild(p)
+
+          var badge = document.createElement('span')
+          badge.className = 'result-card-badge'
+          badge.textContent = h.cat.toUpperCase()
+          a.appendChild(badge)
+
+          var title = document.createElement('h3')
+          title.className = 'result-card-title'
+          title.appendChild(highlight(h.e.t, terms))
+          a.appendChild(title)
+
+          if (h.e.d) {
+            var desc = document.createElement('p')
+            desc.className = 'result-card-desc'
+            desc.appendChild(highlight(h.e.d, terms))
+            a.appendChild(desc)
+          }
+
           li.appendChild(a)
           out.appendChild(li)
         })
-        out.hidden = hits.length === 0
+
+        if (wrapper) wrapper.hidden = false
         if (status) {
-          status.textContent = hits.length
-            ? hits.length + ' resulta'
-            : 'Walang nahanap. Subukan ang listahan sa ibaba.'
+          status.textContent = filtered.length
+            ? filtered.length + ' resulta para sa "' + input.value + '"'
+            : 'Walang nahanap para sa "' + input.value + '". Subukan ang ibang salita.'
         }
       }
 
@@ -187,8 +523,35 @@ const groups = [
         clearTimeout(timer)
         var q = input.value
         timer = setTimeout(function () {
-          load().then(function () { render(q) })
-        }, 150)
+          loadIndex().then(function () { render(q) })
+        }, 120)
+      })
+
+      if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+          input.value = ''
+          input.focus()
+          render('')
+        })
+      }
+
+      chips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          var q = chip.dataset.query
+          input.value = q
+          input.focus()
+          loadIndex().then(function () { render(q) })
+        })
+      })
+
+      filterPills.forEach(function (pill) {
+        pill.addEventListener('click', function () {
+          filterPills.forEach(function (p) { p.classList.remove('is-active') })
+          pill.classList.add('is-active')
+          currentCat = pill.dataset.cat
+          var terms = norm(input.value).split(/\s+/).filter(Boolean)
+          displayResults(terms)
+        })
       })
     })()
   </script>

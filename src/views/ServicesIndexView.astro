@@ -6,6 +6,7 @@
  */
 import Section from '@/components/Section.astro'
 import Placeholder from '@/components/Placeholder.astro'
+import InteractiveServiceCalculator from '@/components/InteractiveServiceCalculator.astro'
 import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 import { SERVICE_DETAILS } from '@/lib/content/active'
 import { isPlaceholder } from '@/lib/content/placeholder'
@@ -71,4 +72,8 @@ const p = prefix(locale)
       ))
     }
   </ul>
+
+  <div style="margin-top:var(--space-5)">
+    <InteractiveServiceCalculator locale={locale} />
+  </div>
 </Section>

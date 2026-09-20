@@ -64,7 +64,7 @@ const { locale } = Astro.props
 
     /* `textContent`, never `innerHTML`. Everything below was typed into the
        admin by a person, and a barangay announcement is not a trusted
-       template — a stored `<script>` would otherwise run on every visitor. */
+       template — a stored script tag would otherwise run on every visitor. */
     function txt(tag, cls, value) {
       var n = document.createElement(tag)
       if (cls) n.className = cls

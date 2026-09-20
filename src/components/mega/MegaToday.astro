@@ -163,10 +163,16 @@ const ACTIONS: readonly MenuLink[] = [
     </li>
   </ul>
 
-  <a class="mega__viewall" href={`${p}/ligtas`}>
-    {fil ? 'Buong ulat' : 'Full report'}
-    <Icon name="chevron-right" size={16} />
-  </a>
+  <div style="display:flex;flex-direction:column;gap:4px">
+    <a class="mega__viewall" href={`${p}/panahon`}>
+      {fil ? 'Live Weather at Windy Map' : 'Live Weather & Windy Map'}
+      <Icon name="chevron-right" size={16} />
+    </a>
+    <a class="mega__viewall" href={`${p}/ligtas`}>
+      {fil ? 'Buong ulat ng kaligtasan' : 'Full safety report'}
+      <Icon name="chevron-right" size={16} />
+    </a>
+  </div>
 </section>
 
 {/* ── Column 2: the boat ─────────────────────────────────────── */}

@@ -1,0 +1,633 @@
+---
+/**
+ * InteractiveServiceCalculator.astro
+ *
+ * Interactive Barangay Document & Fee Calculator for residents of Barangay Tumbod.
+ * Allows residents to select document type, see fee exemptions under RA 11261
+ * (First Time Jobseekers Assistance Act) or Senior/PWD discounts, review what IDs
+ * to bring before riding the boat to the hall, and check off requirements dynamically.
+ */
+import Icon from './Icon.astro'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+
+const SERVICES_CONFIG = [
+  {
+    slug: 'barangay-clearance',
+    nameFil: 'Barangay Clearance',
+    nameEn: 'Barangay Clearance',
+    standardFee: 50,
+    timeFil: '15–20 minuto',
+    timeEn: '15–20 minutes',
+    officialFil: 'Barangay Secretary o Kawani sa Hall',
+    officialEn: 'Barangay Secretary or Hall Officer',
+    descFil: 'Kailangan para sa trabaho, pagbubukas ng bank account, postal ID, o pagkuha ng NBI clearance.',
+    descEn: 'Required for job applications, opening bank accounts, postal IDs, or NBI clearances.',
+    requirementsFil: [
+      { id: 'id', text: 'Valid Government ID (o Voters Certificate / School ID)' },
+      { id: 'residence', text: 'Patunay ng paninirahan sa Purok (hindi bababa sa 6 na buwan)' },
+      { id: 'cedula', text: 'Community Tax Certificate (Cedula) para sa kasalukuyang taon' },
+      { id: 'fee', text: 'Bayad sa clearance (o Oath of Undertaking kung First-Time Jobseeker)' },
+    ],
+    requirementsEn: [
+      { id: 'id', text: 'Valid Government ID (or Voter Certificate / School ID)' },
+      { id: 'residence', text: 'Proof of residence in Purok (at least 6 months)' },
+      { id: 'cedula', text: 'Community Tax Certificate (Cedula) for the current year' },
+      { id: 'fee', text: 'Clearance fee (or Oath of Undertaking if First-Time Jobseeker)' },
+    ],
+  },
+  {
+    slug: 'certificate-of-indigency',
+    nameFil: 'Katunayan ng Kawalan ng Kakayahan (Indigency)',
+    nameEn: 'Certificate of Indigency',
+    standardFee: 0,
+    timeFil: '10–15 minuto',
+    timeEn: '10–15 minutes',
+    officialFil: 'Barangay Captain / Kagawad on Duty',
+    officialEn: 'Barangay Captain / Kagawad on Duty',
+    descFil: 'Para sa medical assistance, educational scholarship, financial aid (DSWD/AICS), o legal aid.',
+    descEn: 'For medical assistance, educational scholarships, financial aid (DSWD/AICS), or legal aid.',
+    requirementsFil: [
+      { id: 'id', text: 'Valid ID o lumang dokumento ng pagkakakilanlan' },
+      { id: 'purpose', text: 'Liham o patunay ng kailangang tulong (Medical abstract, billing, o school assessment)' },
+      { id: 'purok', text: 'Pagpapatotoo ng Purok Leader o kapitbahay' },
+    ],
+    requirementsEn: [
+      { id: 'id', text: 'Valid ID or previous proof of identity' },
+      { id: 'purpose', text: 'Supporting documents for assistance (Medical abstract, hospital bill, or school form)' },
+      { id: 'purok', text: 'Attestation from Purok Leader or neighbour' },
+    ],
+  },
+  {
+    slug: 'certificate-of-residency',
+    nameFil: 'Katunayan ng Paninirahan (Residency)',
+    nameEn: 'Certificate of Residency',
+    standardFee: 50,
+    timeFil: '15 minuto',
+    timeEn: '15 minutes',
+    officialFil: 'Barangay Secretary',
+    officialEn: 'Barangay Secretary',
+    descFil: 'Katunayan na ikaw ay lehitimong residente ng Tuluran Island, Barangay Tumbod.',
+    descEn: 'Proof that you are a bona fide resident of Tuluran Island, Barangay Tumbod.',
+    requirementsFil: [
+      { id: 'id', text: 'Valid ID o anumang patunay ng pagkakakilanlan' },
+      { id: 'proof', text: 'Tala sa Barangay Census o patunay ng tirahan sa Purok' },
+      { id: 'cedula', text: 'Cedula ng kasalukuyang taon' },
+    ],
+    requirementsEn: [
+      { id: 'id', text: 'Valid ID or proof of identity' },
+      { id: 'proof', text: 'Barangay census record or proof of residence in Purok' },
+      { id: 'cedula', text: 'Cedula for current year' },
+    ],
+  },
+  {
+    slug: 'barangay-id',
+    nameFil: 'Barangay ID Card',
+    nameEn: 'Barangay ID Card',
+    standardFee: 100,
+    timeFil: '20 minuto (kasama ang litrato)',
+    timeEn: '20 minutes (with photo capture)',
+    officialFil: 'Barangay Hall Encoder',
+    officialEn: 'Barangay Hall Staff',
+    descFil: 'Opisyal na ID ng barangay para sa mga transaksyon sa munisipyo, bangko, at padala.',
+    descEn: 'Official barangay photo ID for municipal transactions, remittances, and aid.',
+    requirementsFil: [
+      { id: 'birth', text: 'Katunayan ng kapanganakan o Voter’s ID / Certificate' },
+      { id: 'blood', text: 'Impormasyon sa Blood Type at emergency contact person' },
+      { id: 'presence', text: 'Personal na pagpunta sa Hall para sa litrato at pirma' },
+    ],
+    requirementsEn: [
+      { id: 'birth', text: 'Proof of birth or Voter ID / Certificate' },
+      { id: 'blood', text: 'Blood type information and emergency contact person' },
+      { id: 'presence', text: 'Personal appearance at the Hall for photo and digital signature' },
+    ],
+  },
+  {
+    slug: 'business-clearance',
+    nameFil: 'Barangay Business Clearance',
+    nameEn: 'Barangay Business Clearance',
+    standardFee: 200,
+    timeFil: '1–2 araw',
+    timeEn: '1–2 days',
+    officialFil: 'Barangay Treasurer & Committee on Trade',
+    officialEn: 'Barangay Treasurer & Committee on Trade',
+    descFil: 'Para sa sari-sari store, bangka para sa turista, pagawaan, o komersyal na negosyo sa isla.',
+    descEn: 'For sari-sari stores, tourist boats, workshops, or commercial trades on the island.',
+    requirementsFil: [
+      { id: 'dti', text: 'DTI Registration o Katunayan ng Negosyo' },
+      { id: 'contract', text: 'Kontrata ng upa o titulo ng pwesto' },
+      { id: 'cedula', text: 'Cedula ng may-ari ng negosyo' },
+      { id: 'inspect', text: 'Barangay inspection report' },
+    ],
+    requirementsEn: [
+      { id: 'dti', text: 'DTI Registration or proof of business registration' },
+      { id: 'contract', text: 'Lease contract or proof of site ownership' },
+      { id: 'cedula', text: 'Community Tax Certificate (Cedula) of business owner' },
+      { id: 'inspect', text: 'Barangay inspection approval' },
+    ],
+  },
+]
+
+const APPLICANT_TYPES = [
+  { id: 'regular', labelFil: 'Karaniwang Residente', labelEn: 'Regular Resident', waiver: 1 },
+  { id: 'first-time', labelFil: 'Unang Trabaho (RA 11261) · 100% LIBRE', labelEn: 'First-Time Jobseeker (RA 11261) · 100% FREE', waiver: 0 },
+  { id: 'senior-pwd', labelFil: 'Senior Citizen / PWD · 20% Diskwento', labelEn: 'Senior Citizen / PWD · 20% Discount', waiver: 0.8 },
+  { id: 'student', labelFil: 'Estudyante / Para sa Paaralan · LIBRE', labelEn: 'Student / Educational · FREE', waiver: 0 },
+]
+
+const firstService = SERVICES_CONFIG[0]!
+---
+
+<div class="service-calc" id="service-calc" data-reveal="pending">
+  <div class="service-calc__header">
+    <div class="service-calc__icon-wrap" aria-hidden="true">
+      <Icon name="document" size={26} />
+    </div>
+    <div>
+      <h3 class="service-calc__title">
+        {fil ? 'Interactive na Gabay at Kalkulador ng Dokumento' : 'Interactive Document & Fee Calculator'}
+      </h3>
+      <p class="service-calc__subtitle">
+        {
+          fil
+            ? 'Piliin ang kailangang serbisyo upang malaman ang bayad, mga diskwento sa batas, at kailangang dalhin bago pumunta sa hall.'
+            : 'Select a service to check official fees, legal waivers under RA 11261, and what to bring before your crossing.'
+        }
+      </p>
+    </div>
+  </div>
+
+  <div class="service-calc__body">
+    {/* Step 1: Controls */}
+    <div class="service-calc__inputs">
+      <div class="service-calc__field">
+        <label for="calc-service-select" class="service-calc__label">
+          <Icon name="document" size={16} />
+          {fil ? 'Anong dokumento ang kailangan mo?' : 'Which document do you need?'}
+        </label>
+        <select id="calc-service-select" class="service-calc__select">
+          {SERVICES_CONFIG.map((s, idx) => (
+            <option value={s.slug} selected={idx === 0}>
+              {fil ? s.nameFil : s.nameEn}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div class="service-calc__field">
+        <label for="calc-applicant-select" class="service-calc__label">
+          <Icon name="check" size={16} />
+          {fil ? 'Katayuan ng Aplikante (Diskwento o Libre):' : 'Applicant Status (Discounts & Waivers):'}
+        </label>
+        <select id="calc-applicant-select" class="service-calc__select">
+          {APPLICANT_TYPES.map((a, idx) => (
+            <option value={a.id} selected={idx === 0}>
+              {fil ? a.labelFil : a.labelEn}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div class="service-calc__ra-note" id="calc-ra-note" hidden>
+        <Icon name="info" size={16} />
+        <span>
+          {
+            fil
+              ? 'RA 11261 (First Time Jobseekers Assistance Act): Libre ang unang kopya ng Barangay Clearance at iba pang sertipiko kapag maghahanap ng trabaho.'
+              : 'RA 11261: First copy of Barangay Clearance and basic certifications are 100% free when seeking first-time employment.'
+          }
+        </span>
+      </div>
+    </div>
+
+    {/* Step 2: Live Summary Box */}
+    <div class="service-calc__summary">
+      <div class="service-calc__bill-box">
+        <div class="service-calc__fee-row">
+          <span class="service-calc__fee-label">{fil ? 'Kalkuladong Bayad:' : 'Computed Fee:'}</span>
+          <span class="service-calc__fee-val figure" id="calc-fee-val">₱50.00</span>
+        </div>
+        <div class="service-calc__time-row">
+          <span class="service-calc__subtext">
+            <Icon name="clock" size={14} />
+            <span id="calc-time-val">{fil ? firstService.timeFil : firstService.timeEn}</span>
+          </span>
+          <span class="service-calc__subtext">
+            <Icon name="pin" size={14} />
+            <span id="calc-official-val">{fil ? firstService.officialFil : firstService.officialEn}</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Checklist of requirements */}
+      <div class="service-calc__reqs">
+        <div class="service-calc__reqs-head">
+          <h4 class="service-calc__reqs-title">
+            <Icon name="checklist" size={16} />
+            {fil ? 'Listahan ng Kailangang Dalhin:' : 'Requirements Checklist:'}
+          </h4>
+          <span class="service-calc__progress-badge" id="calc-progress-badge">0 / 4</span>
+        </div>
+
+        <ul class="service-calc__req-list" id="calc-req-list">
+          {/* Populated dynamically */}
+        </ul>
+      </div>
+
+      <div class="service-calc__actions">
+        <button type="button" class="btn btn--secondary btn--sm" id="calc-copy-btn">
+          <Icon name="copy" size={16} />
+          <span id="calc-copy-text">{fil ? 'Kopyahin ang Listahan' : 'Copy Checklist'}</span>
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm no-print" id="calc-print-btn">
+          <Icon name="print" size={16} />
+          <span>{fil ? 'I-print ang Slip' : 'Print Slip'}</span>
+        </button>
+      </div>
+      <p id="calc-toast" role="status" class="service-calc__toast" hidden></p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .service-calc {
+    background: var(--surface-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-block: var(--space-5);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .service-calc__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--space-3);
+  }
+
+  .service-calc__icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--interactive) 12%, transparent);
+    color: var(--interactive);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .service-calc__title {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--ink-strong);
+    margin: 0;
+  }
+
+  .service-calc__subtitle {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    margin: 2px 0 0;
+  }
+
+  .service-calc__body {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  @media (min-width: 768px) {
+    .service-calc__body {
+      grid-template-columns: 1fr 1.2fr;
+      align-items: start;
+    }
+  }
+
+  .service-calc__inputs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .service-calc__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .service-calc__label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .service-calc__select {
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .service-calc__select:focus-visible {
+    outline: 2px solid var(--interactive);
+    border-color: var(--interactive);
+  }
+
+  .service-calc__ra-note {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--status-open) 10%, transparent);
+    color: var(--status-open-ink);
+    border: 1px solid color-mix(in srgb, var(--status-open) 25%, transparent);
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
+  }
+
+  .service-calc__summary {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .service-calc__bill-box {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--space-3);
+  }
+
+  .service-calc__fee-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: var(--space-2);
+  }
+
+  .service-calc__fee-label {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+
+  .service-calc__fee-val {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    color: var(--interactive);
+  }
+
+  .service-calc__time-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+
+  .service-calc__subtext {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .service-calc__reqs-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2);
+  }
+
+  .service-calc__reqs-title {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--ink-strong);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+  }
+
+  .service-calc__progress-badge {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--interactive) 15%, transparent);
+    color: var(--interactive);
+  }
+
+  .service-calc__req-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .service-calc__req-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--dur-fast);
+  }
+
+  .service-calc__req-item:hover {
+    background: color-mix(in srgb, var(--interactive) 4%, transparent);
+  }
+
+  .service-calc__req-checkbox {
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    accent-color: var(--interactive);
+    flex-shrink: 0;
+  }
+
+  .service-calc__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
+  .service-calc__toast {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--status-open-ink);
+    margin: 0;
+  }
+</style>
+
+<script is:inline define:vars={{ config: SERVICES_CONFIG, applicantTypes: APPLICANT_TYPES, fil }}>
+  ;(function () {
+    var serviceSelect = document.getElementById('calc-service-select')
+    var applicantSelect = document.getElementById('calc-applicant-select')
+    var raNote = document.getElementById('calc-ra-note')
+    var feeVal = document.getElementById('calc-fee-val')
+    var timeVal = document.getElementById('calc-time-val')
+    var officialVal = document.getElementById('calc-official-val')
+    var reqList = document.getElementById('calc-req-list')
+    var progressBadge = document.getElementById('calc-progress-badge')
+    var copyBtn = document.getElementById('calc-copy-btn')
+    var printBtn = document.getElementById('calc-print-btn')
+    var toast = document.getElementById('calc-toast')
+
+    if (!serviceSelect || !applicantSelect) return
+
+    function render() {
+      var serviceSlug = serviceSelect.value
+      var applicantId = applicantSelect.value
+
+      var s = config.find(function (item) { return item.slug === serviceSlug }) || config[0]
+      var a = applicantTypes.find(function (item) { return item.id === applicantId }) || applicantTypes[0]
+
+      // Calculate fee
+      var fee = s.standardFee * a.waiver
+      if (s.standardFee === 0 || fee === 0) {
+        if (feeVal) feeVal.textContent = fil ? 'LIBRE (₱0.00)' : 'FREE (₱0.00)'
+      } else {
+        if (feeVal) feeVal.textContent = '₱' + fee.toFixed(2)
+      }
+
+      if (raNote) {
+        raNote.hidden = a.id !== 'first-time'
+      }
+
+      if (timeVal) timeVal.textContent = fil ? s.timeFil : s.timeEn
+      if (officialVal) officialVal.textContent = fil ? s.officialFil : s.officialEn
+
+      // Build requirement list
+      var reqs = fil ? s.requirementsFil : s.requirementsEn
+      if (reqList) {
+        reqList.innerHTML = ''
+        var savedChecked = {}
+        try {
+          savedChecked = JSON.parse(localStorage.getItem('tumbod:calc:' + serviceSlug) || '{}')
+        } catch (e) {}
+
+        reqs.forEach(function (r) {
+          var li = document.createElement('li')
+          var label = document.createElement('label')
+          label.className = 'service-calc__req-item'
+
+          var cb = document.createElement('input')
+          cb.type = 'checkbox'
+          cb.className = 'service-calc__req-checkbox'
+          cb.dataset.reqId = r.id
+          if (savedChecked[r.id]) cb.checked = true
+
+          cb.addEventListener('change', function () {
+            updateProgress()
+            persistTicks()
+          })
+
+          var span = document.createElement('span')
+          span.textContent = r.text
+
+          label.appendChild(cb)
+          label.appendChild(span)
+          li.appendChild(label)
+          reqList.appendChild(li)
+        })
+
+        updateProgress()
+      }
+    }
+
+    function updateProgress() {
+      if (!reqList || !progressBadge) return
+      var boxes = reqList.querySelectorAll('.service-calc__req-checkbox')
+      var checked = reqList.querySelectorAll('.service-calc__req-checkbox:checked')
+      progressBadge.textContent = checked.length + ' / ' + boxes.length
+      if (checked.length === boxes.length && boxes.length > 0) {
+        progressBadge.style.backgroundColor = 'color-mix(in srgb, var(--status-open) 20%, transparent)'
+        progressBadge.style.color = 'var(--status-open-ink)'
+      } else {
+        progressBadge.style.backgroundColor = 'color-mix(in srgb, var(--interactive) 15%, transparent)'
+        progressBadge.style.color = 'var(--interactive)'
+      }
+    }
+
+    function persistTicks() {
+      if (!reqList) return
+      var serviceSlug = serviceSelect.value
+      var state = {}
+      reqList.querySelectorAll('.service-calc__req-checkbox').forEach(function (cb) {
+        state[cb.dataset.reqId] = cb.checked
+      })
+      try {
+        localStorage.setItem('tumbod:calc:' + serviceSlug, JSON.stringify(state))
+      } catch (e) {}
+    }
+
+    serviceSelect.addEventListener('change', render)
+    applicantSelect.addEventListener('change', render)
+    render()
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        var s = config.find(function (item) { return item.slug === serviceSelect.value }) || config[0]
+        var reqs = fil ? s.requirementsFil : s.requirementsEn
+        var lines = [
+          '📋 Barangay Tumbod - ' + (fil ? s.nameFil : s.nameEn),
+          'Bayad: ' + (feeVal ? feeVal.textContent : '₱50.00'),
+          'Oras ng Pagproseso: ' + (fil ? s.timeFil : s.timeEn),
+          'Lalapitan: ' + (fil ? s.officialFil : s.officialEn),
+          '',
+          'Mga kailangang dalhin:'
+        ]
+        reqs.forEach(function (r) {
+          lines.push(' [ ] ' + r.text)
+        })
+        lines.push('')
+        lines.push('Barangay Tumbod Hall, Pulo ng Tuluran, Taytay, Palawan')
+
+        navigator.clipboard.writeText(lines.join('\n')).then(function () {
+          if (toast) {
+            toast.hidden = false
+            toast.textContent = fil ? '✓ Nakopya ang checklist sa clipboard!' : '✓ Requirements copied to clipboard!'
+            setTimeout(function () { toast.hidden = true }, 3000)
+          }
+        })
+      })
+    }
+
+    if (printBtn) {
+      printBtn.addEventListener('click', function () {
+        window.print()
+      })
+    }
+  })()
+</script>

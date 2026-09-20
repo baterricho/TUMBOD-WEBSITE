@@ -1,0 +1,929 @@
+---
+/**
+ * WeatherMap.astro
+ *
+ * Interactive Weather & Wind Map for Barangay Tumbod / Tuluran Island.
+ * "Like the Windy Map" — displays wind streamlines, wave heights, and weather conditions.
+ * Features:
+ *   1. Embedded Windy.com Interactive Player with dynamic layer switching (Wind, Waves, Rain, Gusts, Temp);
+ *   2. High-speed local Canvas Marine Chart with real-time animated wind streamline particles and crossing waypoints;
+ *   3. Toggleable fullscreen view and nautical channel route inspection.
+ */
+import Icon from './Icon.astro'
+import type { Locale } from '@/lib/i18n'
+import { TUMBOD_COORDS } from '@/lib/weather'
+
+interface Props {
+  locale: Locale
+  initialWindSpeed?: number
+  initialWindDir?: number
+  initialWaveHeight?: number
+}
+
+const {
+  locale,
+  initialWindSpeed = 14,
+  initialWindDir = 65,
+  initialWaveHeight = 0.6,
+} = Astro.props
+
+const fil = locale === 'fil'
+const lat = TUMBOD_COORDS.lat
+const lon = TUMBOD_COORDS.lon
+
+const LAYERS = [
+  { id: 'wind', labelFil: 'Hangin (Wind Streamlines)', labelEn: 'Wind Streamlines', icon: 'wind' },
+  { id: 'waves', labelFil: 'Alon at Swell (Waves)', labelEn: 'Waves & Swell', icon: 'bangka' },
+  { id: 'rain', labelFil: 'Ulan at Radar (Rain)', labelEn: 'Rain & Radar', icon: 'droplet' },
+  { id: 'gust', labelFil: 'Bugso (Wind Gusts)', labelEn: 'Wind Gusts', icon: 'wind' },
+  { id: 'temp', labelFil: 'Temperatura (Temp)', labelEn: 'Temperature', icon: 'sun' },
+  { id: 'clouds', labelFil: 'Ulap at Satelayt (Satellite)', labelEn: 'Clouds & Satellite', icon: 'cloud' },
+] as const
+---
+
+<div class="weather-map-wrapper" id="weather-map-section" data-reveal="pending">
+  {/* Controls Header */}
+  <div class="weather-map__header">
+    <div class="weather-map__title-group">
+      <div class="weather-map__badge">
+        <Icon name="compass" size={16} />
+        <span>{fil ? 'Interaktibong Mapa ng Panahon at Hangin' : 'Interactive Wind & Weather Map'}</span>
+      </div>
+      <h3 class="weather-map__heading">
+        {fil ? 'Daloy ng Hangin at Alon sa Paligid ng Tuluran' : 'Wind Streamlines & Sea State Around Tuluran Island'}
+      </h3>
+      <p class="small muted">
+        {fil
+          ? 'Tingnan ang direksyon at bilis ng hangin, bugso, at laki ng alon sa Kipot ng Tuluran at Dagat ng Taytay tulad ng Windy Map:'
+          : 'Inspect live wind flow directions, velocities, gusts, and wave conditions across Tuluran Strait and Taytay Bay:'}
+      </p>
+    </div>
+
+    {/* Mode Selector (Windy Radar vs Local Marine Vector Canvas) */}
+    <div class="weather-map__mode-tabs" role="tablist" aria-label={fil ? 'Uri ng Mapa' : 'Map Type'}>
+      <button
+        type="button"
+        class="map-tab-btn map-tab-btn--active"
+        id="tab-windy"
+        role="tab"
+        aria-selected="true"
+        aria-controls="panel-windy"
+      >
+        <Icon name="wind" size={14} />
+        <span>{fil ? 'Windy Live Radar' : 'Windy Live Radar'}</span>
+      </button>
+      <button
+        type="button"
+        class="map-tab-btn"
+        id="tab-canvas"
+        role="tab"
+        aria-selected="false"
+        aria-controls="panel-canvas"
+      >
+        <Icon name="bangka" size={14} />
+        <span>{fil ? 'Lokal na Tsart ng Bangka' : 'Local Nautical Chart'}</span>
+      </button>
+    </div>
+  </div>
+
+  {/* Layer Pills for Windy Embed */}
+  <div class="weather-map__layers-bar" id="windy-layers-bar">
+    <span class="weather-map__layers-label">{fil ? 'Patong ng Datos:' : 'Condition Layer:'}</span>
+    <div class="weather-map__layer-pills">
+      {LAYERS.map((layer, idx) => (
+        <button
+          type="button"
+          class={`layer-pill ${idx === 0 ? 'layer-pill--active' : ''}`}
+          data-layer={layer.id}
+          aria-pressed={idx === 0 ? 'true' : 'false'}
+        >
+          <Icon name={layer.icon as any} size={14} />
+          <span>{fil ? layer.labelFil : layer.labelEn}</span>
+        </button>
+      ))}
+    </div>
+    <button
+      type="button"
+      class="map-fullscreen-btn"
+      id="map-fullscreen-toggle"
+      title={fil ? 'Palakihin ang mapa' : 'Fullscreen toggle'}
+    >
+      <Icon name="maximize" size={16} />
+      <span class="sr-only">{fil ? 'Palakihin' : 'Fullscreen'}</span>
+    </button>
+  </div>
+
+  {/* Container for Maps */}
+  <div class="weather-map__stage" id="weather-map-stage">
+    {/* Panel 1: Windy.com Interactive Embed */}
+    <div class="weather-map__panel weather-map__panel--active" id="panel-windy" role="tabpanel">
+      <iframe
+        id="windy-iframe"
+        title={fil ? 'Windy Interactive Weather Map para sa Tuluran Island' : 'Windy Interactive Weather Map for Tuluran Island'}
+        src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=10&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&pressure=true`}
+        class="windy-frame"
+        loading="lazy"
+        allowfullscreen
+      ></iframe>
+      <div class="windy-attribution">
+        <span class="small muted">
+          {fil ? 'Datos at Modelo ng Hangin: ECMWF / GFS sa pamamagitan ng Windy.com · Naka-sentro sa Pulo ng Tuluran' : 'Wind model and streamlines provided by ECMWF / GFS via Windy.com · Centered on Tuluran Island'}
+        </span>
+      </div>
+    </div>
+
+    {/* Panel 2: Local High-Speed Canvas Marine Chart with Animated Wind Streamlines */}
+    <div class="weather-map__panel" id="panel-canvas" role="tabpanel" hidden>
+      <div class="canvas-map-container" id="canvas-container">
+        <canvas id="marine-wind-canvas" class="marine-canvas"></canvas>
+
+        {/* Floating Waypoint Info Drawer */}
+        <div class="marine-waypoint-card" id="marine-waypoint-info">
+          <div class="marine-waypoint-card__head">
+            <span class="marine-waypoint-card__title" id="waypoint-title">{fil ? 'Kipot ng Tuluran (Tuluran Strait)' : 'Tuluran Strait Crossing'}</span>
+            <span class="marine-waypoint-card__badge" id="waypoint-badge">{fil ? 'Ligtas Tumawid' : 'Safe Crossing'}</span>
+          </div>
+          <p class="marine-waypoint-card__desc" id="waypoint-desc">
+            {fil
+              ? 'Pangunahing ruta ng bangka patungong Taytay Mainland Pantalan (~3.2 km, 20-30 minuto).'
+              : 'Primary boat corridor to mainland Taytay Port (~3.2 km, 20-30 min passage).'}
+          </p>
+          <div class="marine-waypoint-card__stats">
+            <div>
+              <span class="small muted">{fil ? 'Taas ng Alon' : 'Wave Height'}</span>
+              <strong id="waypoint-wave">{initialWaveHeight} m</strong>
+            </div>
+            <div>
+              <span class="small muted">{fil ? 'Hangin' : 'Wind'}</span>
+              <strong id="waypoint-wind">{initialWindSpeed} kph</strong>
+            </div>
+            <div>
+              <span class="small muted">{fil ? 'Rekomendasyon' : 'Advisory'}</span>
+              <strong id="waypoint-rec">{fil ? 'Bukas sa Lahat ng Bangka' : 'Open for All Vessels'}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Canvas Map Controls */}
+        <div class="canvas-controls">
+          <button type="button" class="canvas-ctrl-btn" id="canvas-btn-tumbod" title={fil ? 'I-focus sa Tumbod Pier' : 'Focus Tumbod Pier'}>
+            Pantalan
+          </button>
+          <button type="button" class="canvas-ctrl-btn" id="canvas-btn-strait" title={fil ? 'I-focus sa Kipot' : 'Focus Strait'}>
+            Kipot
+          </button>
+          <button type="button" class="canvas-ctrl-btn" id="canvas-btn-mainland" title={fil ? 'I-focus sa Taytay Mainland' : 'Focus Mainland'}>
+            Taytay
+          </button>
+        </div>
+
+        {/* Legend */}
+        <div class="canvas-legend">
+          <div class="canvas-legend__row">
+            <span class="particle-sample"></span>
+            <span>{fil ? 'Daloy ng Hangin (Streamlines)' : 'Wind Streamlines'}</span>
+          </div>
+          <div class="canvas-legend__row">
+            <span class="corridor-sample"></span>
+            <span>{fil ? 'Ruta ng Bangka' : 'Boat Corridors'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Guide to Reading the Wind Map */}
+  <div class="weather-map__guide">
+    <div class="guide-item">
+      <div class="guide-item__icon">
+        <Icon name="wind" size={20} />
+      </div>
+      <div>
+        <strong>{fil ? 'Paano Basahin ang Streamlines' : 'Reading Wind Streamlines'}</strong>
+        <p class="small muted">
+          {fil
+            ? 'Ang mga gumagalaw na linya ay nagpapakita kung saan papunta ang hangin. Kung mas mabilis at mas makapal ang mga linya, mas malakas ang hangin sa kipot.'
+            : 'Moving streamlines trace the path of the wind. Denser, faster particles indicate stronger gusts and chop across the strait.'}
+        </p>
+      </div>
+    </div>
+
+    <div class="guide-item">
+      <div class="guide-item__icon">
+        <Icon name="bangka" size={20} />
+      </div>
+      <div>
+        <strong>{fil ? 'Kaligtasan ng Katig sa Alon' : 'Outrigger Vessel Safety'}</strong>
+        <p class="small muted">
+          {fil
+            ? 'Kapag lumampas sa 1.3 m ang alon o higit sa 25 km/h ang hangin, delikado para sa maliliit na bangkang pangisda ang bukas na dagat papuntang Casian o Shark Fin Bay.'
+            : 'When wave heights exceed 1.3 m or wind exceeds 25 km/h, small fishing bancas should avoid open sea crossings toward Casian or Shark Fin Bay.'}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.weather-map-wrapper {
+  background: var(--palette-slate-900);
+  border: 1px solid var(--palette-slate-800);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  color: var(--palette-slate-100);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  margin-block: var(--space-4);
+}
+
+.weather-map__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.weather-map__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--palette-sea-400);
+  margin-bottom: 4px;
+}
+
+.weather-map__heading {
+  margin: 0 0 6px;
+  font-size: var(--text-xl);
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.weather-map__mode-tabs {
+  display: flex;
+  background: var(--palette-slate-800);
+  padding: 4px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--palette-slate-700);
+}
+
+.map-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  background: transparent;
+  color: var(--palette-slate-300);
+  border: none;
+  cursor: pointer;
+  transition: all var(--dur-fast);
+}
+
+.map-tab-btn--active {
+  background: var(--palette-sea-500);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Layer Pills */
+.weather-map__layers-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--palette-slate-800);
+}
+
+.weather-map__layers-label {
+  font-size: var(--text-xs);
+  color: var(--palette-slate-400);
+  font-weight: 600;
+}
+
+.weather-map__layer-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.layer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  background: var(--palette-slate-800);
+  color: var(--palette-slate-300);
+  border: 1px solid var(--palette-slate-700);
+  cursor: pointer;
+  transition: all var(--dur-fast);
+}
+
+.layer-pill:hover {
+  background: var(--palette-slate-700);
+  color: #ffffff;
+}
+
+.layer-pill--active {
+  background: var(--palette-slate-700);
+  color: var(--palette-sea-300);
+  border-color: var(--palette-sea-400);
+}
+
+.map-fullscreen-btn {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--palette-slate-800);
+  color: var(--palette-slate-300);
+  border: 1px solid var(--palette-slate-700);
+  cursor: pointer;
+  transition: all var(--dur-fast);
+}
+
+.map-fullscreen-btn:hover {
+  background: var(--palette-slate-700);
+  color: #ffffff;
+}
+
+/* Stage & Map container */
+.weather-map__stage {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--palette-slate-700);
+  background: #09131f;
+}
+
+.weather-map__panel {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: none;
+}
+
+.weather-map__panel--active {
+  display: block;
+}
+
+.windy-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.windy-attribution {
+  position: absolute;
+  bottom: 6px;
+  left: 10px;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+/* Canvas nautical chart */
+.canvas-map-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: #0c1a2d;
+}
+
+.marine-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+.marine-waypoint-card {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  max-width: 340px;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--palette-slate-700);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  z-index: 15;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.marine-waypoint-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.marine-waypoint-card__title {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.marine-waypoint-card__badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--palette-sea-400);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  text-transform: uppercase;
+}
+
+.marine-waypoint-card__desc {
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: var(--palette-slate-300);
+  line-height: 1.4;
+}
+
+.marine-waypoint-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--palette-slate-700);
+  font-size: 11px;
+}
+
+.canvas-controls {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  gap: 6px;
+  z-index: 15;
+}
+
+.canvas-ctrl-btn {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  color: var(--palette-slate-200);
+  border: 1px solid var(--palette-slate-700);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--dur-fast);
+}
+
+.canvas-ctrl-btn:hover {
+  background: var(--palette-slate-700);
+  color: #ffffff;
+}
+
+.canvas-legend {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--palette-slate-700);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--palette-slate-300);
+  z-index: 15;
+}
+
+.canvas-legend__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.particle-sample {
+  width: 14px;
+  height: 2px;
+  background: var(--palette-sea-400);
+  border-radius: 1px;
+}
+
+.corridor-sample {
+  width: 14px;
+  height: 2px;
+  border-bottom: 2px dashed #fbbf24;
+}
+
+/* Fullscreen mode */
+.weather-map-wrapper.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  border-radius: 0;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+.weather-map-wrapper.is-fullscreen .weather-map__stage {
+  flex: 1;
+  height: auto;
+}
+
+/* Guide items */
+.weather-map__guide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--palette-slate-800);
+}
+
+.guide-item {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.guide-item__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--palette-slate-800);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--palette-sea-400);
+  flex-shrink: 0;
+}
+
+.guide-item strong {
+  display: block;
+  font-size: var(--text-xs);
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+</style>
+
+<script is:inline define:vars={{ lat, lon, initialWindSpeed, initialWindDir, fil }}>
+;(function() {
+  var tabWindy = document.getElementById('tab-windy')
+  var tabCanvas = document.getElementById('tab-canvas')
+  var panelWindy = document.getElementById('panel-windy')
+  var panelCanvas = document.getElementById('panel-canvas')
+  var layersBar = document.getElementById('windy-layers-bar')
+  var iframe = document.getElementById('windy-iframe')
+  var fsBtn = document.getElementById('map-fullscreen-toggle')
+  var mapWrap = document.getElementById('weather-map-section')
+
+  var currentLayer = 'wind'
+
+  // Tab switching
+  if (tabWindy && tabCanvas && panelWindy && panelCanvas) {
+    tabWindy.addEventListener('click', function() {
+      tabWindy.classList.add('map-tab-btn--active')
+      tabWindy.setAttribute('aria-selected', 'true')
+      tabCanvas.classList.remove('map-tab-btn--active')
+      tabCanvas.setAttribute('aria-selected', 'false')
+
+      panelWindy.classList.add('weather-map__panel--active')
+      panelWindy.hidden = false
+      panelCanvas.classList.remove('weather-map__panel--active')
+      panelCanvas.hidden = true
+      if (layersBar) layersBar.style.display = 'flex'
+    })
+
+    tabCanvas.addEventListener('click', function() {
+      tabCanvas.classList.add('map-tab-btn--active')
+      tabCanvas.setAttribute('aria-selected', 'true')
+      tabWindy.classList.remove('map-tab-btn--active')
+      tabWindy.setAttribute('aria-selected', 'false')
+
+      panelCanvas.classList.add('weather-map__panel--active')
+      panelCanvas.hidden = false
+      panelWindy.classList.remove('weather-map__panel--active')
+      panelWindy.hidden = true
+
+      initCanvasMap()
+    })
+  }
+
+  // Dynamic Windy Layer Switching
+  var layerPills = document.querySelectorAll('.layer-pill')
+  layerPills.forEach(function(pill) {
+    pill.addEventListener('click', function() {
+      layerPills.forEach(function(p) {
+        p.classList.remove('layer-pill--active')
+        p.setAttribute('aria-pressed', 'false')
+      })
+      pill.classList.add('layer-pill--active')
+      pill.setAttribute('aria-pressed', 'true')
+
+      currentLayer = pill.getAttribute('data-layer') || 'wind'
+      if (iframe) {
+        iframe.src = 'https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=10&overlay=' + currentLayer + '&product=ecmwf&level=surface&lat=' + lat + '&lon=' + lon + '&detailLat=' + lat + '&detailLon=' + lon + '&marker=true&pressure=true'
+      }
+    })
+  })
+
+  // Fullscreen toggle
+  if (fsBtn && mapWrap) {
+    fsBtn.addEventListener('click', function() {
+      mapWrap.classList.toggle('is-fullscreen')
+      if (document.body) {
+        document.body.style.overflow = mapWrap.classList.contains('is-fullscreen') ? 'hidden' : ''
+      }
+    })
+  }
+
+  // Local Nautical Canvas Streamline Particle Map
+  var canvasInitialized = false
+  function initCanvasMap() {
+    if (canvasInitialized) return
+    canvasInitialized = true
+
+    var canvas = document.getElementById('marine-wind-canvas')
+    var container = document.getElementById('canvas-container')
+    if (!canvas || !container) return
+
+    var ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    var width = (canvas.width = container.clientWidth)
+    var height = (canvas.height = container.clientHeight)
+
+    window.addEventListener('resize', function() {
+      width = canvas.width = container.clientWidth
+      height = canvas.height = container.clientHeight
+    })
+
+    // Nautical Waypoints (Relative percentages on map)
+    var waypoints = [
+      {
+        id: 'tumbod',
+        nameFil: 'Pantalan ng Tumbod (Pier)',
+        nameEn: 'Tumbod Pier',
+        x: 0.52,
+        y: 0.44,
+        descFil: 'Pangunahing daungan sa Pulo ng Tuluran. May protektadong anchorage sa loob ng look.',
+        descEn: 'Primary harbor on Tuluran Island with protected anchorage inside the cove.',
+        wave: '0.4 m',
+        wind: initialWindSpeed + ' kph',
+        statusFil: 'Ligtas na Daungan',
+        statusEn: 'Safe Harbor',
+      },
+      {
+        id: 'strait',
+        nameFil: 'Kipot ng Tuluran (Tuluran Strait)',
+        nameEn: 'Tuluran Strait Channel',
+        x: 0.43,
+        y: 0.54,
+        descFil: 'Bukas na lagusan ng bangka patungong Taytay. Dito kadalasang sumasalubong ang alon.',
+        descEn: 'Open boat passage to mainland Taytay. Vulnerable to cross-channel wind chop.',
+        wave: '0.8 m',
+        wind: (initialWindSpeed + 4) + ' kph',
+        statusFil: 'Bantayan ang Alon',
+        statusEn: 'Watch Swells',
+      },
+      {
+        id: 'mainland',
+        nameFil: 'Taytay Poblacion Port (Mainland)',
+        nameEn: 'Taytay Mainland Port',
+        x: 0.28,
+        y: 0.72,
+        descFil: 'Pangunahing pantalan sa mainland para sa pamilihan, ospital, at transportasyon.',
+        descEn: 'Mainland port serving markets, municipal hospital, and overland transport.',
+        wave: '0.5 m',
+        wind: initialWindSpeed + ' kph',
+        statusFil: 'Bukas ang Pantalan',
+        statusEn: 'Port Open',
+      },
+      {
+        id: 'biton',
+        nameFil: 'Look ng Biton (Biton Cove)',
+        nameEn: 'Biton Cove',
+        x: 0.62,
+        y: 0.35,
+        descFil: 'Kanlungan ng mga bangkang pangisda kapag malakas ang Amihan mula sa hilagang-silangan.',
+        descEn: 'Safe refuge inlet for fishing outriggers during strong northeast Amihan winds.',
+        wave: '0.3 m',
+        wind: (initialWindSpeed - 3) + ' kph',
+        statusFil: 'Tahimik na Look',
+        statusEn: 'Calm Cove',
+      },
+      {
+        id: 'casian',
+        nameFil: 'Lagusang Casian Island',
+        nameEn: 'Casian Island Passage',
+        x: 0.75,
+        y: 0.22,
+        descFil: 'Malawak na dagat patungong Casian. Bawal sa maliliit na bangka kapag maalon.',
+        descEn: 'Open deep-water strait to Casian. Restricted for small boats during high swells.',
+        wave: '1.2 m',
+        wind: (initialWindSpeed + 6) + ' kph',
+        statusFil: 'May Pag-iingat',
+        statusEn: 'Caution',
+      },
+    ]
+
+    var selectedWaypoint = waypoints[1]
+
+    function updateWaypointCard(wp) {
+      selectedWaypoint = wp
+      var titleEl = document.getElementById('waypoint-title')
+      var badgeEl = document.getElementById('waypoint-badge')
+      var descEl = document.getElementById('waypoint-desc')
+      var waveEl = document.getElementById('waypoint-wave')
+      var windEl = document.getElementById('waypoint-wind')
+      var recEl = document.getElementById('waypoint-rec')
+
+      if (titleEl) titleEl.textContent = fil ? wp.nameFil : wp.nameEn
+      if (badgeEl) badgeEl.textContent = fil ? wp.statusFil : wp.statusEn
+      if (descEl) descEl.textContent = fil ? wp.descFil : wp.descEn
+      if (waveEl) waveEl.textContent = wp.wave
+      if (windEl) windEl.textContent = wp.wind
+      if (recEl) recEl.textContent = fil ? wp.statusFil : wp.statusEn
+    }
+
+    // Connect waypoint buttons
+    var btnTumbod = document.getElementById('canvas-btn-tumbod')
+    var btnStrait = document.getElementById('canvas-btn-strait')
+    var btnMainland = document.getElementById('canvas-btn-mainland')
+    if (btnTumbod && waypoints[0]) btnTumbod.addEventListener('click', function() { updateWaypointCard(waypoints[0]) })
+    if (btnStrait && waypoints[1]) btnStrait.addEventListener('click', function() { updateWaypointCard(waypoints[1]) })
+    if (btnMainland && waypoints[2]) btnMainland.addEventListener('click', function() { updateWaypointCard(waypoints[2]) })
+
+    // Streamline particle engine
+    var PARTICLE_COUNT = 90
+    var particles = []
+    var rad = (initialWindDir * Math.PI) / 180
+    var vx = Math.cos(rad) * 1.5
+    var vy = Math.sin(rad) * 1.5
+
+    for (var i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        speed: 0.8 + Math.random() * 1.6,
+        length: 12 + Math.random() * 20,
+        opacity: 0.15 + Math.random() * 0.55,
+      })
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, width, height)
+
+      // Ocean background gradient
+      var oceanGrad = ctx.createLinearGradient(0, 0, width, height)
+      oceanGrad.addColorStop(0, '#0a1727')
+      oceanGrad.addColorStop(1, '#0e233d')
+      ctx.fillStyle = oceanGrad
+      ctx.fillRect(0, 0, width, height)
+
+      // Bathymetric depth contours
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.arc(width * 0.52, height * 0.44, width * 0.35, 0, Math.PI * 2)
+      ctx.arc(width * 0.52, height * 0.44, width * 0.22, 0, Math.PI * 2)
+      ctx.arc(width * 0.52, height * 0.44, width * 0.12, 0, Math.PI * 2)
+      ctx.stroke()
+
+      // Boat corridors (dashed yellow lines)
+      ctx.save()
+      ctx.strokeStyle = '#f59e0b'
+      ctx.setLineDash([6, 6])
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      // Tumbod to Mainland
+      ctx.moveTo(width * 0.52, height * 0.44)
+      ctx.lineTo(width * 0.43, height * 0.54)
+      ctx.lineTo(width * 0.28, height * 0.72)
+      // Tumbod to Casian
+      ctx.moveTo(width * 0.52, height * 0.44)
+      ctx.lineTo(width * 0.75, height * 0.22)
+      ctx.stroke()
+      ctx.restore()
+
+      // Tuluran Island Silhouette
+      ctx.fillStyle = '#1e3a5f'
+      ctx.strokeStyle = '#38bdf8'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.ellipse(width * 0.54, height * 0.42, width * 0.09, height * 0.14, Math.PI / 6, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+
+      // Island label
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 11px system-ui, sans-serif'
+      ctx.fillText('PULO NG TULURAN', width * 0.50, height * 0.43)
+      ctx.fillStyle = '#94a3b8'
+      ctx.font = '9px system-ui, sans-serif'
+      ctx.fillText('(Brgy. Tumbod)', width * 0.51, height * 0.46)
+
+      // Taytay Mainland Coastline
+      ctx.fillStyle = '#13283f'
+      ctx.beginPath()
+      ctx.moveTo(0, height * 0.50)
+      ctx.quadraticCurveTo(width * 0.20, height * 0.65, width * 0.30, height * 0.85)
+      ctx.lineTo(width * 0.35, height)
+      ctx.lineTo(0, height)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+
+      ctx.fillStyle = '#cbd5e1'
+      ctx.font = 'bold 11px system-ui, sans-serif'
+      ctx.fillText('TAYTAY MAINLAND', width * 0.08, height * 0.78)
+
+      // Animate Wind Streamline Particles
+      ctx.save()
+      for (var pIdx = 0; pIdx < particles.length; pIdx++) {
+        var p = particles[pIdx]
+        ctx.strokeStyle = 'rgba(56, 189, 248, ' + p.opacity + ')'
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.moveTo(p.x, p.y)
+        ctx.lineTo(p.x - vx * p.length, p.y - vy * p.length)
+        ctx.stroke()
+
+        p.x += vx * p.speed
+        p.y += vy * p.speed
+
+        if (p.x < -30) p.x = width + 30
+        if (p.x > width + 30) p.x = -30
+        if (p.y < -30) p.y = height + 30
+        if (p.y > height + 30) p.y = -30
+      }
+      ctx.restore()
+
+      // Draw Waypoints
+      for (var wIdx = 0; wIdx < waypoints.length; wIdx++) {
+        var wp = waypoints[wIdx]
+        var wx = width * wp.x
+        var wy = height * wp.y
+        var isSel = selectedWaypoint && selectedWaypoint.id === wp.id
+
+        // Pulse circle
+        ctx.beginPath()
+        ctx.arc(wx, wy, isSel ? 14 : 9, 0, Math.PI * 2)
+        ctx.fillStyle = isSel ? 'rgba(16, 185, 129, 0.35)' : 'rgba(56, 189, 248, 0.25)'
+        ctx.fill()
+
+        // Inner solid
+        ctx.beginPath()
+        ctx.arc(wx, wy, isSel ? 6 : 4, 0, Math.PI * 2)
+        ctx.fillStyle = isSel ? '#10b981' : '#38bdf8'
+        ctx.fill()
+
+        // Label
+        ctx.fillStyle = '#ffffff'
+        ctx.font = isSel ? 'bold 11px system-ui, sans-serif' : '10px system-ui, sans-serif'
+        ctx.fillText(fil ? wp.nameFil.split(' ')[0] : wp.nameEn.split(' ')[0], wx + 8, wy - 6)
+      }
+
+      requestAnimationFrame(render)
+    }
+
+    render()
+
+    // Canvas click detection for waypoints
+    canvas.addEventListener('click', function(e) {
+      var rect = canvas.getBoundingClientRect()
+      var clickX = e.clientX - rect.left
+      var clickY = e.clientY - rect.top
+
+      for (var i = 0; i < waypoints.length; i++) {
+        var wp = waypoints[i]
+        var wx = width * wp.x
+        var wy = height * wp.y
+        var dist = Math.hypot(clickX - wx, clickY - wy)
+        if (dist <= 25) {
+          updateWaypointCard(wp)
+          break
+        }
+      }
+    })
+  }
+})()
+</script>

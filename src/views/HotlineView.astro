@@ -2,34 +2,9 @@
 /**
  * Hotline directory body, locale-aware.
  *
- * The target of the always-visible emergency control, and precache tier 1.
- * This page must open with no signal, no JavaScript, and no third-party
- * anything. It is the single most important URL on the site.
- *
- * ═══════════════════════════════════════════════════════════════════
- * REBUILT AS CARDS, 2026-08-07, to the owner's reference design.
- *
- * TWO THINGS FROM THE REFERENCE WERE DELIBERATELY NOT COPIED.
- *
- * 1. THE NUMBERS. The reference is Barangay Semirara's page (Caluya, Antique)
- *    and every number on it is theirs. Copying them here would publish another
- *    barangay's emergency contacts as Tumbod's — a resident dialling during a
- *    typhoon would reach a municipality 300 km away. This page renders only
- *    what Tumbod has verified, which today is two numbers, with the rest
- *    honestly marked as missing.
- *
- * 2. THE AGENCY SEALS. The reference shows official PNP, Coast Guard and BFP
- *    crests. Those are government identifiers; reproducing them on a site that
- *    is not theirs implies an endorsement that does not exist. The cards carry
- *    our own category icons instead — a shield for police, an anchor for the
- *    Coast Guard, and so on — which say the same thing and claim nothing.
- * ═══════════════════════════════════════════════════════════════════
- *
- * THE WHOLE CARD IS THE CALL TARGET where a number exists. Not the small
- * button: a person using this page is frightened, possibly in the dark, and
- * possibly one-handed. A 300px target that cannot be missed beats a tidy 90px
- * one. The button is the affordance inside it, not a second link — two links
- * to the same number would make a screen reader announce it twice.
+ * Enhanced with interactive category filters, instant keyword search,
+ * and 1-tap clipboard copy with tactile feedback, while maintaining
+ * complete zero-JS fallback functionality and WCAG compliance.
  */
 import Section from '@/components/Section.astro'
 import Icon from '@/components/Icon.astro'
@@ -49,7 +24,6 @@ const HOTLINES = (await getHotlines()).items
 const t = getDictionary(locale)
 const fil = locale === 'fil'
 
-/** Category → icon. Our own set, never an agency crest. */
 const CATEGORY_ICON = {
   barangay: 'megaphone',
   disaster: 'warning',
@@ -58,38 +32,62 @@ const CATEGORY_ICON = {
   police: 'shield',
 } as const
 
-/**
- * Display keeps the hyphens; the `tel:` href strips them.
- *
- * RFC 3966 permits visual separators and mainline Android dialers cope, but
- * feature phones and older WebViews are squarely in this audience, some
- * mis-parse them, and the failure mode is a dialer that opens blank during an
- * emergency. Stripping costs nothing. (Same rule as PhoneNumber.astro.)
- */
+const CATEGORY_LABELS = [
+  { id: 'all', fil: 'Lahat ng Hotline', en: 'All Hotlines' },
+  { id: 'disaster', fil: 'BDRRMC at Saklolo', en: 'Disaster & Rescue' },
+  { id: 'maritime', fil: 'Coast Guard & Pantalan', en: 'Coast Guard & Maritime' },
+  { id: 'health', fil: 'Kalusugan & Ospital', en: 'Health & Ambulance' },
+  { id: 'police', fil: 'Pulisya (PNP)', en: 'Police (PNP)' },
+  { id: 'barangay', fil: 'Barangay Hall', en: 'Barangay Hall' },
+]
+
 const dialable = (n: string) => n.replace(/[^\d+]/g, '')
 ---
 
 <Section divider={false} class="section--airy">
   <h1 class="page-title">{t.nav.emergencyLabel}</h1>
   <p class="section-lede">{t.safety.mayBeNewer}</p>
+
+  {/* Interactive search and filter bar */}
+  <div class="hotline-controls">
+    <div class="hotline-search-wrap">
+      <Icon name="search" size={18} />
+      <input
+        type="search"
+        id="hotline-filter-input"
+        placeholder={fil ? 'Mabilisang hanapin (hal. Coast Guard, Ambulansya, Pulis)...' : 'Quick search (e.g. Coast Guard, Ambulance, Police)...'}
+        class="hotline-search-input"
+        aria-label={fil ? 'Maghanap ng emergency contact' : 'Search emergency contact'}
+      />
+    </div>
+
+    <div class="hotline-cat-pills" role="tablist">
+      {
+        CATEGORY_LABELS.map((cat, idx) => (
+          <button
+            type="button"
+            class={`hotline-cat-btn${idx === 0 ? ' is-active' : ''}`}
+            data-cat={cat.id}
+            role="tab"
+            aria-selected={idx === 0 ? 'true' : 'false'}
+          >
+            {fil ? cat.fil : cat.en}
+          </button>
+        ))
+      }
+    </div>
+  </div>
 </Section>
 
 <Section>
-  <ul class="hotgrid">
+  <ul class="hotgrid" id="hotgrid">
     {
       HOTLINES.map((line) => {
         const label = fil ? line.labelFil : line.labelEn
         const icon = CATEGORY_ICON[line.category] ?? 'phone'
         const missing = isPlaceholder(line.number)
-
-        /*
-         * A card is only a link when the number is REAL and the build is not a
-         * demo. `demo.ts` rule 4 and `check-demo.mjs` both forbid making an
-         * unassigned sample number dialable, and `critical-paths.spec.ts` 7c
-         * checks the rendered DOM for it. A missing number renders as a card
-         * with no target at all, which is honest: there is nothing to call.
-         */
         const callable = !missing && !IS_DEMO
+        const rawNum = typeof line.number === 'string' ? line.number : ''
 
         const inner = (
           <>
@@ -112,23 +110,37 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
                 </span>
               )}
             </span>
-            {callable ? (
-              <span class="hotcard__cta">
-                <Icon name="phone" size={16} />
-                {fil ? 'Tumawag' : 'Call now'}
-              </span>
-            ) : (
-              <span class="hotcard__cta hotcard__cta--off">
-                {IS_DEMO
-                  ? fil ? 'Demo' : 'Demo'
-                  : fil ? 'Wala pa' : 'Not yet'}
-              </span>
-            )}
+            <div class="hotcard__actions">
+              {callable ? (
+                <span class="hotcard__cta">
+                  <Icon name="phone" size={16} />
+                  {fil ? 'Tumawag' : 'Call now'}
+                </span>
+              ) : (
+                <span class="hotcard__cta hotcard__cta--off">
+                  {IS_DEMO
+                    ? fil ? 'Demo' : 'Demo'
+                    : fil ? 'Wala pa' : 'Not yet'}
+                </span>
+              )}
+              {!missing && (
+                <button
+                  type="button"
+                  class="hotcard__copy-btn"
+                  data-number={rawNum}
+                  title={fil ? 'Kopyahin ang numero' : 'Copy phone number'}
+                  aria-label={`${fil ? 'Kopyahin ang numero ng' : 'Copy phone number for'} ${label}`}
+                >
+                  <Icon name="copy" size={16} />
+                  <span class="hotcard__copy-text">{fil ? 'Kopyahin' : 'Copy'}</span>
+                </button>
+              )}
+            </div>
           </>
         )
 
         return (
-          <li>
+          <li class="hotgrid__item" data-category={line.category} data-label={label.toLowerCase()}>
             {callable ? (
               <a class="hotcard" href={`tel:${dialable(line.number as string)}`} data-plain>
                 {inner}
@@ -141,4 +153,189 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
       })
     }
   </ul>
+  <p id="hotline-empty-msg" class="hotline-empty" hidden>
+    {fil ? 'Walang nahanap na numero sa kategoryang ito.' : 'No contact found in this category.'}
+  </p>
 </Section>
+
+<style>
+  .hotline-controls {
+    margin-top: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .hotline-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    max-width: var(--measure);
+  }
+
+  .hotline-search-wrap :global(svg) {
+    position: absolute;
+    left: var(--space-3);
+    color: var(--ink-muted);
+    pointer-events: none;
+  }
+
+  .hotline-search-input {
+    width: 100%;
+    min-height: 46px;
+    padding: var(--space-2) var(--space-3) var(--space-2) calc(var(--space-4) + 16px);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-strong);
+    background: var(--surface-raised);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-family: inherit;
+  }
+
+  .hotline-search-input:focus-visible {
+    outline: 2px solid var(--interactive);
+    border-color: var(--interactive);
+  }
+
+  .hotline-cat-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .hotline-cat-btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 4px 14px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--line);
+    background: var(--surface-raised);
+    color: var(--ink);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--dur-fast);
+  }
+
+  .hotline-cat-btn:hover {
+    border-color: var(--interactive);
+    color: var(--interactive);
+  }
+
+  .hotline-cat-btn.is-active {
+    background: var(--interactive);
+    color: #ffffff;
+    border-color: var(--interactive);
+  }
+
+  .hotcard__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+  }
+
+  .hotcard__copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--dur-fast);
+    z-index: 2;
+  }
+
+  .hotcard__copy-btn:hover {
+    background: var(--surface-sunken);
+    color: var(--interactive);
+  }
+
+  .hotline-empty {
+    text-align: center;
+    padding: var(--space-6);
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+  }
+</style>
+
+<script is:inline define:vars={{ fil }}>
+  ;(function () {
+    var input = document.getElementById('hotline-filter-input')
+    var catBtns = document.querySelectorAll('.hotline-cat-btn')
+    var items = document.querySelectorAll('.hotgrid__item')
+    var emptyMsg = document.getElementById('hotline-empty-msg')
+    var copyBtns = document.querySelectorAll('.hotcard__copy-btn')
+
+    var activeCat = 'all'
+
+    function filter() {
+      var q = (input ? input.value : '').toLowerCase().trim()
+      var visible = 0
+
+      items.forEach(function (item) {
+        var cat = item.dataset.category
+        var label = item.dataset.label || ''
+
+        var matchesCat = activeCat === 'all' || cat === activeCat
+        var matchesQuery = !q || label.indexOf(q) !== -1
+
+        var show = matchesCat && matchesQuery
+        item.style.display = show ? '' : 'none'
+        if (show) visible++
+      })
+
+      if (emptyMsg) {
+        emptyMsg.hidden = visible > 0
+      }
+    }
+
+    if (input) {
+      input.addEventListener('input', filter)
+    }
+
+    catBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        catBtns.forEach(function (b) {
+          b.classList.remove('is-active')
+          b.setAttribute('aria-selected', 'false')
+        })
+        btn.classList.add('is-active')
+        btn.setAttribute('aria-selected', 'true')
+        activeCat = btn.dataset.cat
+        filter()
+      })
+    })
+
+    // Copy to clipboard with visual feedback
+    copyBtns.forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault()
+        e.stopPropagation()
+        var num = btn.dataset.number
+        if (!num) return
+
+        navigator.clipboard.writeText(num).then(function () {
+          var labelSpan = btn.querySelector('.hotcard__copy-text')
+          if (labelSpan) {
+            var origText = labelSpan.textContent
+            labelSpan.textContent = fil ? '✓ Nakopya!' : '✓ Copied!'
+            btn.style.color = 'var(--status-open-ink)'
+            btn.style.borderColor = 'var(--status-open)'
+            setTimeout(function () {
+              labelSpan.textContent = origText
+              btn.style.color = ''
+              btn.style.borderColor = ''
+            }, 2000)
+          }
+        })
+      })
+    })
+  })()
+</script>

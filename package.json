@@ -5,9 +5,10 @@
   "type": "module",
   "description": "Official website of Barangay Tumbod, Taytay, Palawan, Philippines",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "astro dev --host 0.0.0.0 --port 3000",
     "build": "astro build",
-    "preview": "astro preview",
+    "preview": "astro preview --host 0.0.0.0 --port 3000",
+    "lint": "astro check",
     "typecheck": "astro check",
     "dev:demo": "node scripts/dev-demo.mjs",
     "build:demo": "node scripts/build-demo.mjs",
@@ -25,9 +26,15 @@
     "check:third-party": "node scripts/check-third-party.mjs"
   },
   "dependencies": {
+    "@astrojs/react": "^6.0.6",
     "@astrojs/sitemap": "^3.7.3",
     "@supabase/supabase-js": "^2.112.1",
-    "astro": "^7.1.6"
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "astro": "^7.1.6",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",

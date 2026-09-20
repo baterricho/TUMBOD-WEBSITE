@@ -33,6 +33,10 @@ import Section from '@/components/Section.astro'
 import Hero from '@/components/Hero.astro'
 import Icon from '@/components/Icon.astro'
 import SeaAdvisory from '@/components/SeaAdvisory.astro'
+import WeatherMarineWidget from '@/components/WeatherMarineWidget.astro'
+import WeatherMap from '@/components/WeatherMap.astro'
+import InteractiveCrossingPlanner from '@/components/InteractiveCrossingPlanner.astro'
+import InteractiveServiceCalculator from '@/components/InteractiveServiceCalculator.astro'
 import { getSiteSettings } from '@/lib/content/live-collections'
 import Placeholder from '@/components/Placeholder.astro'
 import OfficeStatusBadge from '@/components/OfficeStatusBadge.astro'
@@ -130,19 +134,22 @@ const quickActions = [
 const exploreCards = [
   {
     href: `${p}/kasaysayan`,
-    kicker: fil ? 'Larawan — wala pa' : 'Photograph — not yet supplied',
+    kicker: fil ? 'Look ng Tuluran' : 'Tuluran Cove',
+    image: '/media/tumbod-cove-1-thumb.jpg',
     title: fil ? 'Kasaysayan' : 'History',
     body: fil ? 'Paano nabuo ang barangay sa Pulo ng Tuluran.' : 'How the barangay formed on Tuluran Island.',
   },
   {
     href: `${p}/turismo`,
-    kicker: fil ? 'Larawan — wala pa' : 'Photograph — not yet supplied',
+    kicker: fil ? 'Talon sa Baybayin' : 'Shoreline Falls',
+    image: '/media/tumbod-falls-thumb.jpg',
     title: fil ? 'Turismo' : 'Tourism',
     body: fil ? 'Mga pasyalan at kung paano marating nang ligtas.' : 'Places to visit and how to reach them safely.',
   },
   {
     href: `${p}/proyekto`,
-    kicker: fil ? 'Mga proyekto' : 'Projects',
+    kicker: fil ? 'Pantalan at Pondo' : 'Pier & Projects',
+    image: '/media/tumbod-pantalan-thumb.jpg',
     title: fil ? 'Mga Proyekto' : 'Projects',
     body: fil ? 'Ano ang ginagawa, magkano, at saan galing ang pondo.' : 'What is being built, its cost, and its funding.',
   },
@@ -160,7 +167,8 @@ const exploreCards = [
   },
   {
     href: `${p}/larawan`,
-    kicker: fil ? 'Larawan — wala pa' : 'Photograph — not yet supplied',
+    kicker: fil ? 'Bahura at Baybayin' : 'Reef & Coast',
+    image: '/media/tumbod-cove-2-thumb.jpg',
     title: fil ? 'Mga Larawan' : 'Gallery',
     body: fil ? 'Tunay na larawan lamang ng Tumbod.' : 'Real photographs of Tumbod only.',
   },
@@ -231,6 +239,21 @@ const exploreCards = [
   and this one spans the viewport like the band it replaces.
 */}
 <SeaAdvisory advisory={settings.advisory} locale={locale} />
+
+{/* Real-time Marine Weather & Sea Safety Warning Widget */}
+<Section title={fil ? 'Panahon at Babala sa Paglalayag' : 'Marine Weather & Sea Travel Warning'} titleId="panahon-dagat">
+  <WeatherMarineWidget locale={locale} />
+</Section>
+
+{/* Interactive Weather & Wind Map (Like the Windy Map) */}
+<Section title={fil ? 'Mapa ng Hangin at Alon (Windy Radar)' : 'Interactive Wind & Sea Map (Windy Radar)'} titleId="mapa-hangin">
+  <WeatherMap locale={locale} />
+</Section>
+
+{/* Interactive Crossing Planner for Island Residents & Boats */}
+<Section title={fil ? 'Plano ng Paglalayag at Pagtawid sa Pulo' : 'Island Crossing & Strait Navigation'} titleId="crossing-guide">
+  <InteractiveCrossingPlanner locale={locale} />
+</Section>
 
 {/* Module 7 promoted: emergency contacts now sit directly under the actions,
     in a bordered block, because they must be findable under stress. */}
@@ -370,6 +393,10 @@ const exploreCards = [
       ))
     }
   </ul>
+  <p style="margin-top:var(--space-3)"><a href={`${p}/serbisyo`}>{fil ? 'Tingnan ang lahat ng serbisyo' : 'View all services'} →</a></p>
+
+  {/* Interactive Calculator for Document Requirements and Legal Waivers */}
+  <InteractiveServiceCalculator locale={locale} />
 </Section>
 
 {/*
@@ -443,7 +470,12 @@ const exploreCards = [
     {
       exploreCards.map((c) => (
         <a class="fcard" href={c.href} data-reveal="pending">
-          <div class="fcard__media" aria-hidden="true">{c.kicker}</div>
+          <div class="fcard__media" aria-hidden="true">
+            {c.image && (
+              <img src={c.image} alt="" class="fcard__media-thumb" loading="lazy" />
+            )}
+            <span class="fcard__media-badge">{c.kicker}</span>
+          </div>
           <span class="fcard__title">{c.title}</span>
           <span class="fcard__meta">{c.body}</span>
         </a>

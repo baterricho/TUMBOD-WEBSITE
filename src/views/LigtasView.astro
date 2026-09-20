@@ -13,21 +13,29 @@ import Section from '@/components/Section.astro'
 import Alert from '@/components/Alert.astro'
 import Icon from '@/components/Icon.astro'
 import Placeholder from '@/components/Placeholder.astro'
-import PhoneNumber from '@/components/PhoneNumber.astro'
+import WeatherMarineWidget from '@/components/WeatherMarineWidget.astro'
+import WeatherMap from '@/components/WeatherMap.astro'
+import FishermanWeatherSafety from '@/components/FishermanWeatherSafety.astro'
+import RealtimeWeatherWarningBanner from '@/components/RealtimeWeatherWarningBanner.astro'
+import { FishingWeatherChart } from '@/components/FishingWeatherChart'
+import EmergencyContactDirectory from '@/components/EmergencyContactDirectory.astro'
 import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 import { CHECKLIST as TYPHOON_CHECKLIST, EVACUATION_SITES } from '@/lib/content/active'
-import { getHotlines } from '@/lib/content/live-collections'
 import { isPlaceholder, needsData } from '@/lib/content/placeholder'
+import { fetchLiveMarineWeather } from '@/lib/weather'
 
 interface Props {
   locale: Locale
 }
 
 const { locale } = Astro.props
-const HOTLINES = (await getHotlines()).items
 const t = getDictionary(locale)
 const fil = locale === 'fil'
 const p = prefix(locale)
+
+const report = await fetchLiveMarineWeather()
+const cur = report.current
+const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel === 'caution' ? 'warning' : 'info'
 
 /** How word spreads on the island when the network is down. Not guessable. */
 const NO_SIGNAL_METHOD = needsData(
@@ -37,41 +45,87 @@ const NO_SIGNAL_METHOD = needsData(
   'BDRRMC',
   true,
 )
-
-const row =
-  'min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);border-bottom:1px solid var(--line);flex-wrap:wrap'
 ---
 
 <Section divider={false} class="section--airy">
-  <h1 class="page-title">{t.safety.title}</h1>
+  {/* Real-Time Weather & Sea Warning Banner at the top of the Safety Panel */}
+  <RealtimeWeatherWarningBanner locale={locale} report={report} />
+
+  <div class="safety-page-header">
+    <div class="safety-header-badge">
+      <Icon name="shield" size={16} />
+      <span>{fil ? 'BDRRMC at Kaligtasan sa Tuluran' : 'BDRRMC & Tuluran Island Disaster Safety'}</span>
+    </div>
+    <h1 class="page-title">{t.safety.title}</h1>
+    <p class="safety-header-desc">
+      {fil
+        ? 'Opisyal na impormasyon sa kaligtasan, real-time na babala sa panahon at alon para sa mga mangingisda at mamamayan, lilikasan sa bagyo, at mga numerong matatawagan sa saklolo.'
+        : 'Official safety portal: real-time weather and sea warnings for fishermen and island residents, typhoon storm surge evacuation zones, and emergency rescue hotlines.'}
+    </p>
+  </div>
 </Section>
 
-{/* Answer first: current threat level. */}
+{/* 1. Answer first: current threat level & weather safety status */}
 <Section title={t.safety.currentStatus} titleId="status" divider={false}>
-  <Alert level="info" locale={locale}>
-    <strong>{t.safety.noWarning}</strong><br />
-    {t.safety.normalConditions}
+  <Alert level={alertLevel} locale={locale}>
+    <strong>
+      {cur.safetyLevel === 'danger'
+        ? fil ? 'MAY MATINDING BABALA SA PAGLALAYAG (GALE / STORM ADVISORY)' : 'SEVERE MARITIME WARNING (GALE / STORM ADVISORY)'
+        : cur.safetyLevel === 'caution'
+          ? fil ? 'MAY PAALALA: KATAMTAMANG ALON AT CHOP SA KIPOT' : 'ADVISORY: MODERATE SWELL & CHANNEL CHOP'
+          : fil ? 'NORMAL NA KALAGAYAN: LIGTAS ANG KARAGATAN' : 'NORMAL CONDITIONS: WATERS GENERALLY CALM'}
+    </strong><br />
+    {fil ? cur.safetyExplanationFil : cur.safetyExplanationEn}
   </Alert>
   <p style="margin-top:var(--space-2);font-size:var(--text-sm);color:var(--ink-muted)">
     {t.safety.mayBeNewer}
   </p>
 </Section>
 
-{/* Then: the numbers. Above the fold, always. */}
-<Section title={t.safety.callNow} titleId="hotlines">
-  <ul style="list-style:none;padding:0;margin:0">
-    {
-      HOTLINES.map((line) => (
-        <li style={row}>
-          <span style="display:flex;align-items:center;gap:var(--space-2)">
-            <Icon name="phone" size={18} />
-            {fil ? line.labelFil : line.labelEn}
-          </span>
-          <PhoneNumber number={line.number} locale={locale} />
-        </li>
-      ))
-    }
-  </ul>
+{/* 2. Real-Time Marine Weather & Sea Safety Telemetry Widget */}
+<Section
+  title={fil ? 'Kasalukuyang Datos ng Panahon at Dagat' : 'Live Sea & Marine Weather Telemetry'}
+  titleId="telemetry"
+  divider={true}
+>
+  <WeatherMarineWidget locale={locale} initialData={report} />
+</Section>
+
+{/* 3. 5-Day Weather Forecast Trends for Fishermen (Recharts Visualization) */}
+<Section
+  title={fil ? 'Pagsusuri sa Panahon at Alon sa Pangingisda (5-Araw na Trends)' : '5-Day Marine Fishing Weather Trends'}
+  titleId="fishing-trends"
+  divider={true}
+>
+  <FishingWeatherChart client:visible locale={locale} dailyData={report.daily} />
+</Section>
+
+{/* 4. Dedicated Fisherman & Island Resident Weather Warning System */}
+<Section
+  title={fil ? 'Babala sa Panahon at Kaligtasan ng mga Mangingisda' : 'Fishermen Weather Warnings & Maritime Directives'}
+  titleId="mangingisda-safety"
+  divider={true}
+>
+  <FishermanWeatherSafety locale={locale} report={report} />
+</Section>
+
+{/* 5. Interactive Wind Streamlines & Wave Map (Windy Radar + Marine Streamline Particles) */}
+<Section
+  title={fil ? 'Mapa ng Hangin at Alon sa Kipot (Windy Radar)' : 'Interactive Wind & Sea State Map (Windy Radar)'}
+  titleId="windy-map"
+  divider={true}
+>
+  <WeatherMap
+    locale={locale}
+    initialWindSpeed={report.current.windSpeedKph}
+    initialWindDir={report.current.windDirectionDeg}
+    initialWaveHeight={report.current.waveHeightM}
+  />
+</Section>
+
+{/* 6. Structured Emergency Contact Directory (Mobile-Optimized Table for Low-End Devices) */}
+<Section title={t.safety.callNow} titleId="hotlines" divider={true}>
+  <EmergencyContactDirectory locale={locale} />
 </Section>
 
 <Section title={t.safety.whereToEvacuate} titleId="evacuation">
@@ -142,3 +196,32 @@ const row =
     <a href={`${p}/ligtas/hotline`}>{t.nav.emergencyLabel} →</a>
   </p>
 </Section>
+
+<style>
+.safety-page-header {
+  max-width: var(--measure);
+}
+
+.safety-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: var(--palette-coral-100);
+  color: var(--palette-coral-800);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  margin-bottom: var(--space-2);
+}
+
+.safety-header-desc {
+  font-size: var(--text-lg);
+  color: var(--palette-slate-600);
+  line-height: 1.6;
+  margin-top: var(--space-2);
+}
+</style>
+

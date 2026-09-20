@@ -1,0 +1,585 @@
+---
+/**
+ * InteractiveCrossingPlanner.astro
+ *
+ * An interactive, accessible sea crossing planner for Tuluran Island residents
+ * and visitors. Calculates crossing times, tide considerations, vessel rules,
+ * and Coast Guard advisories for sea travel between mainland Palawan and Barangay Tumbod.
+ *
+ * Works with zero JavaScript (sensible defaults and static information),
+ * and upgrades to dynamic real-time calculations when JavaScript is available.
+ */
+import Icon from './Icon.astro'
+import type { Locale } from '@/lib/i18n'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+
+const ROUTES = [
+  {
+    id: 'taytay-tumbod',
+    nameFil: 'Taytay Pier (Mainland) ↔ Tumbod Pantalan',
+    nameEn: 'Taytay Pier (Mainland) ↔ Tumbod Pier',
+    distanceKm: 8.4,
+    durationMin: '25–35',
+    notesFil: 'Pangunahing ruta ng mga residente at kargamento. Dumaraan sa bukas na look.',
+    notesEn: 'Primary crossing for residents and goods. Traverses the open bay channel.',
+    riskFil: 'Maaaring maalon kapag may hanging Amihan o Habagat.',
+    riskEn: 'Can be choppy during Northeast or Southwest monsoon winds.',
+  },
+  {
+    id: 'tumbod-sharkfin',
+    nameFil: 'Tumbod Pantalan ↔ Shark Fin Bay / Silangan',
+    nameEn: 'Tumbod Pier ↔ Shark Fin Bay / East Cove',
+    distanceKm: 4.2,
+    durationMin: '15–20',
+    notesFil: 'Protektadong ruta sa loob ng look; mas kalmado ang tubig.',
+    notesEn: 'Sheltered route inside the bay; usually calmer waters.',
+    riskFil: 'Mababaw ang bahura tuwing low tide.',
+    riskEn: 'Reef flats are shallow during low tide.',
+  },
+  {
+    id: 'tumbod-falls',
+    nameFil: 'Tumbod Pantalan ↔ Talon sa Baybayin (North)',
+    nameEn: 'Tumbod Pier ↔ Shoreline Falls (North)',
+    distanceKm: 6.1,
+    durationMin: '20–25',
+    notesFil: 'Daan patungo sa talon at hilagang komunidad ng Tuluran.',
+    notesEn: 'Route towards the falls and northern Tuluran settlements.',
+    riskFil: 'Matarik ang baybayin; mag-ingat sa pagdaong.',
+    riskEn: 'Steep coastline; caution required when mooring.',
+  },
+]
+
+const VESSELS = [
+  {
+    id: 'small-bangka',
+    nameFil: 'Bangkang de-katig (< 3 Gross Tons)',
+    nameEn: 'Outrigger boat (< 3 Gross Tons)',
+    descFil: 'Karaniwang bangkang pangisda o pantawid. Sakop ng mahigpit na Coast Guard advisory kapag may gale warning.',
+    descEn: 'Common fishing or crossing outrigger. Strictly regulated by Coast Guard under gale warnings.',
+    safeWaveMeters: 1.2,
+  },
+  {
+    id: 'passenger-bangka',
+    nameFil: 'Bangkang Pampasahero (3–10 GT)',
+    nameEn: 'Passenger Bangka (3–10 GT)',
+    descFil: 'Mas malaking bangkang may lisensya para sa mga residente at kargamento.',
+    descEn: 'Larger licensed passenger vessel for residents and heavy provisions.',
+    safeWaveMeters: 2.0,
+  },
+  {
+    id: 'patrol-boat',
+    nameFil: 'Barangay / MDRRMO Patrol Boat',
+    nameEn: 'Barangay / Rescue Patrol Boat',
+    descFil: 'Bangkang pang-emergency at opisyal na pag-inspeksyon ng barangay.',
+    descEn: 'Emergency response and official inspection vessel.',
+    safeWaveMeters: 2.5,
+  },
+]
+
+const firstRoute = ROUTES[0]!
+---
+
+<div class="crossing-planner" id="crossing-planner" data-reveal="pending">
+  <div class="crossing-planner__header">
+    <div class="crossing-planner__icon-box" aria-hidden="true">
+      <Icon name="anchor" size={26} />
+    </div>
+    <div>
+      <h3 class="crossing-planner__title">
+        {fil ? 'Gabay sa Pagtawid sa Tuluran Strait' : 'Tuluran Strait Crossing Planner'}
+      </h3>
+      <p class="crossing-planner__subtitle">
+        {
+          fil
+            ? 'Interactive na gabay sa oras ng biyahe, lagay ng dagat, at kaligtasan bago tumawid.'
+            : 'Interactive guide for crossing durations, sea conditions, and safety before departure.'
+        }
+      </p>
+    </div>
+  </div>
+
+  <div class="crossing-planner__grid">
+    {/* Left Column: Interactive Controls */}
+    <div class="crossing-planner__controls">
+      {/* Route Selector */}
+      <div class="crossing-planner__field">
+        <label for="crossing-route-select" class="crossing-planner__label">
+          <Icon name="pin" size={16} />
+          {fil ? 'Piliin ang Ruta ng Biyahe' : 'Select Crossing Route'}
+        </label>
+        <select id="crossing-route-select" class="crossing-planner__select">
+          {ROUTES.map((r, i) => (
+            <option value={r.id} selected={i === 0}>
+              {fil ? r.nameFil : r.nameEn} ({r.distanceKm} km)
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Vessel Selector */}
+      <div class="crossing-planner__field">
+        <label for="crossing-vessel-select" class="crossing-planner__label">
+          <Icon name="bangka" size={16} />
+          {fil ? 'Uri ng Bangka / Sasakyang Pandagat' : 'Vessel Type'}
+        </label>
+        <select id="crossing-vessel-select" class="crossing-planner__select">
+          {VESSELS.map((v, i) => (
+            <option value={v.id} selected={i === 0}>
+              {fil ? v.nameFil : v.nameEn}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Time of Day / Target Departure */}
+      <div class="crossing-planner__field">
+        <label for="crossing-time-select" class="crossing-planner__label">
+          <Icon name="clock" size={16} />
+          {fil ? 'Oras ng Pag-alis (PST)' : 'Departure Window (PST)'}
+        </label>
+        <select id="crossing-time-select" class="crossing-planner__select">
+          <option value="now" selected>{fil ? 'Ngayon Na (Kasalukuyang Oras)' : 'Depart Now (Current Time)'}</option>
+          <option value="morning">{fil ? 'Umaga (06:00 - 09:00) · Kadalasang kalmado' : 'Morning (06:00 - 09:00) · Usually calm'}</option>
+          <option value="midday">{fil ? 'Tanghali (10:00 - 13:00) · Katamtamang alon' : 'Midday (10:00 - 13:00) · Moderate sea'}</option>
+          <option value="afternoon">{fil ? 'Hapon (14:00 - 17:00) · Paglakas ng simoy' : 'Afternoon (14:00 - 17:00) · Breezy chop'}</option>
+        </select>
+      </div>
+    </div>
+
+    {/* Right Column: Dynamic Status & Calculation Results */}
+    <div class="crossing-planner__results" id="crossing-results">
+      <div class="crossing-planner__card">
+        <div class="crossing-planner__status-badge" id="crossing-status-badge">
+          <span class="crossing-status-dot"></span>
+          <span id="crossing-status-text">
+            {fil ? 'Ligtas ang Paglalayag' : 'Sailing Permitted'}
+          </span>
+        </div>
+
+        <div class="crossing-planner__metrics">
+          <div class="crossing-metric">
+            <span class="crossing-metric__label">{fil ? 'Tinatayang Tagal' : 'Est. Duration'}</span>
+            <span class="crossing-metric__val figure" id="crossing-duration">25–35 min</span>
+          </div>
+          <div class="crossing-metric">
+            <span class="crossing-metric__label">{fil ? 'Distansya' : 'Distance'}</span>
+            <span class="crossing-metric__val figure" id="crossing-distance">8.4 km</span>
+          </div>
+          <div class="crossing-metric">
+            <span class="crossing-metric__label">{fil ? 'Kasalukuyang Taog' : 'Tide Status'}</span>
+            <span class="crossing-metric__val" id="crossing-tide">
+              {fil ? 'Katamtamang Taog' : 'Mid Tide'}
+            </span>
+          </div>
+        </div>
+
+        <div class="crossing-planner__notes-box" id="crossing-notes">
+          <p id="crossing-route-note">
+            {fil ? firstRoute.notesFil : firstRoute.notesEn}
+          </p>
+          <p class="crossing-planner__risk" id="crossing-risk-note">
+            <strong>{fil ? 'Paalala: ' : 'Advisory: '}</strong>
+            <span>{fil ? firstRoute.riskFil : firstRoute.riskEn}</span>
+          </p>
+        </div>
+
+        {/* Safety pre-departure checklist */}
+        <div class="crossing-planner__checklist">
+          <p class="crossing-planner__checklist-title">
+            <Icon name="shield" size={16} />
+            {fil ? 'Checklist Bago Pumalaot:' : 'Pre-Departure Checklist:'}
+          </p>
+          <ul class="crossing-planner__checkitems" id="crossing-checkitems">
+            <li>
+              <label class="crossing-check-label">
+                <input type="checkbox" class="crossing-checkbox" checked />
+                <span>{fil ? 'May sapat na life jacket (busal) ang bawat sakay' : 'Life vests for every passenger'}</span>
+              </label>
+            </li>
+            <li>
+              <label class="crossing-check-label">
+                <input type="checkbox" class="crossing-checkbox" checked />
+                <span>{fil ? 'Nakabalot sa waterproof / dry bag ang mahahalagang gamit' : 'Waterproof dry bag for essential gear'}</span>
+              </label>
+            </li>
+            <li>
+              <label class="crossing-check-label">
+                <input type="checkbox" class="crossing-checkbox" />
+                <span>{fil ? 'Nai-report ang biyahe sa pantalan o Bantay Dagat' : 'Trip logged with pier master / sea patrol'}</span>
+              </label>
+            </li>
+          </ul>
+        </div>
+
+        <div class="crossing-planner__actions">
+          <button type="button" class="btn btn--secondary btn--sm" id="crossing-copy-btn">
+            <Icon name="copy" size={16} />
+            <span id="crossing-copy-label">{fil ? 'Kopyahin ang Plano' : 'Copy Trip Summary'}</span>
+          </button>
+          <a href={`${fil ? '' : '/en'}/ligtas`} class="btn btn--ghost btn--sm">
+            <Icon name="shield" size={16} />
+            {fil ? 'Tingnan ang Opisyal na Advisory' : 'Official Coast Advisory'}
+          </a>
+        </div>
+        <p id="crossing-copy-status" role="status" class="crossing-copy-toast" hidden></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .crossing-planner {
+    background: var(--surface-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-block: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--dur-normal) var(--ease-out);
+  }
+
+  .crossing-planner:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .crossing-planner__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--space-3);
+  }
+
+  .crossing-planner__icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--interactive) 12%, transparent);
+    color: var(--interactive);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .crossing-planner__title {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--ink-strong);
+    margin: 0;
+  }
+
+  .crossing-planner__subtitle {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    margin: 2px 0 0;
+  }
+
+  .crossing-planner__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  @media (min-width: 768px) {
+    .crossing-planner__grid {
+      grid-template-columns: 1.1fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .crossing-planner__controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .crossing-planner__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .crossing-planner__label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .crossing-planner__select {
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color var(--dur-fast);
+  }
+
+  .crossing-planner__select:focus-visible {
+    outline: 2px solid var(--interactive);
+    outline-offset: 1px;
+    border-color: var(--interactive);
+  }
+
+  .crossing-planner__card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .crossing-planner__status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 6px var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--status-open) 12%, transparent);
+    color: var(--status-open-ink);
+    border: 1px solid color-mix(in srgb, var(--status-open) 30%, transparent);
+    align-self: flex-start;
+  }
+
+  .crossing-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+    animation: crossingPulse 2s infinite ease-in-out;
+  }
+
+  @keyframes crossingPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  .crossing-planner__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+    border-block: 1px solid var(--line);
+    padding-block: var(--space-2);
+  }
+
+  .crossing-metric {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .crossing-metric__label {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+
+  .crossing-metric__val {
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--ink-strong);
+  }
+
+  .crossing-planner__notes-box {
+    font-size: var(--text-sm);
+    color: var(--ink);
+    line-height: var(--leading-snug);
+  }
+
+  .crossing-planner__notes-box p {
+    margin: 0 0 var(--space-1);
+  }
+
+  .crossing-planner__risk {
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+  }
+
+  .crossing-planner__checklist {
+    background: color-mix(in srgb, var(--interactive) 4%, transparent);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .crossing-planner__checklist-title {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: var(--ink-strong);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0 0 var(--space-1);
+  }
+
+  .crossing-planner__checkitems {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .crossing-check-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+
+  .crossing-checkbox {
+    accent-color: var(--interactive);
+    width: 15px;
+    height: 15px;
+  }
+
+  .crossing-planner__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+  }
+
+  .btn--sm {
+    min-height: 38px;
+    padding: 6px var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .crossing-copy-toast {
+    font-size: var(--text-xs);
+    color: var(--status-open-ink);
+    font-weight: 600;
+    margin: 0;
+  }
+</style>
+
+<script is:inline define:vars={{ routes: ROUTES, vessels: VESSELS, fil }}>
+  ;(function () {
+    var routeSelect = document.getElementById('crossing-route-select')
+    var vesselSelect = document.getElementById('crossing-vessel-select')
+    var timeSelect = document.getElementById('crossing-time-select')
+
+    var durEl = document.getElementById('crossing-duration')
+    var distEl = document.getElementById('crossing-distance')
+    var tideEl = document.getElementById('crossing-tide')
+    var noteEl = document.getElementById('crossing-route-note')
+    var riskEl = document.getElementById('crossing-risk-note')
+    var badgeEl = document.getElementById('crossing-status-badge')
+    var badgeTextEl = document.getElementById('crossing-status-text')
+    var copyBtn = document.getElementById('crossing-copy-btn')
+    var copyStatus = document.getElementById('crossing-copy-status')
+
+    if (!routeSelect || !vesselSelect) return
+
+    function calculateTide(timeChoice) {
+      var d = new Date()
+      var hour = d.getHours()
+      if (timeChoice === 'morning') hour = 7
+      if (timeChoice === 'midday') hour = 12
+      if (timeChoice === 'afternoon') hour = 15
+
+      // Semi-diurnal tide cycle estimate for Taytay/Shark Fin Bay
+      var cycle = hour % 12
+      if (cycle >= 4 && cycle <= 7) {
+        return fil ? 'Mababang Tubig (Low Tide / Kati)' : 'Low Tide (Shallow Reefs)'
+      } else if (cycle >= 10 || cycle <= 1) {
+        return fil ? 'Mataas na Tubig (High Tide / Taog)' : 'High Tide (Deep Channel)'
+      }
+      return fil ? 'Katamtamang Taog (Mid Tide)' : 'Mid Tide (Safe Nav)'
+    }
+
+    function update() {
+      var routeId = routeSelect.value
+      var vesselId = vesselSelect.value
+      var timeChoice = timeSelect ? timeSelect.value : 'now'
+
+      var route = routes.find(function (r) { return r.id === routeId }) || routes[0]
+      var vessel = vessels.find(function (v) { return v.id === vesselId }) || vessels[0]
+
+      if (durEl) durEl.textContent = route.durationMin + ' min'
+      if (distEl) distEl.textContent = route.distanceKm + ' km'
+      if (noteEl) noteEl.textContent = fil ? route.notesFil : route.notesEn
+      if (riskEl) {
+        var riskSpan = riskEl.querySelector('span')
+        if (riskSpan) riskSpan.textContent = fil ? route.riskFil : route.riskEn
+      }
+
+      var tide = calculateTide(timeChoice)
+      if (tideEl) tideEl.textContent = tide
+
+      // Vessel + wave risk assessment
+      if (badgeTextEl && badgeEl) {
+        if (vessel.id === 'small-bangka' && route.id === 'taytay-tumbod') {
+          badgeTextEl.textContent = fil ? 'Mag-ingat sa Alon (Kailangan ng Busal)' : 'Caution (Lifejackets Mandatory)'
+          badgeEl.style.color = 'var(--status-caution-ink, #b45309)'
+          badgeEl.style.backgroundColor = 'color-mix(in srgb, var(--status-caution, #f59e0b) 12%, transparent)'
+          badgeEl.style.borderColor = 'color-mix(in srgb, var(--status-caution, #f59e0b) 30%, transparent)'
+        } else {
+          badgeTextEl.textContent = fil ? 'Ligtas ang Paglalayag' : 'Sailing Permitted'
+          badgeEl.style.color = 'var(--status-open-ink, #047857)'
+          badgeEl.style.backgroundColor = 'color-mix(in srgb, var(--status-open, #10b981) 12%, transparent)'
+          badgeEl.style.borderColor = 'color-mix(in srgb, var(--status-open, #10b981) 30%, transparent)'
+        }
+      }
+    }
+
+    routeSelect.addEventListener('change', update)
+    vesselSelect.addEventListener('change', update)
+    if (timeSelect) timeSelect.addEventListener('change', update)
+    update()
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        var route = routes.find(function (r) { return r.id === routeSelect.value }) || routes[0]
+        var vessel = vessels.find(function (v) { return v.id === vesselSelect.value }) || vessels[0]
+        var tide = tideEl ? tideEl.textContent : ''
+
+        var text = [
+          '⚓ Plano ng Pagtawid sa Pulo ng Tuluran',
+          'Ruta: ' + (fil ? route.nameFil : route.nameEn),
+          'Distansya: ' + route.distanceKm + ' km (Tinatayang ' + route.durationMin + ' minuto)',
+          'Bangka: ' + (fil ? vessel.nameFil : vessel.nameEn),
+          'Lagay ng Tubig / Taog: ' + tide,
+          'Paalala: Magsuot ng life vest at siguraduhing ligtas ang panahon bago pumalaot.',
+          'Barangay Tumbod, Taytay, Palawan'
+        ].join('\n')
+
+        navigator.clipboard.writeText(text).then(function () {
+          if (copyStatus) {
+            copyStatus.hidden = false
+            copyStatus.textContent = fil ? '✓ Nakopya ang plano sa clipboard!' : '✓ Trip summary copied to clipboard!'
+            setTimeout(function () { copyStatus.hidden = true }, 3000)
+          }
+        }).catch(function () {
+          if (copyStatus) {
+            copyStatus.hidden = false
+            copyStatus.textContent = fil ? 'Maaaring i-screenshot ang planong ito.' : 'Take a screenshot of this plan.'
+          }
+        })
+      })
+    }
+  })()
+</script>

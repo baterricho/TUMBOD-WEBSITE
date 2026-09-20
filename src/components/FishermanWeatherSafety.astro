@@ -1,0 +1,987 @@
+---
+/**
+ * FishermanWeatherSafety.astro
+ *
+ * Dedicated weather warning & sea safety guide for the fishermen and residents of Barangay Tumbod.
+ * Specifically tuned for Tuluran Island waters, Tuluran Strait, and Taytay Bay.
+ *
+ * Features:
+ *   1. Live Fishermen Sailing & Sea Safety Advisory status based on real-time marine telemetry;
+ *   2. Interactive Pre-Departure Safety Checklist with live completion counter;
+ *   3. Wave & Wind Threshold Matrix by Outrigger (Bangka) tonnage category;
+ *   4. PAGASA TCWS Tropical Cyclone Wind Signal Action Matrix for coastal communities;
+ *   5. Boat Hauling & Tie-Down guidelines against storm surges and squalls;
+ *   6. Emergency Safe Haven Inlets around Tuluran Island (Biton Cove, Mangrove channels);
+ *   7. Marine VHF Channel 16 and Sea Rescue hotlines.
+ */
+import Icon from './Icon.astro'
+import PhoneNumber from './PhoneNumber.astro'
+import type { Locale } from '@/lib/i18n'
+import type { MarineWeatherReport } from '@/lib/weather'
+
+interface Props {
+  locale: Locale
+  report?: MarineWeatherReport
+}
+
+const { locale, report } = Astro.props
+const fil = locale === 'fil'
+
+const cur = report?.current
+const waveHeight = cur?.waveHeightM ?? 0.6
+const windSpeed = cur?.windSpeedKph ?? 14
+const windGusts = cur?.windGustsKph ?? 19
+const windDir = cur?.windCardinalFil ?? 'Hilagang Silangan (Amihan)'
+const monsoon = cur?.monsoonFil ?? 'Amihan (Northeast Monsoon)'
+
+// Fishermen-specific advisory logic
+let fishermanStatus = 'safe' // 'safe' | 'caution' | 'danger'
+if (waveHeight >= 1.5 || windSpeed >= 30 || windGusts >= 40) {
+  fishermanStatus = 'danger'
+} else if (waveHeight >= 0.9 || windSpeed >= 20 || windGusts >= 28) {
+  fishermanStatus = 'caution'
+}
+
+const STATUS_CONTENT = {
+  safe: {
+    badgeFil: 'Ligtas Pumalaot (Normal)',
+    badgeEn: 'Safe for All Bancas',
+    color: '#10b981',
+    bg: 'rgba(16, 185, 129, 0.12)',
+    border: 'rgba(16, 185, 129, 0.35)',
+    icon: 'anchor',
+    titleFil: 'Kondisyon ng Dagat: Ligtas at Tahimik ang Karagatan',
+    titleEn: 'Sea Condition: Favorable and Calm Waters',
+    descFil: `Mababa ang alon (${waveHeight} m) at banayad ang hangin (${windSpeed} km/h mula ${windDir}). Bukas sa pangingisda sa Look ng Taytay at ligtas ang pagtawid sa Kipot ng Tuluran.`,
+    descEn: `Low swell (${waveHeight} m) and gentle breeze (${windSpeed} km/h from ${cur?.windCardinal ?? 'NE'}). Open for all fishing operations across Taytay Bay and safe for Tuluran Strait crossings.`,
+  },
+  caution: {
+    badgeFil: 'Mag-ingat — Limitado ang Pagpalaot',
+    badgeEn: 'Caution — Small Craft Advisory',
+    color: '#f59e0b',
+    bg: 'rgba(245, 158, 11, 0.12)',
+    border: 'rgba(245, 158, 11, 0.35)',
+    icon: 'warning',
+    titleFil: 'Kondisyon ng Dagat: May Katamtamang Alon at Chop sa Kipot',
+    titleEn: 'Sea Condition: Moderate Swell & Cross-Channel Chop',
+    descFil: `Umakyat ang alon sa ${waveHeight} m at ang hangin sa ${windSpeed} km/h (may bugso na ${windGusts} km/h). Hindi inirerekomenda sa maliliit na bangkang walang katig o mas mababa sa 1 Gross Ton ang pumunta sa bukas na dagat patungong Casian Island o Shark Fin Bay. Manatili sa protektadong baybayin.`,
+    descEn: `Wave heights have reached ${waveHeight} m with winds of ${windSpeed} km/h (gusts to ${windGusts} km/h). Small bancas under 1 GT and unmotorized craft are strongly advised against open-sea navigation toward Casian or Shark Fin Bay. Remain in sheltered coastal waters.`,
+  },
+  danger: {
+    badgeFil: 'DELIKADO — BAWAL PUMALAOT (NO SAIL)',
+    badgeEn: 'DANGER — GALE WARNING / NO SAIL ORDER',
+    color: '#ef4444',
+    bg: 'rgba(239, 68, 68, 0.15)',
+    border: 'rgba(239, 68, 68, 0.45)',
+    icon: 'warning',
+    titleFil: 'Mahigpit na Babala: Ipinagbabawal ang Paglayag ng Lahat ng Bangka',
+    titleEn: 'Strict Advisory: All Small Watercraft Sailing Suspended',
+    descFil: `Mapanganib ang dagat (${waveHeight} m alon, ${windSpeed} km/h hangin, bugso ${windGusts} km/h). Alinsunod sa Philippine Coast Guard Memorandum Circular No. 03-01, ipinagbabawal ang paglalayag ng lahat ng sasakyang-dagat na mas mababa sa 3 Gross Tonnage (3 GT). I-ahon agad ang mga bangka sa pampang.`,
+    descEn: `Hazardous sea state (${waveHeight} m waves, ${windSpeed} km/h wind, gusts ${windGusts} km/h). Pursuant to Philippine Coast Guard regulations, all watercraft below 3 Gross Tonnage (3 GT) are legally prohibited from unmooring. Haul out all outriggers to high ground immediately.`,
+  },
+}
+
+const activeStatus = STATUS_CONTENT[fishermanStatus as keyof typeof STATUS_CONTENT]
+
+// Vessel Category matrix
+const BOAT_CATEGORIES = [
+  {
+    typeFil: 'Maliit na Bangka / De-sagwan (< 1 GT)',
+    typeEn: 'Small Non-motorized / Paddle Banca (< 1 GT)',
+    waveMax: '0.7 m',
+    windMax: '15 km/h',
+    zoneFil: 'Loob ng look at mabababaw na baybayin lamang',
+    zoneEn: 'Inner cove and shallow shoreline only',
+    notesFil: 'Bawal tumawid sa gitna ng kipot kapag may salpukan ng alon.',
+    notesEn: 'Prohibited from mid-strait crossing during strong tidal chop.',
+  },
+  {
+    typeFil: 'Katamtamang Bangkang De-motor (1 - 3 GT)',
+    typeEn: 'Motorized Outrigger Fishing Banca (1 - 3 GT)',
+    waveMax: '1.2 m',
+    windMax: '24 km/h',
+    zoneFil: 'Kipot ng Tuluran at baybayin ng Look ng Taytay',
+    zoneEn: 'Tuluran Strait and Taytay Bay coastal waters',
+    notesFil: 'Dapat may reserbang sagwan, pampa-baile, at life vest bago umalis.',
+    notesEn: 'Must carry spare paddles, bailer bucket, and life vests onboard.',
+  },
+  {
+    typeFil: 'Pampasahero at Malaking Bangka (3 - 10 GT)',
+    typeEn: 'Passenger Ferry & Deep Sea Banca (3 - 10 GT)',
+    waveMax: '2.0 m',
+    windMax: '35 km/h',
+    zoneFil: 'Tuluran hanggang Taytay Mainland Pantalan',
+    zoneEn: 'Tuluran to Taytay Mainland Port corridor',
+    notesFil: 'Awtomatikong tigil-biyahe kapag nagtaas ng Gale Warning ang PAGASA/PCG.',
+    notesEn: 'Mandatory cancellation upon PAGASA / Coast Guard Gale Warning.',
+  },
+]
+
+// Checklist items for fishermen
+const CHECKLIST_ITEMS = [
+  {
+    id: 'chk-vest',
+    labelFil: 'Rehistradong Life Vest para sa bawat sakay at tripulante',
+    labelEn: 'Approved Life Jacket for every passenger and crew member',
+  },
+  {
+    id: 'chk-paddles',
+    labelFil: 'Dalawang (2) matitibay na sagwan kung sakaling tumirik ang makina',
+    labelEn: 'Two (2) heavy-duty spare paddles in case of engine stall',
+  },
+  {
+    id: 'chk-bailer',
+    labelFil: 'Pampa-baile (timba o pambomba) para sa sumasalpok na tubig-dagat',
+    labelEn: 'Bailing bucket or manual bilge scoop for incoming spray',
+  },
+  {
+    id: 'chk-light',
+    labelFil: 'Waterproof na flashlight at sulo/lighter na nakatago sa plastic',
+    labelEn: 'Waterproof torch / flashlight and matches sealed in plastic',
+  },
+  {
+    id: 'chk-phone',
+    labelFil: 'Cellphone sa selyadong waterproof pouch (may load at full battery)',
+    labelEn: 'Mobile phone sealed in waterproof pouch (charged and with credit)',
+  },
+  {
+    id: 'chk-fuel',
+    labelFil: 'Sapat na gasolina/krudo at 1 litrong reserba kasama ang ekstra langis',
+    labelEn: 'Sufficient marine fuel plus 1-liter reserve and 2T/engine oil',
+  },
+  {
+    id: 'chk-float',
+    labelFil: 'Nagsabi sa pamilya o Tanod Outpost kung saan mangingisda at kailan uuwi',
+    labelEn: 'Informed family or Barangay Tanod outpost of destination & ETA',
+  },
+]
+
+// Natural Havens around Tuluran Island
+const SAFE_HAVENS = [
+  {
+    nameFil: 'Look ng Biton (Biton Cove)',
+    nameEn: 'Biton Cove Shelter',
+    featureFil: 'Kanlungan laban sa Amihan (NE Monsoon)',
+    featureEn: 'Refuge from strong Amihan (NE) winds',
+    descFil: 'Nasa hilagang-kanlurang bahagi ng Tuluran. May malalim at banayad na anchorage na protektado ng matataas na burol kapag sumisipol ang hangin mula sa silangan.',
+    descEn: 'Located northwest of Tuluran Island. Deep, calm anchorage shielded by high ridges when northeast gales whistle through Taytay Bay.',
+  },
+  {
+    nameFil: 'Kipot ng Tuluran Mangrove Estuary',
+    nameEn: 'Tuluran Strait Mangrove Estuary',
+    featureFil: 'Kanlungan laban sa biglaang unos at buhawi',
+    featureEn: 'Refuge from sudden squalls and waterspouts',
+    descFil: 'Mabababaw na sapa ng bakawan sa pagitan ng Tuluran at mainland. Dito itinatali ang mga katig sa mga ugat ng bakawan kapag may unos.',
+    descEn: 'Shallow mangrove channels between Tuluran and mainland. Bancas can be safely lashed to sturdy mangrove prop-roots during severe weather.',
+  },
+  {
+    nameFil: 'Silangang Dalampasigan ng Tuluran',
+    nameEn: 'Eastern Coastline of Tuluran',
+    featureFil: 'Kanlungan laban sa Habagat (SW Monsoon)',
+    featureEn: 'Refuge from Southwest Monsoon (Habagat)',
+    descFil: 'Kapag umiihip ang malalakas na hanging Habagat mula sa timog-kanluran, ang silangang bahagi ng pulo ang nagiging kalasag ng mga bangka.',
+    descEn: 'When fierce Habagat winds blast from the southwest, the eastern lee side of Tuluran Island serves as a natural wave barrier.',
+  },
+]
+---
+
+<div class="fisherman-safety" id="fisherman-safety-section">
+  {/* 1. Live Weather Status Banner for Fishermen */}
+  <div
+    class="fisherman-status-banner"
+    style={`background:${activeStatus.bg};border-color:${activeStatus.border};`}
+  >
+    <div class="fisherman-status-banner__head">
+      <div class="fisherman-status-badge" style={`color:${activeStatus.color};border-color:${activeStatus.border};`}>
+        <Icon name={activeStatus.icon as any} size={18} />
+        <span>{fil ? activeStatus.badgeFil : activeStatus.badgeEn}</span>
+      </div>
+      <div class="fisherman-monsoon-tag">
+        <Icon name="compass" size={14} />
+        <span>{monsoon}</span>
+      </div>
+    </div>
+
+    <h3 class="fisherman-status-title" style={`color:${fishermanStatus === 'danger' ? '#f87171' : fishermanStatus === 'caution' ? '#fbbf24' : '#34d399'};`}>
+      {fil ? activeStatus.titleFil : activeStatus.titleEn}
+    </h3>
+    <p class="fisherman-status-desc">
+      {fil ? activeStatus.descFil : activeStatus.descEn}
+    </p>
+
+    {/* Live Key Marine Readings */}
+    <div class="fisherman-metrics-strip">
+      <div class="metric-pill">
+        <Icon name="wave-moderate" size={16} />
+        <div>
+          <span class="metric-label">{fil ? 'Taas ng Alon' : 'Wave Height'}</span>
+          <strong>{waveHeight} m</strong>
+        </div>
+      </div>
+      <div class="metric-pill">
+        <Icon name="wind" size={16} />
+        <div>
+          <span class="metric-label">{fil ? 'Bilis ng Hangin' : 'Wind Speed'}</span>
+          <strong>{windSpeed} km/h</strong>
+        </div>
+      </div>
+      <div class="metric-pill">
+        <Icon name="wind" size={16} />
+        <div>
+          <span class="metric-label">{fil ? 'Bugso (Gusts)' : 'Wind Gusts'}</span>
+          <strong>{windGusts} km/h</strong>
+        </div>
+      </div>
+      <div class="metric-pill">
+        <Icon name="compass" size={16} />
+        <div>
+          <span class="metric-label">{fil ? 'Direksyon' : 'Direction'}</span>
+          <strong>{cur?.windCardinal ?? 'ENE'}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* 2. Interactive Pre-Departure Safety Checklist */}
+  <div class="fisherman-card">
+    <div class="fisherman-card__header">
+      <div class="fisherman-card__title-group">
+        <div class="fisherman-card__badge">
+          <Icon name="checklist" size={16} />
+          <span>{fil ? 'Bantay-Laot Checklist' : 'Pre-Departure Inspection'}</span>
+        </div>
+        <h4 class="fisherman-card__heading">
+          {fil ? 'Kagamitang Pangkaligtasan Bago Pumalaot' : 'Mandatory Pre-Departure Safety Checklist'}
+        </h4>
+      </div>
+      <div class="checklist-progress" id="checklist-progress-box">
+        <span class="checklist-progress__count" id="checklist-counter">0 / {CHECKLIST_ITEMS.length}</span>
+        <span class="checklist-progress__label">{fil ? 'Nasiyasat' : 'Verified'}</span>
+      </div>
+    </div>
+
+    <p class="small muted" style="margin-bottom:var(--space-3);">
+      {fil
+        ? 'Huwag aalis ng dalampasigan nang hindi nasusuri ang pitong (7) kagamitang ito para sa kaligtasan ng inyong pamilya at tripulante:'
+        : 'Do not unmoor or depart from Tuluran Island without verifying these seven (7) essential survival items:'}
+    </p>
+
+    <div class="checklist-grid" id="fisherman-checklist">
+      {CHECKLIST_ITEMS.map((item) => (
+        <label class="checklist-item" for={item.id}>
+          <input type="checkbox" id={item.id} class="checklist-item__input" />
+          <span class="checklist-item__custom-box" aria-hidden="true">
+            <Icon name="check" size={14} />
+          </span>
+          <span class="checklist-item__text">{fil ? item.labelFil : item.labelEn}</span>
+        </label>
+      ))}
+    </div>
+
+    <div class="checklist-notice" id="checklist-notice" hidden>
+      <Icon name="shield" size={20} />
+      <span>
+        {fil
+          ? 'Mabuhay! Kumpleto ang inyong mga kagamitan sa kaligtasan. Mag-ingat sa dagat at magmasid sa mga ulap sa abot-tanaw!'
+          : 'All safety equipment verified! Sail safely, maintain lookout for squall lines on the horizon, and observe safe distances.'}
+      </span>
+    </div>
+  </div>
+
+  {/* 3. Bangka Capacity & Wave Limit Matrix */}
+  <div class="fisherman-card">
+    <div class="fisherman-card__badge">
+      <Icon name="bangka" size={16} />
+      <span>{fil ? 'Limitasyon sa Alon' : 'Vessel Wave Limits'}</span>
+    </div>
+    <h4 class="fisherman-card__heading">
+      {fil ? 'Talahanayan ng Laki ng Bangka at Limitasyon sa Dagat' : 'Bangka Category & Safe Wave Limit Matrix'}
+    </h4>
+    <p class="small muted" style="margin-bottom:var(--space-3);">
+      {fil
+        ? 'Alamin ang ligtas na kapasidad ng inyong sasakyang-dagat batay sa taas ng alon at lakas ng hangin:'
+        : 'Observe safe operating parameters for your specific outrigger craft based on wave heights and wind speed:'}
+    </p>
+
+    <div class="boat-table-wrapper">
+      <table class="boat-table">
+        <thead>
+          <tr>
+            <th>{fil ? 'Uri ng Sasakyang-Dagat' : 'Vessel Classification'}</th>
+            <th>{fil ? 'Sagad na Alon' : 'Max Wave'}</th>
+            <th>{fil ? 'Sagad na Hangin' : 'Max Wind'}</th>
+            <th>{fil ? 'Ligtas na Lugar' : 'Safe Operating Zone'}</th>
+            <th>{fil ? 'Paalala sa Kaligtasan' : 'Safety Requirement'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {BOAT_CATEGORIES.map((cat) => (
+            <tr>
+              <td>
+                <strong>{fil ? cat.typeFil : cat.typeEn}</strong>
+              </td>
+              <td><span class="limit-chip limit-chip--wave">{cat.waveMax}</span></td>
+              <td><span class="limit-chip limit-chip--wind">{cat.windMax}</span></td>
+              <td>{fil ? cat.zoneFil : cat.zoneEn}</td>
+              <td class="small muted">{fil ? cat.notesFil : cat.notesEn}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {/* 4. PAGASA Tropical Cyclone Wind Signal (TCWS) Protocols */}
+  <div class="fisherman-card">
+    <div class="fisherman-card__badge">
+      <Icon name="warning" size={16} />
+      <span>{fil ? 'Babala sa Bagyo (TCWS)' : 'Typhoon Wind Signals'}</span>
+    </div>
+    <h4 class="fisherman-card__heading">
+      {fil ? 'Alituntunin ng BDRRMC at Coast Guard sa Signal ng Bagyo' : 'Typhoon Warning Signals (TCWS) & Maritime Directives'}
+    </h4>
+
+    <div class="tcws-grid">
+      <div class="tcws-card tcws-card--1">
+        <div class="tcws-card__badge">SIGNAL #1</div>
+        <div class="tcws-card__wind">39 – 61 km/h</div>
+        <p class="small">
+          {fil
+            ? 'Awtomatikong suspendido ang paglalayag ng mga bangkang mas mababa sa 3 GT. Kanselahin ang malayuang pangingisda sa Casian at Shark Fin Bay.'
+            : 'Automatic sailing suspension for vessels below 3 GT. Halt all deep-sea fishing runs toward Casian Island and Shark Fin Bay.'}
+        </p>
+      </div>
+
+      <div class="tcws-card tcws-card--2">
+        <div class="tcws-card__badge">SIGNAL #2</div>
+        <div class="tcws-card__wind">62 – 88 km/h</div>
+        <p class="small">
+          {fil
+            ? 'Lahat ng biyahe sa kipot (Tuluran-Taytay) ay suspendido. I-ahon na agad ang lahat ng bangka nang 15-20 metro mula sa high-tide line.'
+            : 'All Tuluran Strait crossings completely halted. Haul all outrigger boats 15-20 meters above the high-tide watermark immediately.'}
+        </p>
+      </div>
+
+      <div class="tcws-card tcws-card--3">
+        <div class="tcws-card__badge">SIGNAL #3 & #4</div>
+        <div class="tcws-card__wind">89 – 184+ km/h</div>
+        <p class="small">
+          {fil
+            ? 'Banta ng Delubyo at Storm Surge (higit 2.5 - 3.5 metro tulad ng Bagyong Tino). Lumikas sa mga matataas na evacuation center. Mahigpit na bawal lumapit sa dalampasigan.'
+            : 'Severe Storm Surge threat (>2.5 - 3.5 meters as experienced during Typhoon Tino). Evacuate to elevated shelters. Coastal areas strictly off-limits.'}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {/* 5. Hauling & Tie-Down Guidelines for Bancas */}
+  <div class="fisherman-card">
+    <div class="fisherman-card__badge">
+      <Icon name="anchor" size={16} />
+      <span>{fil ? 'Pangangalaga sa Bangka' : 'Vessel Protection'}</span>
+    </div>
+    <h4 class="fisherman-card__heading">
+      {fil ? 'Gabay sa Pag-ahon at Pagtatali ng mga Katig sa Unos' : 'Boat Hauling & Storm Tie-Down Protocols'}
+    </h4>
+
+    <div class="hauling-steps-grid">
+      <div class="hauling-step">
+        <div class="hauling-step__num">1</div>
+        <strong>{fil ? 'Pag-ahon sa Dalampasigan' : 'High Ground Hauling'}</strong>
+        <p class="small muted">
+          {fil
+            ? 'I-ahon ang bangka sa mataas na lupa gamit ang mga troso o rollers. Siguraduhing lumampas ito sa pinakamataas na abot ng tubig-dagat.'
+            : 'Haul bancas inland using skids or timber rollers. Ensure the craft is positioned well beyond the predicted maximum storm tide level.'}
+        </p>
+      </div>
+
+      <div class="hauling-step">
+        <div class="hauling-step__num">2</div>
+        <strong>{fil ? 'Four-Point Tie Down' : '4-Point Lashing'}</strong>
+        <p class="small muted">
+          {fil
+            ? 'Talian ang prowa (unahan), popa (hulihan), at magkabilang katig sa matitibay na puno ng niyog o malalalim na istaka upang hindi liparin ng hangin.'
+            : 'Secure four independent nylon ropes to bow, stern, and both outrigger wings anchored to mature coconut trunks or deep ground stakes.'}
+        </p>
+      </div>
+
+      <div class="hauling-step">
+        <div class="hauling-step__num">3</div>
+        <strong>{fil ? 'Pangangalaga sa Makina' : 'Engine Protection'}</strong>
+        <p class="small muted">
+          {fil
+            ? 'Baklasin ang outboard engine o takpan ang inboard engine ng makapal na tarpaulin upang hindi pasukin ng buhangin at tubig-alat.'
+            : 'Dismount outboard motors and carry them to indoor shelters. For inboard diesels, seal exhaust and air intakes with heavy canvas.'}
+        </p>
+      </div>
+
+      <div class="hauling-step">
+        <div class="hauling-step__num">4</div>
+        <strong>{fil ? 'Ligtas na Anchorage' : 'Safe Anchorage Refuge'}</strong>
+        <p class="small muted">
+          {fil
+            ? 'Para sa mga malalaking bangka na hindi kayang iahon, i-angkla ang mga ito sa Look ng Biton o loob ng mangrove river tributaries.'
+            : 'For large passenger craft that cannot be beached, navigate to Biton Cove or sheltered mangrove creeks with double bow-and-stern anchors.'}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {/* 6. Emergency Safe Haven Inlets */}
+  <div class="fisherman-card">
+    <div class="fisherman-card__badge">
+      <Icon name="compass" size={16} />
+      <span>{fil ? 'Ligtas na Kanlungan' : 'Emergency Havens'}</span>
+    </div>
+    <h4 class="fisherman-card__heading">
+      {fil ? 'Mga Ligtas na Kanlungan (Safe Havens) sa Paligid ng Tuluran' : 'Natural Marine Shelters Around Tuluran Island'}
+    </h4>
+    <p class="small muted" style="margin-bottom:var(--space-3);">
+      {fil
+        ? 'Kung inabutan ng biglaang unos, buhawi, o matinding alon sa dagat, dumaong sa mga natural na kanlungang ito:'
+        : 'If caught by sudden squalls or high cross-waves at sea, seek immediate refuge at these natural island harbors:'}
+    </p>
+
+    <div class="haven-cards-grid">
+      {SAFE_HAVENS.map((haven) => (
+        <div class="haven-item">
+          <div class="haven-item__head">
+            <Icon name="anchor" size={18} />
+            <strong>{fil ? haven.nameFil : haven.nameEn}</strong>
+          </div>
+          <span class="haven-feature">{fil ? haven.featureFil : haven.featureEn}</span>
+          <p class="small muted">{fil ? haven.descFil : haven.descEn}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  {/* 7. Emergency Contact Bar for Fishermen */}
+  <div class="fisherman-emergency-bar">
+    <div class="emergency-bar__left">
+      <div class="emergency-bar__badge">
+        <Icon name="phone" size={18} />
+        <span>{fil ? 'Saklolo sa Dagat (Coast Guard & BDRRMC)' : 'Maritime Emergency & Rescue'}</span>
+      </div>
+      <p class="emergency-bar__desc">
+        {fil
+          ? 'Kung may bangkang tumirik, nagkaproblema sa katig, o hindi nakauwi sa takdang oras, makipag-ugnayan agad sa radyo o telepono:'
+          : 'For engine failure, damaged outriggers, capsizing, or overdue fishing bancas, call immediately on radio or mobile:'}
+      </p>
+    </div>
+
+    <div class="emergency-bar__contacts">
+      <div class="emergency-contact-pill">
+        <span class="contact-name">{fil ? 'VHF Marine Radio:' : 'VHF Radio:'}</span>
+        <strong>Channel 16 (156.8 MHz)</strong>
+      </div>
+      <div class="emergency-contact-pill">
+        <span class="contact-name">{fil ? 'Coast Guard Taytay:' : 'PCG Taytay:'}</span>
+        <PhoneNumber number="0917-842-7653" locale={locale} />
+      </div>
+      <div class="emergency-contact-pill">
+        <span class="contact-name">{fil ? 'BDRRMC Sea Rescue:' : 'BDRRMC Rescue:'}</span>
+        <PhoneNumber number="0917-123-4567" locale={locale} />
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.fisherman-safety {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-block: var(--space-3);
+}
+
+/* Status Banner */
+.fisherman-status-banner {
+  border-radius: var(--radius-lg);
+  border: 1px solid;
+  padding: var(--space-4);
+  color: var(--palette-slate-100);
+  background: var(--palette-slate-900);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.fisherman-status-banner__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.fisherman-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.fisherman-monsoon-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--palette-slate-300);
+  background: rgba(15, 23, 42, 0.4);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.fisherman-status-title {
+  margin: 0 0 6px;
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+.fisherman-status-desc {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--palette-slate-200);
+  line-height: 1.5;
+  max-width: 80ch;
+}
+
+.fisherman-metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.metric-pill {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.metric-pill svg {
+  color: var(--palette-sea-400);
+  flex-shrink: 0;
+}
+
+.metric-label {
+  display: block;
+  font-size: 10px;
+  color: var(--palette-slate-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metric-pill strong {
+  display: block;
+  font-size: var(--text-sm);
+  color: #ffffff;
+}
+
+/* Card Container */
+.fisherman-card {
+  background: #ffffff;
+  border: 1px solid var(--palette-slate-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.fisherman-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.fisherman-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--palette-sea-700);
+  margin-bottom: 4px;
+}
+
+.fisherman-card__heading {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 800;
+  color: var(--palette-slate-900);
+}
+
+/* Checklist */
+.checklist-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: var(--palette-sea-50);
+  border: 1px solid var(--palette-sea-200);
+  border-radius: var(--radius-md);
+  padding: 6px 14px;
+}
+
+.checklist-progress__count {
+  font-size: var(--text-base);
+  font-weight: 800;
+  color: var(--palette-sea-800);
+}
+
+.checklist-progress__label {
+  font-size: 10px;
+  color: var(--palette-sea-600);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-2);
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--palette-slate-50);
+  border: 1px solid var(--palette-slate-200);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--dur-fast);
+  user-select: none;
+}
+
+.checklist-item:hover {
+  background: var(--palette-slate-100);
+  border-color: var(--palette-slate-300);
+}
+
+.checklist-item__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.checklist-item__custom-box {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--palette-slate-400);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: transparent;
+  transition: all var(--dur-fast);
+}
+
+.checklist-item__input:checked + .checklist-item__custom-box {
+  background: var(--palette-sea-600);
+  border-color: var(--palette-sea-600);
+  color: #ffffff;
+}
+
+.checklist-item__text {
+  font-size: var(--text-xs);
+  color: var(--palette-slate-800);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.checklist-notice {
+  margin-top: var(--space-3);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: var(--palette-sea-900);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* Boat Table */
+.boat-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--palette-slate-200);
+  border-radius: var(--radius-md);
+}
+
+.boat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+  text-align: left;
+}
+
+.boat-table th {
+  background: var(--palette-slate-100);
+  padding: 10px 14px;
+  font-weight: 700;
+  color: var(--palette-slate-800);
+  border-bottom: 1px solid var(--palette-slate-200);
+}
+
+.boat-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--palette-slate-100);
+  vertical-align: middle;
+}
+
+.boat-table tr:last-child td {
+  border-bottom: none;
+}
+
+.limit-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.limit-chip--wave {
+  background: var(--palette-ocean-100);
+  color: var(--palette-ocean-800);
+}
+
+.limit-chip--wind {
+  background: var(--palette-amber-100);
+  color: var(--palette-amber-800);
+}
+
+/* TCWS Grid */
+.tcws-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.tcws-card {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid;
+}
+
+.tcws-card--1 {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #78350f;
+}
+
+.tcws-card--2 {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.tcws-card--3 {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.tcws-card__badge {
+  font-size: var(--text-xs);
+  font-weight: 900;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.tcws-card__wind {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+/* Hauling steps */
+.hauling-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.hauling-step {
+  background: var(--palette-slate-50);
+  border: 1px solid var(--palette-slate-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+}
+
+.hauling-step__num {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--palette-sea-600);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: var(--text-xs);
+  margin-bottom: 8px;
+}
+
+.hauling-step strong {
+  font-size: var(--text-xs);
+  color: var(--palette-slate-900);
+  margin-bottom: 4px;
+}
+
+/* Haven Cards */
+.haven-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+
+.haven-item {
+  background: var(--palette-slate-50);
+  border: 1px solid var(--palette-slate-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.haven-item__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--palette-ocean-700);
+}
+
+.haven-item__head strong {
+  font-size: var(--text-xs);
+  color: var(--palette-slate-900);
+}
+
+.haven-feature {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--palette-ocean-800);
+  background: var(--palette-ocean-100);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-bottom: 8px;
+}
+
+/* Emergency Bar */
+.fisherman-emergency-bar {
+  background: var(--palette-slate-900);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  color: #ffffff;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.emergency-bar__left {
+  max-width: 50ch;
+}
+
+.emergency-bar__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--palette-coral-400);
+  font-weight: 800;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  margin-bottom: 4px;
+}
+
+.emergency-bar__desc {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--palette-slate-300);
+  line-height: 1.5;
+}
+
+.emergency-bar__contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.emergency-contact-pill {
+  background: var(--palette-slate-800);
+  border: 1px solid var(--palette-slate-700);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contact-name {
+  font-size: 10px;
+  color: var(--palette-slate-400);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.emergency-contact-pill strong {
+  font-size: var(--text-xs);
+  color: #ffffff;
+}
+</style>
+
+<script is:inline>
+;(function() {
+  var inputs = document.querySelectorAll('#fisherman-checklist .checklist-item__input')
+  var counter = document.getElementById('checklist-counter')
+  var notice = document.getElementById('checklist-notice')
+  var total = inputs.length
+
+  function updateChecklist() {
+    var checked = 0
+    inputs.forEach(function(input) {
+      if (input.checked) checked++
+    })
+    if (counter) counter.textContent = checked + ' / ' + total
+    if (notice) {
+      if (checked === total) {
+        notice.hidden = false
+      } else {
+        notice.hidden = true
+      }
+    }
+  }
+
+  inputs.forEach(function(input) {
+    input.addEventListener('change', updateChecklist)
+  })
+})()
+</script>

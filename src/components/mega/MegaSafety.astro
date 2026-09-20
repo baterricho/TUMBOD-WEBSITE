@@ -30,10 +30,11 @@ import SampleChip from '../SampleChip.astro'
 import { ACTIVE_ADVISORY, IS_DEMO } from '@/lib/content/active'
 import { getHotlines } from '@/lib/content/live-collections'
 import { isPlaceholder } from '@/lib/content/placeholder'
-import { SAMPLE_EMERGENCY, SAMPLE_WEATHER, SAMPLE_EVAC } from '@/lib/content/sample'
+import { SAMPLE_EMERGENCY, SAMPLE_EVAC } from '@/lib/content/sample'
 import { PROCEDURES, prefix, label, note } from '@/lib/content/menu'
 import { CHART_GEOMETRY } from '@/features/chart/geometry'
 import { getDictionary, type Locale } from '@/lib/i18n'
+import { fetchLiveMarineWeather } from '@/lib/weather'
 import type { IconName } from '../Icon.astro'
 
 interface Props {
@@ -45,6 +46,9 @@ const HOTLINES = (await getHotlines()).items
 const fil = locale === 'fil'
 const p = prefix(locale)
 const t = getDictionary(locale)
+
+const weatherReport = await fetchLiveMarineWeather()
+const curWeather = weatherReport.current
 
 /** Only numbers we actually hold. A placeholder is not a contact. */
 const verified = HOTLINES.filter((h) => h.active && !isPlaceholder(h.number))
@@ -139,41 +143,57 @@ const ALERT_TEXT = {
 {/* ── Column 2: weather ──────────────────────────────────────── */}
 <section class="mega__col">
   <h2 class="mega__heading">
-    {fil ? 'Panahon' : 'Weather'}
-    <SampleChip locale={locale} />
+    {fil ? 'Panahon at Dagat' : 'Marine Weather'}
   </h2>
 
-  <div class="mega-weather mega-weather--calm">
+  <div class={`mega-weather ${curWeather.safetyLevel === 'danger' ? 'mega-weather--warning' : 'mega-weather--calm'}`}>
     <span class="mega-weather__icon">
-      <Icon name="sun" size={40} />
+      <Icon name={curWeather.weatherCode <= 1 ? 'sun' : curWeather.weatherCode >= 60 ? 'droplet' : 'cloud'} size={40} />
     </span>
     <span class="mega-weather__temp">
-      <span class="figure">{SAMPLE_WEATHER.temperature}</span>°C
+      <span class="figure">{curWeather.temperature}</span>°C
     </span>
     <span class="mega-weather__state">
-      {fil ? SAMPLE_WEATHER.conditionFil : SAMPLE_WEATHER.conditionEn}
+      {fil ? curWeather.weatherDescFil : curWeather.weatherDescEn}
     </span>
   </div>
 
   <ul class="mega-metrics">
-    {
-      SAMPLE_WEATHER.metrics.map((m) => (
-        <li>
-          <span class="mega-metric__label">
-            <Icon name={m.icon} size={14} />
-            {fil ? m.labelFil : m.labelEn}
-          </span>
-          <span class="mega-metric__value">{m.value}</span>
-        </li>
-      ))
-    }
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="bangka" size={14} />
+        {fil ? 'Alon sa Kipot' : 'Wave Height'}
+      </span>
+      <span class="mega-metric__value">{curWeather.waveHeightM} m</span>
+    </li>
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="wind" size={14} />
+        {fil ? 'Hangin' : 'Wind'}
+      </span>
+      <span class="mega-metric__value">{curWeather.windSpeedKph} km/h {curWeather.windCardinal}</span>
+    </li>
+    <li>
+      <span class="mega-metric__label">
+        <Icon name="shield" size={14} />
+        {fil ? 'Kaligtasan' : 'Sea Safety'}
+      </span>
+      <span class="mega-metric__value" style={`color:${curWeather.safetyLevel === 'danger' ? '#ef4444' : curWeather.safetyLevel === 'caution' ? '#f59e0b' : '#10b981'};font-weight:700;`}>
+        {fil ? curWeather.safetyTitleFil : curWeather.safetyTitleEn}
+      </span>
+    </li>
   </ul>
 
-  {/* The honest reading lives here, and it says where. */}
-  <a class="mega__viewall" href={`${p}/ligtas`}>
-    {fil ? 'Tunay na lagay ng dagat' : 'Real sea conditions'}
-    <Icon name="chevron-right" size={16} />
-  </a>
+  <div style="display:flex;flex-direction:column;gap:6px;margin-top:auto;">
+    <a class="mega__viewall" href={`${p}/ligtas`}>
+      {fil ? 'Babala sa pangingisda at kaligtasan' : 'Fishermen safety & warnings'}
+      <Icon name="chevron-right" size={16} />
+    </a>
+    <a class="mega__viewall" href={`${p}/panahon`}>
+      {fil ? 'Windy Live Radar at Mapa' : 'Windy Live Radar & Map'}
+      <Icon name="chevron-right" size={16} />
+    </a>
+  </div>
 </section>
 
 {/* ── Column 3: safety guides ────────────────────────────────── */}

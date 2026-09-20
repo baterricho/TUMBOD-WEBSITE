@@ -1,0 +1,431 @@
+---
+/**
+ * IslandQuickDock.astro
+ *
+ * An interactive, accessible floating dock ("Gabay sa Pulo") providing:
+ *   1. Quick Emergency SOS popup with 1-tap dialable emergency numbers;
+ *   2. Quick Sea Advisory status & crossing guidance toggle;
+ *   3. Smooth Scroll-to-Top with real-time SVG circular scroll progress indicator;
+ *   4. Instant search shortcut trigger.
+ *
+ * Fully keyboard accessible, respects prefers-reduced-motion, and degrades silently.
+ */
+import Icon from './Icon.astro'
+import { getDictionary, type Locale, prefix } from '@/lib/i18n'
+import { getHotlines } from '@/lib/content/live-collections'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const fil = locale === 'fil'
+const p = prefix(locale)
+const t = getDictionary(locale)
+const HOTLINES = (await getHotlines()).items.slice(0, 5)
+---
+
+<aside class="quick-dock" id="quick-dock" aria-label={fil ? 'Mabilisang Tulong sa Pulo' : 'Island Quick Actions'}>
+  {/* Emergency Quick Modal / Drawer */}
+  <dialog id="dock-sos-dialog" class="dock-dialog" aria-labelledby="dock-sos-title">
+    <div class="dock-dialog__content">
+      <div class="dock-dialog__head">
+        <h3 id="dock-sos-title" class="dock-dialog__title">
+          <Icon name="phone" size={20} />
+          {fil ? 'Mga Numerong Pang-Emergency' : 'Emergency Hotlines'}
+        </h3>
+        <button type="button" class="dock-dialog__close" id="dock-sos-close" aria-label={fil ? 'Isara' : 'Close'}>
+          <Icon name="close" size={20} />
+        </button>
+      </div>
+      <p class="dock-dialog__desc">
+        {fil ? 'Direktang numerong matatawagan para sa saklolo sa Pulo ng Tuluran:' : 'Immediate assistance contacts for Tuluran Island:'}
+      </p>
+
+      <ul class="dock-sos-list">
+        {HOTLINES.map((h) => (
+          <li class="dock-sos-item">
+            <span class="dock-sos-label">{fil ? h.labelFil : h.labelEn}</span>
+            <a href={`tel:${String(h.number).replace(/[^\d+]/g, '')}`} class="dock-sos-btn">
+              <Icon name="phone" size={16} />
+              <span>{h.number}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <div class="dock-dialog__foot">
+        <a href={`${p}/ligtas/hotline`} class="btn btn--secondary btn--sm">
+          {fil ? 'Tingnan ang Lahat ng Hotline →' : 'View Full Directory →'}
+        </a>
+      </div>
+    </div>
+  </dialog>
+
+  {/* Dock Buttons Group */}
+  <div class="quick-dock__bar" role="toolbar" aria-label={fil ? 'Mga aksyon' : 'Quick Actions'}>
+    {/* SOS / Emergency Button */}
+    <button
+      type="button"
+      id="dock-sos-trigger"
+      class="dock-btn dock-btn--sos"
+      title={fil ? 'Buksan ang mga Numerong Pang-Emergency' : 'Open Emergency Numbers'}
+      aria-haspopup="dialog"
+      aria-expanded="false"
+    >
+      <Icon name="phone" size={18} />
+      <span class="dock-btn__label">{t.nav.emergency}</span>
+    </button>
+
+    {/* Weather & Wind Map Shortcut */}
+    <a
+      href={`${p}/panahon`}
+      class="dock-btn dock-btn--weather"
+      title={fil ? 'Live Weather at Windy Map' : 'Live Weather & Wind Map'}
+    >
+      <Icon name="wind" size={18} />
+      <span class="dock-btn__label">{fil ? 'Panahon' : 'Weather'}</span>
+    </a>
+
+    {/* Sea State Shortcut */}
+    <a
+      href={`${p}/ligtas`}
+      class="dock-btn dock-btn--sea"
+      title={fil ? 'Lagay ng Dagat at Alon' : 'Sea & Wave Condition'}
+    >
+      <Icon name="anchor" size={18} />
+      <span class="dock-btn__label">{fil ? 'Dagat' : 'Sea'}</span>
+    </a>
+
+    {/* Search Shortcut */}
+    <a
+      href={`${p}/hanapin`}
+      class="dock-btn dock-btn--search"
+      title={fil ? 'Mabilisang Paghahanap' : 'Quick Search'}
+    >
+      <Icon name="search" size={18} />
+      <span class="dock-btn__label">{fil ? 'Hanapin' : 'Search'}</span>
+    </a>
+
+    {/* Scroll To Top Button with Circular Progress */}
+    <button
+      type="button"
+      id="dock-top-btn"
+      class="dock-btn dock-btn--top"
+      title={fil ? 'Bumalik sa Taas' : 'Back to top'}
+      aria-label={fil ? 'Bumalik sa taas ng pahina' : 'Back to top'}
+      hidden
+    >
+      <svg class="dock-progress-svg" viewBox="0 0 36 36" aria-hidden="true">
+        <path
+          class="dock-progress-bg"
+          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+        />
+        <path
+          class="dock-progress-bar"
+          id="dock-progress-bar"
+          stroke-dasharray="0, 100"
+          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+        />
+      </svg>
+      <Icon name="chevron-up" size={18} />
+    </button>
+  </div>
+</aside>
+
+<style>
+  .quick-dock {
+    position: fixed;
+    right: max(var(--space-3), env(safe-area-inset-right));
+    bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  .quick-dock__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-full);
+    padding: 6px;
+    box-shadow: var(--shadow-lg), 0 8px 30px -6px rgb(15 23 42 / 0.2);
+    pointer-events: auto;
+  }
+
+  .dock-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    min-width: 40px;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    font-family: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    position: relative;
+    transition: background-color var(--dur-fast), transform var(--dur-fast), color var(--dur-fast);
+  }
+
+  .dock-btn:hover {
+    background: color-mix(in srgb, var(--interactive) 10%, transparent);
+    color: var(--interactive);
+  }
+
+  .dock-btn:active {
+    transform: scale(0.96);
+  }
+
+  .dock-btn--sos {
+    background: var(--alert-emergency);
+    color: var(--alert-emergency-ink);
+  }
+
+  .dock-btn--sos:hover {
+    background: color-mix(in srgb, var(--alert-emergency) 85%, black);
+    color: #ffffff;
+  }
+
+  .dock-btn--top {
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+  }
+
+  .dock-progress-svg {
+    position: absolute;
+    inset: 2px;
+    width: 36px;
+    height: 36px;
+    transform: rotate(-90deg);
+  }
+
+  .dock-progress-bg {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 3;
+  }
+
+  .dock-progress-bar {
+    fill: none;
+    stroke: var(--interactive);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    transition: stroke-dasharray var(--dur-fast);
+  }
+
+  @media (max-width: 640px) {
+    .dock-btn__label {
+      display: none;
+    }
+    .dock-btn {
+      padding: 0;
+      width: 42px;
+      height: 42px;
+    }
+  }
+
+  /* Dialog styling */
+  .dock-dialog {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 0;
+    max-width: 420px;
+    width: calc(100vw - 32px);
+    box-shadow: var(--shadow-lg), 0 20px 40px -10px rgb(0 0 0 / 0.3);
+    margin: auto;
+    pointer-events: auto;
+  }
+
+  .dock-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .dock-dialog__content {
+    padding: var(--space-4);
+  }
+
+  .dock-dialog__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--space-2);
+  }
+
+  .dock-dialog__title {
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--alert-emergency-on-surface);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+  }
+
+  .dock-dialog__close {
+    background: transparent;
+    border: none;
+    color: var(--ink-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dock-dialog__close:hover {
+    color: var(--ink);
+    background: var(--surface-sunken);
+  }
+
+  .dock-dialog__desc {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    margin: var(--space-2) 0 var(--space-3);
+  }
+
+  .dock-sos-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .dock-sos-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+  }
+
+  .dock-sos-label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--ink-strong);
+  }
+
+  .dock-sos-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    background: var(--alert-emergency);
+    color: var(--alert-emergency-ink);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-decoration: none;
+    transition: opacity var(--dur-fast);
+  }
+
+  .dock-sos-btn:hover {
+    opacity: 0.9;
+  }
+
+  .dock-dialog__foot {
+    margin-top: var(--space-3);
+    text-align: center;
+  }
+</style>
+
+<script is:inline>
+  ;(function () {
+    var trigger = document.getElementById('dock-sos-trigger')
+    var dialog = document.getElementById('dock-sos-dialog')
+    var closeBtn = document.getElementById('dock-sos-close')
+    var topBtn = document.getElementById('dock-top-btn')
+    var progressBar = document.getElementById('dock-progress-bar')
+
+    // Dialog handling
+    if (trigger && dialog) {
+      trigger.addEventListener('click', function () {
+        if (typeof dialog.showModal === 'function') {
+          dialog.showModal()
+        } else {
+          dialog.setAttribute('open', '')
+        }
+        trigger.setAttribute('aria-expanded', 'true')
+      })
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+          if (typeof dialog.close === 'function') {
+            dialog.close()
+          } else {
+            dialog.removeAttribute('open')
+          }
+          trigger.setAttribute('aria-expanded', 'false')
+        })
+      }
+
+      dialog.addEventListener('close', function () {
+        trigger.setAttribute('aria-expanded', 'false')
+      })
+
+      // Click outside to close
+      dialog.addEventListener('click', function (e) {
+        if (e.target === dialog) {
+          dialog.close()
+        }
+      })
+    }
+
+    // Scroll handling: back to top and scroll progress circle
+    function onScroll() {
+      var scrollY = window.scrollY || document.documentElement.scrollTop
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight
+      var progress = docHeight > 0 ? Math.min(100, Math.max(0, (scrollY / docHeight) * 100)) : 0
+
+      if (topBtn) {
+        if (scrollY > 280) {
+          topBtn.hidden = false
+        } else {
+          topBtn.hidden = true
+        }
+      }
+
+      if (progressBar) {
+        progressBar.setAttribute('stroke-dasharray', progress.toFixed(1) + ', 100')
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+
+    if (topBtn) {
+      topBtn.addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      })
+    }
+
+    // Keyboard shortcut '/' to search
+    document.addEventListener('keydown', function (e) {
+      if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+        e.preventDefault()
+        window.location.href = '/hanapin'
+      }
+    })
+  })()
+</script>

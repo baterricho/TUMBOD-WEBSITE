@@ -18,6 +18,9 @@ export type IconName =
   | 'shield' | 'mail' | 'chevron-left' | 'chevron-right' | 'layers'
   // Hero map chrome.
   | 'chevron-down' | 'plus' | 'minus' | 'locate' | 'sun' | 'droplet'
+  | 'chevron-up' | 'close' | 'camera' | 'play' | 'check'
+  | 'cloud' | 'cloud-sun' | 'lightning' | 'compass' | 'maximize'
+  | 'radio' | 'user' | 'bar-chart'
 
 const PATHS: Record<IconName, string> = {
   bangka: 'M3 15h18l-2 4H5l-2-4Zm2-1V9m14 5V9M7 14 12 5l5 9',
@@ -59,6 +62,19 @@ const PATHS: Record<IconName, string> = {
   /* Weather. The sea icons cover the sea; these cover the sky. */
   sun: 'M12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10ZM12 1v3m0 16v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M1 12h3m16 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1',
   droplet: 'M12 3s6 6.3 6 10a6 6 0 0 1-12 0c0-3.7 6-10 6-10Z',
+  'chevron-up': 'M18 15l-6-6-6 6',
+  close: 'M18 6L6 18M6 6l12 12',
+  camera: 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  play: 'M5 3l14 9-14 9V3z',
+  check: 'M20 6L9 17l-5-5',
+  cloud: 'M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z',
+  'cloud-sun': 'M17 18a5 5 0 0 0-10 0M12 2v2M4.93 4.93l1.41 1.41M2 12h2M20 12h2M19.07 4.93l-1.41 1.41',
+  lightning: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  compass: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm4.24-14.24l-2.83 8.48-8.48 2.83 2.83-8.48 8.48-2.83Z',
+  maximize: 'M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3',
+  radio: 'M4.9 19.1C1 15.2 1 8.8 4.9 4.9m14.2 0c3.9 3.9 3.9 10.3 0 14.2M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5m8.4 0c2.3 2.3 2.3 6.1 0 8.5M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
+  user: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
+  'bar-chart': 'M12 20V10m6 10V4M6 20v-4',
 }
 
 interface Props {

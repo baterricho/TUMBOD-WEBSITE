@@ -255,6 +255,9 @@ const statusBorder =
     </div>
 
     <div class="weather-timeline__scroller" role="region" aria-label={fil ? 'Oras-oras na lagay ng dagat' : 'Hourly sea conditions'}>
+      <p class="timeline-swipe-hint" aria-hidden="true">
+        <span>↔</span> {fil ? 'I-swipe pakaliwa o pakanan para sa susunod na mga oras' : 'Swipe left/right to inspect hourly forecast'}
+      </p>
       <div class="weather-timeline__track" id="weather-hourly-track">
         {data.hourly.slice(0, 18).map((h, idx) => (
           <button
@@ -948,13 +951,70 @@ const statusBorder =
   text-align: right;
 }
 
+.timeline-swipe-hint {
+  display: none;
+  font-size: 11px;
+  color: var(--palette-slate-400);
+  margin: 0 0 6px 2px;
+}
+
 @media (max-width: 640px) {
+  .timeline-swipe-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .weather-widget {
+    padding: var(--space-3);
+  }
+  .weather-widget__controls {
+    width: 100%;
+    margin-top: var(--space-2);
+  }
+  .weather-widget__unit-btn,
+  .weather-widget__refresh-btn {
+    min-height: 48px;
+    padding: 10px 16px;
+  }
   .weather-safety-card {
     flex-direction: column;
+    padding: var(--space-3);
   }
   .weather-safety-card__icon-col {
     flex-direction: row;
     justify-content: flex-start;
+  }
+  .weather-gauges {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  .weather-gauge-card {
+    padding: var(--space-4);
+  }
+  .weather-daily__grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+    gap: 10px;
+  }
+  .daily-card {
+    flex: 0 0 135px;
+    scroll-snap-align: start;
+    min-height: 140px;
+    padding: 12px 8px;
+  }
+  .weather-timeline__track {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .timeline-hour {
+    scroll-snap-align: start;
+    min-width: 72px;
+    min-height: 80px;
+    padding: 10px 8px;
   }
 }
 </style>

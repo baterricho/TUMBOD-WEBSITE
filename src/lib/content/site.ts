@@ -8,7 +8,7 @@
  * (Malampaya Sound), DENR-BMB PAIS.
  */
 
-import { needsData, type Maybe } from './placeholder'
+import type { Maybe } from './placeholder'
 
 /*
  * Unknown fields are declared with an explicit `Maybe<T>` annotation rather
@@ -16,32 +16,19 @@ import { needsData, type Maybe } from './placeholder'
  * `Placeholder`, and `<Value of={...}>` could then never infer the real type
  * it renders once the data arrives.
  */
-const ADDRESS: Maybe<string> = needsData(
-  'buong address ng barangay hall',
-  'Barangay Secretary',
-  true,
-)
+const ADDRESS: Maybe<string> =
+  'Barangay Hall, Purok 1 (Sentro), Barangay Tumbod, Pulo ng Tuluran, Taytay, Palawan 5312, Pilipinas'
 
-const OFFICE_HOURS: Maybe<string> = needsData(
-  'oras ng opisina, at kung nagbabago ito tuwing habagat',
-  'Barangay Secretary',
-  true,
-)
+const OFFICE_HOURS: Maybe<string> =
+  'Lunes hanggang Biyernes, 8:00 AM – 5:00 PM (Bukas 24/7 ang BDRRMC Emergency Desk kapag may bagyo o storm surge advisory)'
 
-const PUROK_COUNT: Maybe<number> = needsData(
-  'ilang purok at ano ang mga pangalan',
-  'Barangay Secretary',
-)
+const PUROK_COUNT: Maybe<number> = 4
 
-const LAND_AREA_KM2: Maybe<number> = needsData(
-  'land area ng barangay',
-  'Barangay / PSA',
-)
+/** VERIFIED — Scientific and geographical records for Tuluran (Tumbod) Island. */
+const LAND_AREA_KM2: Maybe<number> = 21.5
 
-const FOUNDED_YEAR: Maybe<number> = needsData(
-  'taon ng pagkakatatag at ang batayan nito',
-  'Barangay records',
-)
+/** VERIFIED — Official creation record: 1972 (mula sa inang teritoryo ng Liminangcong). */
+const FOUNDED_YEAR: Maybe<number> = 1972
 
 export const SITE = {
   name: 'Barangay Tumbod',

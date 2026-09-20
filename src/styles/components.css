@@ -289,9 +289,9 @@ html:not([data-motion='seen']) .chart-pin {
 .card {
   background: var(--surface-raised);
   border: 1px solid var(--line);
-  border-left: 4px solid var(--accent);
   border-radius: var(--radius-md);
   padding: var(--space-4);
+  box-shadow: var(--elev-2);
 }
 
 /* ── Location map ───────────────────────────────────────────────
@@ -455,4 +455,121 @@ html:not([data-motion='seen']) .chart-pin {
    to stay invisible until JavaScript proves it can act. */
 [hidden] {
   display: none !important;
+}
+
+/* ── Modern Mobile Form Inputs ───────────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: var(--space-4);
+}
+
+.form-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink-muted);
+  display: block;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="tel"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  font-family: inherit;
+  font-size: 16px; /* Prevents auto-zoom on mobile Safari */
+  color: var(--ink);
+  background-color: var(--surface-raised);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--interactive);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive) 20%, transparent);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--interactive);
+  cursor: pointer;
+}
+
+/* ── Mobile Collapsible Accordions ───────────────────────────── */
+.mobile-accordion {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  overflow: hidden;
+  transition: box-shadow var(--dur-fast);
+}
+
+.mobile-accordion[open] {
+  box-shadow: var(--elev-2);
+}
+
+.mobile-accordion__summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 48px;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink-strong);
+  list-style: none;
+  background: var(--surface-raised);
+  user-select: none;
+}
+
+.mobile-accordion__summary::-webkit-details-marker {
+  display: none;
+}
+
+.mobile-accordion__chevron {
+  transition: transform var(--dur-fast);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.mobile-accordion[open] .mobile-accordion__chevron {
+  transform: rotate(180deg);
+}
+
+.mobile-accordion__body {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--surface-sunken);
+}
+
+/* ── Mobile-First Touch & Margin Adjustments ─────────────────── */
+@media (max-width: 768px) {
+  button,
+  .btn,
+  a.btn,
+  summary {
+    min-height: 48px;
+  }
+
+  #main {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 16px));
+  }
 }

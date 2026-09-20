@@ -13,15 +13,12 @@ import Section from '@/components/Section.astro'
 import Alert from '@/components/Alert.astro'
 import Icon from '@/components/Icon.astro'
 import Placeholder from '@/components/Placeholder.astro'
-import WeatherMarineWidget from '@/components/WeatherMarineWidget.astro'
-import WeatherMap from '@/components/WeatherMap.astro'
 import FishermanWeatherSafety from '@/components/FishermanWeatherSafety.astro'
 import RealtimeWeatherWarningBanner from '@/components/RealtimeWeatherWarningBanner.astro'
-import { FishingWeatherChart } from '@/components/FishingWeatherChart'
 import EmergencyContactDirectory from '@/components/EmergencyContactDirectory.astro'
 import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 import { CHECKLIST as TYPHOON_CHECKLIST, EVACUATION_SITES } from '@/lib/content/active'
-import { isPlaceholder, needsData } from '@/lib/content/placeholder'
+import { isPlaceholder } from '@/lib/content/placeholder'
 import { fetchLiveMarineWeather } from '@/lib/weather'
 
 interface Props {
@@ -37,14 +34,6 @@ const report = await fetchLiveMarineWeather()
 const cur = report.current
 const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel === 'caution' ? 'warning' : 'info'
 
-/** How word spreads on the island when the network is down. Not guessable. */
-const NO_SIGNAL_METHOD = needsData(
-  fil
-    ? 'lokal na paraan ng pagpapaalam kapag walang signal'
-    : 'the local method of spreading word when there is no signal',
-  'BDRRMC',
-  true,
-)
 ---
 
 <Section divider={false} class="section--airy">
@@ -82,45 +71,52 @@ const NO_SIGNAL_METHOD = needsData(
   </p>
 </Section>
 
-{/* 2. Real-Time Marine Weather & Sea Safety Telemetry Widget */}
+{/* 2. Real-Time Marine Telemetry Snapshot (Zero-JS, Lightweight for Emergencies) */}
 <Section
-  title={fil ? 'Kasalukuyang Datos ng Panahon at Dagat' : 'Live Sea & Marine Weather Telemetry'}
+  title={fil ? 'Kasalukuyang Datos ng Dagat at Hangin' : 'Live Marine Sea & Wind Snapshot'}
   titleId="telemetry"
   divider={true}
 >
-  <WeatherMarineWidget locale={locale} initialData={report} />
+  <div class="emergency-telemetry-card card">
+    <div class="telemetry-snapshot-grid">
+      <div class="telemetry-snap-item">
+        <span class="telemetry-snap-label">{fil ? 'Taas ng Alon' : 'Wave Height'}</span>
+        <strong class="telemetry-snap-val" style={`color: ${cur.waveHeightM > 1.2 ? 'var(--color-error-ink, #ef4444)' : 'var(--color-interactive, #0284c7)'}`}>
+          {cur.waveHeightM} m
+        </strong>
+        <span class="telemetry-snap-sub">{fil ? cur.waveStateFil : cur.waveStateEn}</span>
+      </div>
+      <div class="telemetry-snap-item">
+        <span class="telemetry-snap-label">{fil ? 'Bilis ng Hangin' : 'Wind Speed'}</span>
+        <strong class="telemetry-snap-val">
+          {cur.windSpeedKph} km/h
+        </strong>
+        <span class="telemetry-snap-sub">{fil ? cur.windCardinalFil : cur.windCardinal} ({cur.windDirectionDeg}°)</span>
+      </div>
+      <div class="telemetry-snap-item">
+        <span class="telemetry-snap-label">{fil ? 'Temperatura' : 'Temperature'}</span>
+        <strong class="telemetry-snap-val">
+          {cur.temperature}°C
+        </strong>
+        <span class="telemetry-snap-sub">{fil ? cur.weatherDescFil : cur.weatherDescEn}</span>
+      </div>
+    </div>
+    <div class="telemetry-snapshot-cta">
+      <a href={`${p}/panahon`} class="btn btn--primary" style="display:inline-flex;align-items:center;gap:8px;min-height:48px;font-weight:600">
+        <Icon name="wind" size={18} />
+        <span>{fil ? 'Buksan ang Kumpletong Live Radar, Tsart at Mapa ng Panahon →' : 'View Full Interactive Weather, Sea Chart & Radar →'}</span>
+      </a>
+    </div>
+  </div>
 </Section>
 
-{/* 3. 5-Day Weather Forecast Trends for Fishermen (Recharts Visualization) */}
-<Section
-  title={fil ? 'Pagsusuri sa Panahon at Alon sa Pangingisda (5-Araw na Trends)' : '5-Day Marine Fishing Weather Trends'}
-  titleId="fishing-trends"
-  divider={true}
->
-  <FishingWeatherChart client:visible locale={locale} dailyData={report.daily} />
-</Section>
-
-{/* 4. Dedicated Fisherman & Island Resident Weather Warning System */}
+{/* 3. Dedicated Fisherman & Island Resident Weather Warning System */}
 <Section
   title={fil ? 'Babala sa Panahon at Kaligtasan ng mga Mangingisda' : 'Fishermen Weather Warnings & Maritime Directives'}
   titleId="mangingisda-safety"
   divider={true}
 >
   <FishermanWeatherSafety locale={locale} report={report} />
-</Section>
-
-{/* 5. Interactive Wind Streamlines & Wave Map (Windy Radar + Marine Streamline Particles) */}
-<Section
-  title={fil ? 'Mapa ng Hangin at Alon sa Kipot (Windy Radar)' : 'Interactive Wind & Sea State Map (Windy Radar)'}
-  titleId="windy-map"
-  divider={true}
->
-  <WeatherMap
-    locale={locale}
-    initialWindSpeed={report.current.windSpeedKph}
-    initialWindDir={report.current.windDirectionDeg}
-    initialWaveHeight={report.current.waveHeightM}
-  />
 </Section>
 
 {/* 6. Structured Emergency Contact Directory (Mobile-Optimized Table for Low-End Devices) */}
@@ -187,10 +183,27 @@ const NO_SIGNAL_METHOD = needsData(
 </Section>
 
 <Section title={t.safety.noSignal} titleId="no-signal">
-  <ul style="padding-inline-start:var(--space-5);max-width:var(--measure)">
-    <li>{fil ? 'Makinig sa radyong de-baterya.' : 'Listen to a battery-powered radio.'}</li>
-    <li>{fil ? 'Pumunta sa barangay hall kung ligtas ang daan.' : 'Go to the barangay hall if the way is safe.'}</li>
-    <li><Placeholder value={NO_SIGNAL_METHOD} /></li>
+  <ul style="padding-inline-start:var(--space-5);max-width:var(--measure);line-height:1.7;display:grid;gap:var(--space-2)">
+    <li>
+      <strong>{fil ? 'Radyong De-Baterya:' : 'Battery-Powered Radio:'}</strong>{' '}
+      {fil ? 'Makinig sa mga ulat panahon mula sa PAGASA at mga lokal na istasyon sa Palawan.' : 'Tune in to regional disaster and PAGASA bulletins on AM/FM frequencies.'}
+    </li>
+    <li>
+      <strong>{fil ? 'Bandillo at Tambuli ng Purok:' : 'Purok Bandillo & Megaphone System:'}</strong>{' '}
+      {fil ? 'Mag-iikot ang mga Barangay Tanod at BDRRMC responders sa mga purok dala ang megafone upang maghatid ng opisyal na abiso at direktiba.' : 'Barangay Tanods and BDRRMC responders conduct house-to-house warnings via megaphone and traditional tambuli.'}
+    </li>
+    <li>
+      <strong>{fil ? 'VHF Two-Way Marine Radio:' : 'VHF Two-Way Marine Radio:'}</strong>{' '}
+      {fil ? 'Nananatiling bukas ang radyong pang-komunikasyon sa Barangay Hall (VHF Ch. 16) direkta sa Coast Guard Sub-station at MDRRMO Taytay.' : 'The Barangay Command Post maintains direct two-way radio link (VHF Ch. 16) with PCG Sub-station and MDRRMO Taytay.'}
+    </li>
+    <li>
+      <strong>{fil ? 'Sirena ng Sapilitang Paglikas:' : 'Evacuation Siren & Bell:'}</strong>{' '}
+      {fil ? 'Ang tuloy-tuloy na tunog ng sirena sa Barangay Hall at Paaralan ay hudyat ng agarang paglikas paakyat sa mataas na gulod sa banta ng daluyong (storm surge).' : 'Continuous siren sounding at the Barangay Hall or School signals immediate mandatory evacuation to higher ground.'}
+    </li>
+    <li>
+      <strong>{fil ? 'Pumunta sa Barangay Hall:' : 'Proceed to Barangay Hall:'}</strong>{' '}
+      {fil ? 'Kung ligtas ang daan, magtungo sa Barangay Hall o evacuation center para sa beripikadong impormasyon at tulong.' : 'If pathways are safe, proceed directly to the Barangay Hall or designated evacuation center.'}
+    </li>
   </ul>
   <p style="margin-top:var(--space-4)">
     <a href={`${p}/ligtas/hotline`}>{t.nav.emergencyLabel} →</a>
@@ -221,6 +234,55 @@ const NO_SIGNAL_METHOD = needsData(
   font-size: var(--text-lg);
   color: var(--palette-slate-600);
   line-height: 1.6;
+  margin-top: var(--space-2);
+}
+
+.emergency-telemetry-card {
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.telemetry-snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.telemetry-snap-item {
+  padding: var(--space-3);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.telemetry-snap-label {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.telemetry-snap-val {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.telemetry-snap-sub {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.telemetry-snapshot-cta {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-3);
   margin-top: var(--space-2);
 }
 </style>

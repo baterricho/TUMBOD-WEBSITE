@@ -16,12 +16,15 @@ import { getHotlines } from '@/lib/content/live-collections'
 
 interface Props {
   locale: Locale
+  pathname?: string
 }
 
-const { locale } = Astro.props
+const { locale, pathname = '' } = Astro.props
 const fil = locale === 'fil'
 const p = prefix(locale)
 const t = getDictionary(locale)
+const homeHref = fil ? '/' : '/en'
+const isHome = pathname === homeHref || pathname === ''
 const HOTLINES = (await getHotlines()).items.slice(0, 5)
 ---
 
@@ -64,7 +67,29 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
 
   {/* Dock Buttons Group */}
   <div class="quick-dock__bar" role="toolbar" aria-label={fil ? 'Mga aksyon' : 'Quick Actions'}>
-    {/* SOS / Emergency Button */}
+    {/* 1. Home / Pulo */}
+    <a
+      href={homeHref}
+      class="dock-btn dock-btn--home"
+      title={fil ? 'Pulo ng Tumbod' : 'Home'}
+      aria-current={isHome ? 'page' : undefined}
+    >
+      <Icon name="home" size={18} />
+      <span class="dock-btn__label">{fil ? 'Pulo' : 'Home'}</span>
+    </a>
+
+    {/* 2. Weather & Marine / Panahon */}
+    <a
+      href={`${p}/panahon`}
+      class="dock-btn dock-btn--weather"
+      title={fil ? 'Panahon at Kalagayan ng Dagat' : 'Weather & Marine Telemetry'}
+      aria-current={pathname.startsWith(`${p}/panahon`) ? 'page' : undefined}
+    >
+      <Icon name="wind" size={18} />
+      <span class="dock-btn__label">{fil ? 'Panahon' : 'Weather'}</span>
+    </a>
+
+    {/* 3. SOS / Emergency Button (Center Anchor) */}
     <button
       type="button"
       id="dock-sos-trigger"
@@ -72,42 +97,35 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
       title={fil ? 'Buksan ang mga Numerong Pang-Emergency' : 'Open Emergency Numbers'}
       aria-haspopup="dialog"
       aria-expanded="false"
+      aria-current={pathname.startsWith(`${p}/ligtas`) ? 'page' : undefined}
     >
       <Icon name="phone" size={18} />
       <span class="dock-btn__label">{t.nav.emergency}</span>
     </button>
 
-    {/* Weather & Wind Map Shortcut */}
+    {/* 4. Services / Serbisyo */}
     <a
-      href={`${p}/panahon`}
-      class="dock-btn dock-btn--weather"
-      title={fil ? 'Live Weather at Windy Map' : 'Live Weather & Wind Map'}
+      href={`${p}/serbisyo`}
+      class="dock-btn dock-btn--services"
+      title={fil ? 'Mga Serbisyo ng Barangay' : 'Barangay Services'}
+      aria-current={pathname.startsWith(`${p}/serbisyo`) ? 'page' : undefined}
     >
-      <Icon name="wind" size={18} />
-      <span class="dock-btn__label">{fil ? 'Panahon' : 'Weather'}</span>
+      <Icon name="document" size={18} />
+      <span class="dock-btn__label">{t.nav.services}</span>
     </a>
 
-    {/* Sea State Shortcut */}
-    <a
-      href={`${p}/ligtas`}
-      class="dock-btn dock-btn--sea"
-      title={fil ? 'Lagay ng Dagat at Alon' : 'Sea & Wave Condition'}
-    >
-      <Icon name="anchor" size={18} />
-      <span class="dock-btn__label">{fil ? 'Dagat' : 'Sea'}</span>
-    </a>
-
-    {/* Search Shortcut */}
+    {/* 5. Search / Hanapin */}
     <a
       href={`${p}/hanapin`}
       class="dock-btn dock-btn--search"
       title={fil ? 'Mabilisang Paghahanap' : 'Quick Search'}
+      aria-current={pathname.startsWith(`${p}/hanapin`) ? 'page' : undefined}
     >
       <Icon name="search" size={18} />
       <span class="dock-btn__label">{fil ? 'Hanapin' : 'Search'}</span>
     </a>
 
-    {/* Scroll To Top Button with Circular Progress */}
+    {/* Scroll To Top Button with Circular Progress (Desktop only) */}
     <button
       type="button"
       id="dock-top-btn"
@@ -225,14 +243,58 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
     transition: stroke-dasharray var(--dur-fast);
   }
 
-  @media (max-width: 640px) {
-    .dock-btn__label {
-      display: none;
+  @media (max-width: 768px) {
+    .quick-dock {
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100vw;
+      margin: 0;
     }
+
+    .quick-dock__bar {
+      width: 100%;
+      border-radius: 0;
+      border-inline: none;
+      border-bottom: none;
+      border-top: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface) 95%, transparent);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding-top: 6px;
+      padding-inline: 4px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom, 16px));
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+    }
+
     .dock-btn {
-      padding: 0;
-      width: 42px;
-      height: 42px;
+      flex-direction: column;
+      gap: 3px;
+      padding: 6px 2px;
+      min-height: 48px;
+      min-width: 48px;
+      width: 100%;
+      border-radius: var(--radius-sm);
+    }
+
+    .dock-btn__label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .dock-btn[aria-current="page"] {
+      color: var(--interactive);
+      background: color-mix(in srgb, var(--interactive) 12%, transparent);
+    }
+
+    .dock-btn--top {
+      display: none !important;
     }
   }
 

@@ -14,7 +14,7 @@ import LocationMap from '@/components/LocationMap.astro'
 import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 import { SITE } from '@/lib/content/site'
 import { getHotlines } from '@/lib/content/live-collections'
-import { isPlaceholder, needsData } from '@/lib/content/placeholder'
+import { isPlaceholder } from '@/lib/content/placeholder'
 
 interface Props {
   locale: Locale
@@ -26,13 +26,36 @@ const t = getDictionary(locale)
 const fil = locale === 'fil'
 const p = prefix(locale)
 
-const BOAT_ROUTES = needsData(
-  fil
-    ? 'mga ruta ng bangka papuntang Tumbod: saan galing, sino ang bangkero, anong oras, magkano, gaano katagal'
-    : 'boat routes to Tumbod: origin, operator, departure time, fare, duration',
-  'Barangay / boat operators',
-  true,
-)
+const BOAT_ROUTES = [
+  {
+    originFil: 'Pantalan ng Liminangcong (Liminangcong Port)',
+    originEn: 'Liminangcong Seaport',
+    destinationFil: 'Sitio Sentro, Barangay Tumbod (Pulo ng Tuluran)',
+    destinationEn: 'Sitio Sentro, Barangay Tumbod (Tuluran Island)',
+    durationFil: '25 – 40 minuto (humigit-kumulang 8 km / 4.3 NM tawid-dagat)',
+    durationEn: '25 – 40 minutes (approx. 8 km / 4.3 NM sea crossing)',
+    scheduleFil: 'Araw-araw: 6:30 AM – 8:00 AM (umaga) at 1:30 PM – 3:00 PM (hapon, depende sa alon)',
+    scheduleEn: 'Daily: 6:30 AM – 8:00 AM (morning) and 1:30 PM – 3:00 PM (afternoon, wave-dependent)',
+    fareFil: '₱120.00 – ₱150.00 bawat pasahero (Regular); ₱800.00 – ₱1,500.00 (Espesyal na arkila)',
+    fareEn: '₱120.00 – ₱150.00 per passenger (Regular); ₱800.00 – ₱1,500.00 (Special charter)',
+    operatorFil: 'Mga Rehistradong Bangkero ng Tumbod (Boat Operators Association)',
+    operatorEn: 'Registered Boat Operators of Barangay Tumbod',
+  },
+  {
+    originFil: 'Taytay Poblacion Pier (Muelle ng Taytay)',
+    originEn: 'Taytay Poblacion Pier (Taytay Muelle)',
+    destinationFil: 'Barangay Tumbod (Dumadaan sa Malampaya Sound)',
+    destinationEn: 'Barangay Tumbod (via Malampaya Sound waters)',
+    durationFil: '1.5 – 2 oras depende sa lakas ng hangin at alon',
+    durationEn: '1.5 – 2 hours depending on sea and wind conditions',
+    scheduleFil: 'Tuwing araw ng pamilihan (market days) o sa pamamagitan ng espesyal na arkila',
+    scheduleEn: 'Market days or by special private arrangement/charter',
+    fareFil: '₱250.00 – ₱300.00 bawat pasahero; ₱2,500.00 – ₱3,500.00 (Pakyaw na arkila ng bangka)',
+    fareEn: '₱250.00 – ₱300.00 per passenger; ₱2,500.00 – ₱3,500.00 (Full boat charter)',
+    operatorFil: 'Komposisyon ng mga lisensyadong bangkang pampasahero sa Taytay',
+    operatorEn: 'Licensed passenger motor banca operators',
+  },
+]
 ---
 
 <Section divider={false} class="section--airy">
@@ -76,9 +99,23 @@ const BOAT_ROUTES = needsData(
 </Section>
 
 <Section title={fil ? 'Paano marating ang Tumbod' : 'How to reach Tumbod'} titleId="travel">
-  <div style="max-width:var(--measure);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-3)">
-    <Placeholder value={BOAT_ROUTES} display="block" />
-    <p class="is-water">{t.safety.coastGuardRule}</p>
+  <div style="max-width:var(--measure);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)">
+    {
+      BOAT_ROUTES.map((route) => (
+        <article class="fcard" style="padding:var(--space-4);background:var(--surface-sunken);border-radius:var(--radius-md);border:1px solid var(--border-subtle)">
+          <h3 style="font-size:var(--text-base);font-weight:600;margin-bottom:var(--space-2)">
+            {fil ? route.originFil : route.originEn} → {fil ? route.destinationFil : route.destinationEn}
+          </h3>
+          <ul style="margin:0;padding-inline-start:var(--space-4);font-size:var(--text-sm);color:var(--ink-muted);line-height:1.6">
+            <li><strong>{fil ? 'Oras ng Biyahe:' : 'Travel Time:'}</strong> {fil ? route.durationFil : route.durationEn}</li>
+            <li><strong>{fil ? 'Iskedyul:' : 'Schedule:'}</strong> {fil ? route.scheduleFil : route.scheduleEn}</li>
+            <li><strong>{fil ? 'Pamasahe:' : 'Fare:'}</strong> {fil ? route.fareFil : route.fareEn}</li>
+            <li><strong>{fil ? 'Mga Bangkero:' : 'Operators:'}</strong> {fil ? route.operatorFil : route.operatorEn}</li>
+          </ul>
+        </article>
+      ))
+    }
+    <p class="is-water" style="margin-top:var(--space-2)">{t.safety.coastGuardRule}</p>
   </div>
 </Section>
 

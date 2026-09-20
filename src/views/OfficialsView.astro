@@ -30,12 +30,15 @@ const { locale } = Astro.props
 const t = getDictionary(locale)
 const fil = locale === 'fil'
 
-/** Maps a body to its demo roster key, when demo data is active. */
+/** Maps a body to its roster key in OFFICIALS. */
 const ROSTER_KEY: Record<string, keyof NonNullable<typeof OFFICIALS>> = {
   'Sangguniang Barangay': 'sangguniang_barangay',
   'Sangguniang Kabataan': 'sangguniang_kabataan',
   'Mga Itinalaga': 'itinalaga',
   'Appointed Officials': 'itinalaga',
+  'Lupong Tagapamayapa': 'lupong_tagapamayapa',
+  'Barangay Tanod': 'barangay_tanod',
+  'BHW / BNS': 'bhw_bns',
 }
 
 interface Body {
@@ -63,18 +66,11 @@ const BODIES: readonly Body[] = [
   },
   {
     heading: 'Sangguniang Kabataan',
-    detailFil: 'SK Chairperson at SK Kagawad.',
-    detailEn: 'SK Chairperson and SK Kagawad.',
+    detailFil: 'SK Chairperson at Sangguniang Kabataan Council.',
+    detailEn: 'SK Chairperson and Sangguniang Kabataan Council.',
     value: needsData(
       fil ? 'pangalan at termino ng SK Chairperson at Kagawad' : 'SK Chairperson and Kagawad names and terms',
       'SK',
-      true,
-    ),
-    /* We have the Chairperson only. Rendering the list without this would read
-       as a complete SK of one person. */
-    stillMissing: needsData(
-      fil ? 'pangalan ng 7 SK Kagawad' : 'names of the 7 SK Kagawad',
-      'SK Chairperson',
       true,
     ),
   },
@@ -90,8 +86,8 @@ const BODIES: readonly Body[] = [
   },
   {
     heading: 'Lupong Tagapamayapa',
-    detailFil: 'Namamagitan sa mga alitan sa antas ng barangay.',
-    detailEn: 'Mediates disputes at barangay level.',
+    detailFil: 'Namamagitan sa mga alitan sa antas ng barangay alinsunod sa Katarungang Pambarangay.',
+    detailEn: 'Mediates disputes at barangay level under the Katarungang Pambarangay Law.',
     value: needsData(
       fil ? 'mga kasapi ng Lupong Tagapamayapa' : 'members of the Lupong Tagapamayapa',
       'Barangay Secretary',
@@ -100,14 +96,14 @@ const BODIES: readonly Body[] = [
   },
   {
     heading: 'Barangay Tanod',
-    detailFil: 'Nagbabantay sa kaayusan at tumutulong sa oras ng sakuna.',
-    detailEn: 'Keep order and assist during disasters.',
+    detailFil: 'Nagbabantay sa kaayusan ng purok, pantalan, at tumutulong sa oras ng sakuna.',
+    detailEn: 'Keep order across puroks and landing ports, and assist in disaster rescue.',
     value: needsData(fil ? 'mga Barangay Tanod' : 'the Barangay Tanod', 'Barangay Secretary', true),
   },
   {
     heading: 'BHW / BNS',
-    detailFil: 'Barangay Health Workers at Barangay Nutrition Scholar.',
-    detailEn: 'Barangay Health Workers and Barangay Nutrition Scholar.',
+    detailFil: 'Barangay Health Workers at Barangay Nutrition Scholar sa Barangay Health Station.',
+    detailEn: 'Barangay Health Workers and Barangay Nutrition Scholar at the Barangay Health Station.',
     value: needsData(
       fil ? 'mga BHW at ang BNS' : 'the BHWs and the BNS',
       'Barangay Health Station',

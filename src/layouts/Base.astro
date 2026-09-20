@@ -78,16 +78,17 @@ const jsonLd = {
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:locale" content={locale === 'fil' ? 'fil_PH' : 'en_PH'} />
-    {/* Preload the body regular ONLY. Every other face loads on demand
-        (PERF-PLAN.md §3) — preloading all five would spend the whole font
-        budget before the first paragraph renders. */}
-    <link
-      rel="preload"
-      href="/fonts/inter-latin-400-normal.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin="anonymous"
-    />
+    {/* Preload the body regular ONLY on non-emergency routes.
+        On emergency routes (/ligtas), font is cached/on-demand per PERF-PLAN.md §1. */}
+    {!pathname.startsWith('/ligtas') && !pathname.startsWith('/en/ligtas') && (
+      <link
+        rel="preload"
+        href="/fonts/inter-latin-400-normal.woff2"
+        as="font"
+        type="font/woff2"
+        crossorigin="anonymous"
+      />
+    )}
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png" />
@@ -137,6 +138,12 @@ const jsonLd = {
       } catch (e) {
         /* no matchMedia — content stays visible, which is the safe direction */
       }
+      try {
+        var storedTheme = localStorage.getItem('tumbod:theme')
+        if (storedTheme === 'dark' || (!storedTheme && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark')
+        }
+      } catch (e) {}
     </script>
   </head>
   <body>
@@ -150,7 +157,7 @@ const jsonLd = {
       <slot />
     </main>
     <SiteFooter locale={locale} />
-    {!pathname.startsWith('/admin') && <IslandQuickDock locale={locale} />}
+    {!pathname.startsWith('/admin') && <IslandQuickDock locale={locale} pathname={pathname} />}
 
     {/*
       Replaces any `[data-live]` list with what the barangay has actually

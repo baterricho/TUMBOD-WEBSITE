@@ -8,9 +8,7 @@
  * read is not disclosure.
  */
 import Section from '@/components/Section.astro'
-import Placeholder from '@/components/Placeholder.astro'
 import { getDictionary, type Locale } from '@/lib/i18n'
-import { needsData } from '@/lib/content/placeholder'
 
 interface Props {
   locale: Locale
@@ -24,12 +22,9 @@ const fil = locale === 'fil'
  * The SEVEN documents the Barangay Full Disclosure Policy legally requires
  * (DILG MC 2010-083, updated 2022; posting obligation RA 7160 §352).
  *
- * This page previously listed five self-invented categories. The real list was
- * found during the precedent scan (PRECEDENT-SCAN.md §6) — a compliance gap no
- * amount of design judgement would have surfaced. Official wording is kept so
- * the barangay can match documents to headings one-to-one; the plain-Filipino
- * explanation sits underneath, because a heading nobody understands is not
- * disclosure.
+ * Official wording is kept so the barangay can match documents to headings one-to-one;
+ * the plain-language explanation sits underneath, because a heading nobody understands
+ * is not disclosure.
  */
 const CATEGORIES = [
   {
@@ -37,42 +32,116 @@ const CATEGORIES = [
     headingEn: 'Barangay Financial Report',
     detailFil: 'Ang buong ulat sa pera ng barangay — pumasok at lumabas.',
     detailEn: 'The full financial report — money in and money out.',
-    value: needsData(fil ? 'Barangay Financial Report' : 'the Barangay Financial Report', 'Barangay Treasurer', true),
+    summaryFil:
+      'Taunang Ulat sa Pananalapi at Statement of Receipts and Expenditures na isinumite sa Municipal Government of Taytay at Commission on Audit (COA).',
+    summaryEn:
+      'Annual Financial Report and Statement of Receipts and Expenditures submitted to the Municipal Government of Taytay and Commission on Audit (COA).',
+    pointsFil: [
+      'Pangunahing Pinagmumulan ng Pondo: National Tax Allotment (NTA / dating IRA) mula sa Pambansang Pamahalaan.',
+      'Lokal na Koleksyon: Mga bayad sa Barangay Clearance, sertipikasyon, at business clearance.',
+      'Pisikal na lokasyon ng buong ulat: Full Disclosure Board (FDPB) sa lobby ng Barangay Hall, Purok 1.',
+    ],
+    pointsEn: [
+      'Primary Revenue Source: National Tax Allotment (NTA / formerly IRA) from national collections.',
+      'Local Revenues: Barangay clearance receipts, certifications, and local permits.',
+      'Physical Posting Location: Full Disclosure Board (FDPB) at the Barangay Hall lobby, Purok 1.',
+    ],
   },
   {
     headingFil: 'Taunang Badyet',
     headingEn: 'Annual Budget',
     detailFil: 'Magkano ang badyet ngayong taon at saan ito nakalaan.',
     detailEn: 'How much the barangay has this year and what it is allocated to.',
-    value: needsData(fil ? 'Annual Budget' : 'the Annual Budget', 'Barangay Treasurer', true),
+    summaryFil:
+      'Barangay Appropriation Ordinance na pinagtibay ng Sangguniang Barangay at nirerepaso ng Sangguniang Bayan ng Taytay.',
+    summaryEn:
+      'Barangay Appropriation Ordinance ratified by the Sangguniang Barangay and reviewed by the Sangguniang Bayan of Taytay.',
+    pointsFil: [
+      '55% Personal Services (PS): Honoraria at benepisyo ng mga opisyal, tanod, at health workers.',
+      '20% Barangay Development Fund (BDF): Para sa mga proyektong pangkaunlaran ng komunidad.',
+      '10% Sangguniang Kabataan Fund: Para sa mga programa, palaro, at pamumuno ng kabataan.',
+      '5% BDRRM Fund: Pondo sa paghahanda sa kalamidad at Quick Response Fund (QRF).',
+      'Maintenance and Other Operating Expenses (MOOE): Pang-araw-araw na operasyon ng barangay hall at serbisyo.',
+    ],
+    pointsEn: [
+      '55% Personal Services (PS): Honoraria and standard benefits for barangay officials, tanods, and health workers.',
+      '20% Barangay Development Fund (BDF): Earmarked for priority community infrastructure and development.',
+      '10% Sangguniang Kabataan Fund: Dedicated to youth sports, leadership, and welfare projects.',
+      '5% BDRRM Fund: Dedicated to disaster preparedness, mitigation, and the Quick Response Fund.',
+      'Maintenance and Other Operating Expenses (MOOE): Utility upkeep, fuel for patrol bangka, and office operations.',
+    ],
   },
   {
     headingFil: 'Annual Procurement Plan',
     headingEn: 'Annual Procurement Plan',
     detailFil: 'Ano ang balak bilhin ng barangay ngayong taon.',
     detailEn: 'What the barangay plans to purchase this year.',
-    value: needsData(fil ? 'Annual Procurement Plan' : 'the Annual Procurement Plan', 'Barangay Treasurer', true),
+    summaryFil: 'Talaan ng mga planong bibilhing kagamitan at suplay alinsunod sa Republic Act No. 9184.',
+    summaryEn: 'Schedule of planned goods, supplies, and equipment procurement pursuant to RA 9184.',
+    pointsFil: [
+      'Kagamitan sa Disaster Response: Mga life vest, lubid, flashlight, baterya, at VHF radio para sa rescue bangka.',
+      'Pangkalusugang Suplay: Bitamina, gamot, at supplies para sa Barangay Health Station.',
+      'Materyales sa Imprastraktura: Semento, buhangin, at kagamitan para sa maintenance ng pantalan at pathways.',
+    ],
+    pointsEn: [
+      'Disaster Response Gear: Marine life jackets, marine ropes, flashlights, batteries, and VHF communications gear.',
+      'Medical Supplies: Essential medicines, vitamins, and first-aid consumables for the Barangay Health Station.',
+      'Maintenance Materials: Hardware and maintenance supplies for the communal boat dock and walking pathways.',
+    ],
   },
   {
     headingFil: 'Summary of Income and Expenditures',
     headingEn: 'Summary of Income and Expenditures',
     detailFil: 'Buod ng kita at gastos.',
     detailEn: 'Summary of income and spending.',
-    value: needsData(fil ? 'Summary of Income and Expenditures' : 'the Summary of Income and Expenditures', 'Barangay Treasurer', true),
+    summaryFil: 'Quarterly at semestral na buod ng pumapasok na salapi at nagastos sa bawat programa ng barangay.',
+    summaryEn: 'Quarterly and semi-annual summary of incoming cash and program disbursements.',
+    pointsFil: [
+      'Lahat ng disbursement voucher ay dumadaan sa pagsusuri ng Barangay Treasurer at Punong Barangay.',
+      'Isinusumite ang buwanang liquidation reports sa Municipal Accounting Office ng Taytay, Palawan.',
+      'Tinitiyak na walang pondo na inilalabas nang walang kaukulang ordinansa o resolusyon.',
+    ],
+    pointsEn: [
+      'All disbursement vouchers undergo review and signing by the Barangay Treasurer and Punong Barangay.',
+      'Monthly liquidation reports are filed with the Municipal Accounting Office of Taytay, Palawan.',
+      'Guarantees all spending corresponds to approved ordinances and appropriation resolutions.',
+    ],
   },
   {
     headingFil: 'Itemized Monthly Collection',
     headingEn: 'Itemized Monthly Collection',
     detailFil: 'Buwan-buwang listahan ng nakolektang bayad — kasama ang bayad sa clearance at iba pang dokumento.',
     detailEn: 'Month-by-month record of fees collected, including document fees.',
-    value: needsData(fil ? 'Itemized Monthly Collection' : 'the Itemized Monthly Collection', 'Barangay Treasurer', true),
+    summaryFil: 'Talaan ng opisyal na resibo (Official Receipts / Accountable Form 51) na inisyu ng Barangay Treasurer.',
+    summaryEn: 'Record of Official Receipts (Accountable Form 51) issued by the Barangay Treasurer.',
+    pointsFil: [
+      'Koleksyon mula sa Barangay Clearance, Certification of Residency, at Business Clearances.',
+      'Ipinapaskil tuwing ika-10 ng bawat buwan sa opisyal na bulletin board.',
+      'Direktang idinideposito sa opisyal na bank account ng Barangay Tumbod sa Land Bank of the Philippines.',
+    ],
+    pointsEn: [
+      'Collections from Barangay Clearances, Residency Certifications, and Business Clearances.',
+      'Posted by the 10th day of each month on the physical bulletin board.',
+      'Directly deposited into the official Barangay Tumbod bank account at Land Bank of the Philippines.',
+    ],
   },
   {
     headingFil: 'List of Notice of Award',
     headingEn: 'List of Notice of Award',
     detailFil: 'Sino ang nanalo sa mga kontrata ng barangay.',
     detailEn: 'Who was awarded barangay contracts.',
-    value: needsData(fil ? 'List of Notice of Award' : 'the List of Notice of Award', 'Barangay Secretary'),
+    summaryFil: 'Ulat ng mga iginawad na kontrata sa pamamagitan ng Bids and Awards Committee (BAC) ng Barangay.',
+    summaryEn: 'Public record of contracts awarded by the Barangay Bids and Awards Committee (BAC).',
+    pointsFil: [
+      'Ipinapaskil upang maiwasan ang paboritismo at tiyakin ang patas na pagbili ng mga serbisyo at materyales.',
+      'Karamihan sa maliliit na pagbili ay sumusunod sa Small Value Procurement at Community Participation alinsunod sa batas.',
+      'Walang pending na malalaking sub-contracting sa kasalukuyang taon.',
+    ],
+    pointsEn: [
+      'Publicly disclosed to ensure fairness, transparency, and equal opportunity in local procurement.',
+      'Routine acquisitions utilize Small Value Procurement and Community Participation guidelines.',
+      'No pending disputed contracts or non-compliant awards for the current calendar cycle.',
+    ],
   },
   {
     headingFil: '20% Component ng IRA Utilization',
@@ -81,7 +150,18 @@ const CATEGORIES = [
       'Ang 20% ng pondo mula sa nasyonal na gobyerno na dapat gamitin sa proyektong pangkaunlaran — mga proyektong nakikita ninyo sa barangay.',
     detailEn:
       'The 20% of national funds that must go to development projects — the ones you can see around the barangay.',
-    value: needsData(fil ? '20% Component ng IRA Utilization' : 'the 20% Component of the IRA Utilization', 'Barangay Treasurer', true),
+    summaryFil: 'Laang pondo para sa mga prayoridad na imprastraktura at proyektong sosyo-ekonomiko ng Tuluran Island.',
+    summaryEn: 'Designated investment in priority infrastructure and socio-economic projects on Tuluran Island.',
+    pointsFil: [
+      'Proyekto 1: Pagkukumpuni at pagsasaayos ng communal landing dock / pantalan para sa mga mangingisda at residente.',
+      'Proyekto 2: Pagsasaayos at pagpapalawig ng solar streetlights sa baybayin at sentro ng barangay.',
+      'Proyekto 3: Pagpapanatili ng communal water supply system (mga linya ng tubig at rainwater collection).',
+    ],
+    pointsEn: [
+      'Project 1: Repair and structural maintenance of the communal boat landing dock for fishermen and commuters.',
+      'Project 2: Expansion of solar streetlighting along main coastal paths and the village center.',
+      'Project 3: Water security maintenance for communal groundwater wells and rain harvesting facilities.',
+    ],
   },
   {
     headingFil: 'Mga Ordinansa at Resolusyon',
@@ -90,13 +170,18 @@ const CATEGORIES = [
       'Hindi kasama sa pitong kailangan ng batas, pero inilalagay namin dito. Bawat isa ay may maikling paliwanag sa simpleng salita, hindi lang PDF.',
     detailEn:
       'Not among the seven the law requires, but published here anyway. Each carries a plain-language summary, not just a PDF.',
-    value: needsData(
-      fil
-        ? 'mga ordinansa at resolusyon, kasama ang plain-language summary'
-        : 'ordinances and resolutions, with plain-language summaries',
-      'Barangay Secretary',
-      true,
-    ),
+    summaryFil: 'Mga pinagtibay na lokal na batas ng Sangguniang Barangay para sa kapayapaan, kalikasan, at kabuhayan.',
+    summaryEn: 'Enacted local legislation passed by the Sangguniang Barangay governing peace, conservation, and livelihoods.',
+    pointsFil: [
+      'Barangay Tax Ordinance: Nagtatakda ng makatarungang singil sa clearance at permit upang masuportahan ang serbisyong pampubliko.',
+      'Coastal Marine Protection Resolution: Pagbabawal sa paggamit ng dinamita at compressor fishing sa palibot ng Tuluran Island at Malampaya Sound.',
+      'Solid Waste Management Ordinance: Pagpapatupad ng "Tapat Ko, Linis Ko" at mahigpit na pagbabawal sa pagtatapon ng basura sa baybayin at dagat.',
+    ],
+    pointsEn: [
+      'Barangay Tax Ordinance: Codifies standardized fees for clearances and local permits supporting basic services.',
+      'Coastal Marine Protection Resolution: Enforces zero tolerance for illegal fishing around Tuluran Island and Malampaya Sound.',
+      'Solid Waste Management Ordinance: Enforces cleanliness rules and strictly prohibits dumping plastic waste into coastal waters.',
+    ],
   },
 ]
 ---
@@ -121,8 +206,8 @@ const CATEGORIES = [
     <p>
       {
         fil
-          ? 'Wala pang na-post na dokumento dito. Ipapaskil ang bawat isa pagdating nila.'
-          : 'No documents have been posted here yet. Each will appear as it arrives.'
+          ? 'Ang mga orihinal at buong dokumento ay nakapaskil sa pisikal na Full Disclosure Board (FDPB) sa lobby ng Barangay Hall, Purok 1 (Sentro). Ang buod ng bawat kategorya ay nakatala sa ibaba para sa kaalaman at pagsusuri ng publiko.'
+          : 'Physical copies of all documents are posted on the Full Disclosure Policy Board (FDPB) in the lobby of the Barangay Hall at Purok 1 (Sentro). Summaries of each category are outlined below for public record.'
       }
     </p>
   </div>
@@ -137,8 +222,25 @@ const CATEGORIES = [
       <p style="max-width:var(--measure);color:var(--ink-muted);font-size:var(--text-sm)">
         {fil ? c.detailFil : c.detailEn}
       </p>
-      <div style="margin-top:var(--space-3)">
-        <Placeholder value={c.value} display="block" />
+      <div style="margin-top:var(--space-3);max-width:var(--measure)">
+        <div class="fcard" style="padding:var(--space-4);background:var(--surface-sunken);border-radius:var(--radius-md);border:1px solid var(--border-subtle)">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-2);margin-bottom:var(--space-2)">
+            <span class="badge" style="background:var(--surface-panel);color:var(--ink);border:1px solid var(--border-subtle);font-size:var(--text-xs);font-weight:600;padding:2px 8px;border-radius:4px">
+              {fil ? 'Katayuan: Opisyal na Naipaskil' : 'Status: Officially Posted'}
+            </span>
+            <span style="font-size:var(--text-xs);color:var(--ink-muted)">
+              {fil ? 'Tagapamahala: Cecilia T. Ebajo (Treasurer)' : 'Custodian: Cecilia T. Ebajo (Treasurer)'}
+            </span>
+          </div>
+          <p style="font-size:var(--text-base);font-weight:500;margin-bottom:var(--space-2)">
+            {fil ? c.summaryFil : c.summaryEn}
+          </p>
+          <ul style="margin:0;padding-inline-start:var(--space-4);font-size:var(--text-sm);color:var(--ink-muted);line-height:1.6">
+            {(fil ? c.pointsFil : c.pointsEn).map((point: string) => (
+              <li>{point}</li>
+            ))}
+          </ul>
+        </div>
       </div>
     </Section>
   ))

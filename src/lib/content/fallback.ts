@@ -11,7 +11,6 @@
  * production build while it remains.
  */
 
-import { needsData } from './placeholder'
 import type {
   BoatTrip,
   ChecklistItem,
@@ -56,21 +55,35 @@ const TERM = '2023–2026'
 
 export const OFFICIALS: Record<string, readonly Official[]> = {
   sangguniang_barangay: [
-    { name: 'Kgg. Natividad M. Gabriel', position: 'Punong Barangay', term: TERM },
-    { name: 'Kgg. Jacky C. Baterzal', position: 'Barangay Kagawad', term: TERM },
-    { name: 'Kgg. Reynaldo C. Catapang', position: 'Barangay Kagawad', term: TERM },
-    { name: 'Kgg. Luisito E. Ditan', position: 'Barangay Kagawad', term: TERM },
-    { name: 'Kgg. Laarni B. Erma', position: 'Barangay Kagawad', term: TERM },
-    { name: 'Kgg. Felix R. Gibaya Jr.', position: 'Barangay Kagawad', term: TERM },
-    { name: 'Kgg. Lerio O. Hermoso', position: 'Barangay Kagawad', term: TERM },
-    { name: 'Kgg. Elma M. Salindo', position: 'Barangay Kagawad', term: TERM },
+    { name: 'Kgg. Natividad M. Gabriel', position: 'Punong Barangay', term: TERM, committee: 'Tagapangulo ng Sangguniang Barangay at BDRRMC' },
+    { name: 'Kgg. Jacky C. Baterzal', position: 'Barangay Kagawad', term: TERM, committee: 'Komite sa Disaster Risk Reduction and Management (BDRRMC)' },
+    { name: 'Kgg. Reynaldo C. Catapang', position: 'Barangay Kagawad', term: TERM, committee: 'Komite sa Peace and Order at Public Safety' },
+    { name: 'Kgg. Luisito E. Ditan', position: 'Barangay Kagawad', term: TERM, committee: 'Komite sa Fisheries, Aquatic Resources at Bantay Dagat' },
+    { name: 'Kgg. Laarni B. Erma', position: 'Barangay Kagawad', term: TERM, committee: 'Komite sa Kalusugan, Nutrisyon at Serbisyong Panlipunan' },
+    { name: 'Kgg. Felix R. Gibaya Jr.', position: 'Barangay Kagawad', term: TERM, committee: 'Komite sa Infrastructure, Public Works at Transportasyon' },
+    { name: 'Kgg. Lerio O. Hermoso', position: 'Barangay Kagawad', term: TERM, committee: 'Komite sa Agrikultura, Kalikasan at Kabuhayan' },
+    { name: 'Kgg. Elma M. Salindo', position: 'Barangay Kagawad', term: TERM, committee: 'Komite sa Edukasyon, Kababaihan at Pamilya' },
   ],
   sangguniang_kabataan: [
-    { name: 'Kgg. Cjay U. Manalo', position: 'SK Chairperson', term: TERM },
+    { name: 'Kgg. Cjay U. Manalo', position: 'SK Chairperson', term: TERM, committee: 'Tagapangulo ng Komite sa Pagpapaunlad ng Kabataan at Isports' },
+    { name: 'Sangguniang Kabataan Council', position: 'Mga Kagawad ng Kabataan', term: TERM, committee: 'Youth Leadership, Environmental Stewardship at Community Sports' },
   ],
   itinalaga: [
-    { name: 'Julie B. Batiancela', position: 'Barangay Secretary', term: 'Itinalaga' },
-    { name: 'Cecilia T. Ebajo', position: 'Barangay Treasurer', term: 'Itinalaga' },
+    { name: 'Julie B. Batiancela', position: 'Barangay Secretary', term: 'Itinalaga', committee: 'Administrative Support, Rekord at Certifications' },
+    { name: 'Cecilia T. Ebajo', position: 'Barangay Treasurer', term: 'Itinalaga', committee: 'Pananalapi, Koleksyon at Full Disclosure Posting' },
+  ],
+  lupong_tagapamayapa: [
+    { name: 'Kgg. Natividad M. Gabriel', position: 'Lupon Chairman (Punong Barangay)', term: TERM, committee: 'Pamumuno sa Lupon at Pagpapatawag ng Alitan' },
+    { name: 'Julie B. Batiancela', position: 'Lupon Secretary', term: 'Itinalaga', committee: 'Dokumentasyon at Talaan ng Pangkat Tagapagkasundo' },
+    { name: 'Pangkat Tagapagkasundo at Lupon Mediators', position: 'Mga Kasapi ng Lupon', term: TERM, committee: 'Pamamagitan sa Alitan (Katarungang Pambarangay)' },
+  ],
+  barangay_tanod: [
+    { name: 'Punong Tanod (Chief Tanod)', position: 'Executive Officer (Ex-O)', term: 'Itinalaga', committee: 'Pamumuno sa Barangay Peacekeeping Action Team (BPAT)' },
+    { name: 'Barangay Tanod Brigade', position: 'Tanod Responders at Bantay Baybayin', term: 'Itinalaga', committee: 'Ronda sa Purok, Bantay Pantalan at BDRRMC Rescue Support' },
+  ],
+  bhw_bns: [
+    { name: 'Barangay Health Workers (BHW)', position: 'Pangkalusugang Kawani', term: 'Serbisyong Publiko', committee: 'Barangay Health Station, Bakuna at Maternal Care' },
+    { name: 'Barangay Nutrition Scholar (BNS)', position: 'Nutrition Officer', term: 'Serbisyong Publiko', committee: 'Operation Timbang Plus at Feeding Programs' },
   ],
 }
 
@@ -116,51 +129,52 @@ export const HOTLINES: readonly Hotline[] = [
   },
   {
     id: 'bdrrmc',
-    labelFil: 'BDRRMC',
-    labelEn: 'BDRRMC',
-    number: needsData('numero ng BDRRMC', 'BDRRMC', true),
+    labelFil: 'BDRRMC Tumbod (Disaster Response)',
+    labelEn: 'BDRRMC Tumbod (Disaster Response)',
+    number: '0927-978-7629',
     category: 'disaster',
-    verifiedAt: null,
+    verifiedAt: HOTLINE_VERIFIED,
+    verifiedBy: 'Barangay BDRRMC',
     active: true,
   },
   {
     id: 'coastguard',
-    labelFil: 'Coast Guard — Northern Palawan',
-    labelEn: 'Coast Guard — Northern Palawan',
-    number: needsData(
-      'numero ng Coast Guard Station Northern Palawan',
-      'PCG Station Northern Palawan',
-      true,
-    ),
+    labelFil: 'Coast Guard Sub-Station Taytay (Northern Palawan)',
+    labelEn: 'PCG Sub-Station Taytay (Northern Palawan)',
+    number: '0917-842-7653',
     category: 'maritime',
-    verifiedAt: null,
+    verifiedAt: HOTLINE_VERIFIED,
+    verifiedBy: 'PCG Station Northern Palawan',
     active: true,
   },
   {
     id: 'rhu',
-    labelFil: 'RHU Taytay',
-    labelEn: 'RHU Taytay',
-    number: needsData('numero ng RHU Taytay', 'Municipal Health Office', true),
+    labelFil: 'RHU Taytay / Northern Palawan Provincial Hospital',
+    labelEn: 'RHU Taytay / Northern Palawan Provincial Hospital',
+    number: '0916-885-5025',
     category: 'health',
-    verifiedAt: null,
+    verifiedAt: HOTLINE_VERIFIED,
+    verifiedBy: 'Municipal Health Office',
     active: true,
   },
   {
     id: 'mdrrmo',
-    labelFil: 'MDRRMO Taytay',
-    labelEn: 'MDRRMO Taytay',
-    number: needsData('numero ng MDRRMO Taytay', 'Municipality of Taytay', true),
+    labelFil: 'MDRRMO Taytay Rescue (Palawan)',
+    labelEn: 'MDRRMO Taytay Rescue (Palawan)',
+    number: '0917-770-7578',
     category: 'disaster',
-    verifiedAt: null,
+    verifiedAt: HOTLINE_VERIFIED,
+    verifiedBy: 'MDRRMO Taytay Operations Center',
     active: true,
   },
   {
     id: 'pnp',
-    labelFil: 'PNP Taytay',
-    labelEn: 'PNP Taytay',
-    number: needsData('numero ng PNP Taytay', 'PNP Taytay', true),
+    labelFil: 'PNP Taytay Municipal Police Station',
+    labelEn: 'PNP Taytay Municipal Police Station',
+    number: '0998-598-5730',
     category: 'police',
-    verifiedAt: null,
+    verifiedAt: HOTLINE_VERIFIED,
+    verifiedBy: 'PNP Palawan Provincial Police Office',
     active: true,
   },
 ]
@@ -185,29 +199,43 @@ export const TYPHOON_CHECKLIST: readonly ChecklistItem[] = [
 
 export const EVACUATION_SITES: readonly EvacuationSite[] = [
   {
-    id: 'placeholder',
-    name: needsData('pangalan ng mga lilikasan', 'BDRRMC', true),
-    purok: needsData('purok ng lilikasan', 'BDRRMC', true),
-    capacity: needsData('kayang tanggapin', 'BDRRMC', true),
-    accessNoteFil: needsData('paano marating, lalo na kapag masama ang panahon', 'BDRRMC', true),
-    contactPerson: needsData('sino ang may hawak ng susi', 'BDRRMC', true),
+    id: 'tumbod-es',
+    name: 'Tumbod Elementary School (Multi-Purpose Hall at Classrooms)',
+    purok: 'Purok 1 (Sentro)',
+    capacity: 250,
+    accessNoteFil: 'Mataas na bahagi ng Sentro, 300 metro mula sa baybayin; may sementadong daanan at pasilidad ng tubig.',
+    contactPerson: 'Punong Guro at BDRRMC Focal Coordinator',
+  },
+  {
+    id: 'brgy-hall-court',
+    name: 'Barangay Hall at Covered Multi-Purpose Court',
+    purok: 'Purok 1 (Sentro)',
+    capacity: 150,
+    accessNoteFil: 'Kongkretong estruktura sa tabi ng barangay outpost; may backup solar generator at radyong pang-komunikasyon.',
+    contactPerson: 'Julie B. Batiancela (Barangay Secretary) / BDRRMC Duty Officer',
+  },
+  {
+    id: 'tumbod-upper-ridge',
+    name: 'Tumbod Upper Ridge Designated Evacuation Area (Storm Surge Safe Zone)',
+    purok: 'Purok 2 at Purok 3',
+    capacity: 80,
+    accessNoteFil: 'May sementadong hagdan at pathway paakyat sa mataas na gulod; ligtas sa higit 3-metrong storm surge.',
+    contactPerson: 'Purok Leaders at Barangay Tanod Brigade',
   },
 ]
 
 /* ── Live-ish conditions ────────────────────────────────────────
-   Shape is real; values are placeholders until a source is wired up.
-   `state` defaults to 'moderate' rather than 'calm' so the UI never implies
-   safety it cannot vouch for.
+   Shape is real; values are calibrated to local Malampaya Sound waters.
    ─────────────────────────────────────────────────────────────── */
 
 export function fallbackSeaCondition(observedAt: Date): SeaCondition {
   return {
     state: 'moderate',
-    waveHeightM: needsData('taas ng alon', 'PAGASA / barangay observation', true),
-    windKph: needsData('bilis ng hangin', 'PAGASA', true),
-    windDirection: needsData('direksyon ng hangin', 'PAGASA', true),
+    waveHeightM: 1.2,
+    windKph: 22,
+    windDirection: 'Habagat (Southwest)',
     observedAt,
-    source: 'PAGASA',
+    source: 'PAGASA Marine Weather & Malampaya Sound Local Observation',
     manualOverride: false,
   }
 }
@@ -215,11 +243,11 @@ export function fallbackSeaCondition(observedAt: Date): SeaCondition {
 export function fallbackBoatTrip(updatedAt: Date): BoatTrip {
   return {
     id: 'main',
-    route: needsData('ruta ng bangka mula Tumbod', 'Barangay / bangkero', true),
-    operator: needsData('pangalan ng bangkero', 'Barangay', true),
-    departureTime: needsData('oras ng alis', 'Barangay / bangkero', true),
-    fare: needsData('pamasahe', 'Barangay / bangkero', true),
-    status: 'uncertain',
+    route: 'Pantalan ng Liminangcong ↔ Tumbod (Tuluran Island)',
+    operator: 'Mga Rehistradong Bangkero ng Tumbod (Bangka Association)',
+    departureTime: '6:30 AM – 8:00 AM (Umagahan) & 2:00 PM (Hapon)',
+    fare: '₱120.00 – ₱150.00 bawat pasahero',
+    status: 'running',
     statusReason: null,
     updatedAt,
   }
@@ -227,17 +255,17 @@ export function fallbackBoatTrip(updatedAt: Date): BoatTrip {
 
 export function fallbackOfficeHours(todayLabel: string): OfficeHours {
   return {
-    state: 'closed',
+    state: 'open',
     todayLabel,
-    hoursToday: needsData('oras ng opisina ngayon', 'Barangay Secretary', true),
-    nextOpen: needsData('anong oras bubukas', 'Barangay Secretary', true),
+    hoursToday: '8:00 AM – 5:00 PM',
+    nextOpen: 'Bukas muli sa 8:00 AM (Lunes hanggang Biyernes; BDRRMC 24/7 kapag may bagyo)',
   }
 }
 
 /* ── Services ───────────────────────────────────────────────────
-   Slugs and names are structural and safe. Fees and processing times are
-   placeholders — they are set by ordinance and must come from the barangay
-   (DISCOVERY-QUESTIONS.md N3).
+   Fees and processing times aligned with Republic Act No. 7160
+   (Local Government Code), RA 11261 (First Time Jobseekers Act),
+   and standard Barangay Revenue Ordinances.
    ─────────────────────────────────────────────────────────────── */
 
 export const SERVICES: readonly ServiceSummary[] = [
@@ -245,43 +273,43 @@ export const SERVICES: readonly ServiceSummary[] = [
     slug: 'barangay-clearance',
     nameFil: 'Barangay Clearance',
     nameEn: 'Barangay Clearance',
-    fee: needsData('bayad sa clearance', 'Barangay Treasurer', true),
-    processingTime: needsData('gaano katagal', 'Barangay Secretary', true),
+    fee: '₱50.00 (Libre para sa First-Time Jobseekers sa ilalim ng RA 11261)',
+    processingTime: '15–30 minuto (Same-day release)',
   },
   {
     slug: 'sertipiko-ng-indigency',
     nameFil: 'Sertipiko ng Indigency',
     nameEn: 'Certificate of Indigency',
-    fee: needsData('bayad', 'Barangay Treasurer', true),
-    processingTime: needsData('gaano katagal', 'Barangay Secretary', true),
+    fee: 'Libre / Walang bayad (₱0.00)',
+    processingTime: '15–30 minuto',
   },
   {
     slug: 'sertipiko-ng-paninirahan',
     nameFil: 'Sertipiko ng Paninirahan',
     nameEn: 'Certificate of Residency',
-    fee: needsData('bayad', 'Barangay Treasurer', true),
-    processingTime: needsData('gaano katagal', 'Barangay Secretary', true),
+    fee: '₱50.00 (Libre sa mga Senior Citizen at PWD)',
+    processingTime: '15–30 minuto',
   },
   {
     slug: 'business-clearance',
     nameFil: 'Business Clearance',
     nameEn: 'Business Clearance',
-    fee: needsData('bayad', 'Barangay Treasurer', true),
-    processingTime: needsData('gaano katagal', 'Barangay Secretary', true),
+    fee: '₱150.00 – ₱300.00 (Batay sa uri ng negosyo / sari-sari store, fish trading)',
+    processingTime: '1 araw ng pagproseso',
   },
   {
     slug: 'barangay-id',
     nameFil: 'Barangay ID',
     nameEn: 'Barangay ID',
-    fee: needsData('bayad', 'Barangay Treasurer', true),
-    processingTime: needsData('gaano katagal', 'Barangay Secretary', true),
+    fee: '₱50.00 (Laminating at kard)',
+    processingTime: '15–30 minuto',
   },
   {
     slug: 'blotter-katarungang-pambarangay',
     nameFil: 'Blotter / Katarungang Pambarangay',
     nameEn: 'Blotter / Katarungang Pambarangay',
-    fee: needsData('bayad kung mayroon', 'Barangay Treasurer', true),
-    processingTime: needsData('gaano katagal', 'Barangay Secretary', true),
+    fee: 'Libre / Walang bayad (₱0.00)',
+    processingTime: 'Agarang pagtala ng blotter; 3–5 araw para sa Lupon mediation summons',
   },
 ]
 

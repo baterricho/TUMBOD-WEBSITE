@@ -64,24 +64,24 @@ const LAYERS = [
       <button
         type="button"
         class="map-tab-btn map-tab-btn--active"
-        id="tab-windy"
+        id="tab-canvas"
         role="tab"
         aria-selected="true"
-        aria-controls="panel-windy"
+        aria-controls="panel-canvas"
       >
-        <Icon name="wind" size={14} />
-        <span>{fil ? 'Windy Live Radar' : 'Windy Live Radar'}</span>
+        <Icon name="bangka" size={14} />
+        <span>{fil ? 'Lokal na Tsart ng Bangka (Offline)' : 'Local Nautical Chart (Offline)'}</span>
       </button>
       <button
         type="button"
         class="map-tab-btn"
-        id="tab-canvas"
+        id="tab-windy"
         role="tab"
         aria-selected="false"
-        aria-controls="panel-canvas"
+        aria-controls="panel-windy"
       >
-        <Icon name="bangka" size={14} />
-        <span>{fil ? 'Lokal na Tsart ng Bangka' : 'Local Nautical Chart'}</span>
+        <Icon name="wind" size={14} />
+        <span>{fil ? 'Windy Live Radar' : 'Windy Live Radar'}</span>
       </button>
     </div>
   </div>
@@ -115,25 +115,8 @@ const LAYERS = [
 
   {/* Container for Maps */}
   <div class="weather-map__stage" id="weather-map-stage">
-    {/* Panel 1: Windy.com Interactive Embed */}
-    <div class="weather-map__panel weather-map__panel--active" id="panel-windy" role="tabpanel">
-      <iframe
-        id="windy-iframe"
-        title={fil ? 'Windy Interactive Weather Map para sa Tuluran Island' : 'Windy Interactive Weather Map for Tuluran Island'}
-        src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=10&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&pressure=true`}
-        class="windy-frame"
-        loading="lazy"
-        allowfullscreen
-      ></iframe>
-      <div class="windy-attribution">
-        <span class="small muted">
-          {fil ? 'Datos at Modelo ng Hangin: ECMWF / GFS sa pamamagitan ng Windy.com · Naka-sentro sa Pulo ng Tuluran' : 'Wind model and streamlines provided by ECMWF / GFS via Windy.com · Centered on Tuluran Island'}
-        </span>
-      </div>
-    </div>
-
-    {/* Panel 2: Local High-Speed Canvas Marine Chart with Animated Wind Streamlines */}
-    <div class="weather-map__panel" id="panel-canvas" role="tabpanel" hidden>
+    {/* Panel 1: Local High-Speed Canvas Marine Chart with Animated Wind Streamlines (Offline Safe & 0 External Requests) */}
+    <div class="weather-map__panel weather-map__panel--active" id="panel-canvas" role="tabpanel">
       <div class="canvas-map-container" id="canvas-container">
         <canvas id="marine-wind-canvas" class="marine-canvas"></canvas>
 
@@ -145,49 +128,71 @@ const LAYERS = [
           </div>
           <p class="marine-waypoint-card__desc" id="waypoint-desc">
             {fil
-              ? 'Pangunahing ruta ng bangka patungong Taytay Mainland Pantalan (~3.2 km, 20-30 minuto).'
-              : 'Primary boat corridor to mainland Taytay Port (~3.2 km, 20-30 min passage).'}
+              ? 'Ligtas ang alon at direksyon ng hangin para sa mga regular na biyaheng bangka. Manatiling alerto sa mga babala ng tanod.'
+              : 'Wave conditions and wind vectors are favorable for scheduled banca passenger crossings. Follow maritime warden directives.'}
           </p>
-          <div class="marine-waypoint-card__stats">
-            <div>
-              <span class="small muted">{fil ? 'Taas ng Alon' : 'Wave Height'}</span>
-              <strong id="waypoint-wave">{initialWaveHeight} m</strong>
+          <div class="marine-waypoint-stats">
+            <div class="waypoint-stat">
+              <span class="waypoint-stat__label">{fil ? 'Tinatayang Alon' : 'Wave Height'}</span>
+              <strong class="waypoint-stat__val" id="waypoint-wave">{initialWaveHeight} m</strong>
             </div>
-            <div>
-              <span class="small muted">{fil ? 'Hangin' : 'Wind'}</span>
-              <strong id="waypoint-wind">{initialWindSpeed} kph</strong>
+            <div class="waypoint-stat">
+              <span class="waypoint-stat__label">{fil ? 'Bilis ng Hangin' : 'Wind Speed'}</span>
+              <strong class="waypoint-stat__val" id="waypoint-wind">{initialWindSpeed} km/h</strong>
             </div>
-            <div>
-              <span class="small muted">{fil ? 'Rekomendasyon' : 'Advisory'}</span>
-              <strong id="waypoint-rec">{fil ? 'Bukas sa Lahat ng Bangka' : 'Open for All Vessels'}</strong>
+            <div class="waypoint-stat">
+              <span class="waypoint-stat__label">{fil ? 'Tagal ng Biyahe' : 'Transit Time'}</span>
+              <strong class="waypoint-stat__val" id="waypoint-time">~15–20 min</strong>
             </div>
           </div>
         </div>
 
-        {/* Canvas Map Controls */}
-        <div class="canvas-controls">
-          <button type="button" class="canvas-ctrl-btn" id="canvas-btn-tumbod" title={fil ? 'I-focus sa Tumbod Pier' : 'Focus Tumbod Pier'}>
-            Pantalan
+        {/* Nautical Waypoint Pills Bar */}
+        <div class="marine-waypoints-selector" role="toolbar" aria-label={fil ? 'Mga Piling Punto ng Dagat' : 'Marine Waypoints'}>
+          <button type="button" class="waypoint-chip waypoint-chip--active" data-wp="strait">
+            <Icon name="anchor" size={14} />
+            <span>{fil ? 'Kipot ng Tuluran' : 'Tuluran Strait'}</span>
           </button>
-          <button type="button" class="canvas-ctrl-btn" id="canvas-btn-strait" title={fil ? 'I-focus sa Kipot' : 'Focus Strait'}>
-            Kipot
+          <button type="button" class="waypoint-chip" data-wp="tumbod-port">
+            <Icon name="pin" size={14} />
+            <span>{fil ? 'Pantalan ng Tumbod' : 'Tumbod Port'}</span>
           </button>
-          <button type="button" class="canvas-ctrl-btn" id="canvas-btn-mainland" title={fil ? 'I-focus sa Taytay Mainland' : 'Focus Mainland'}>
-            Taytay
+          <button type="button" class="waypoint-chip" data-wp="liminangcong">
+            <Icon name="bangka" size={14} />
+            <span>{fil ? 'Rutang Liminangcong' : 'Liminangcong Route'}</span>
+          </button>
+          <button type="button" class="waypoint-chip" data-wp="taytay-bay">
+            <Icon name="compass" size={14} />
+            <span>{fil ? 'Bukas na Look (Taytay Bay)' : 'Open Taytay Bay'}</span>
           </button>
         </div>
+      </div>
+    </div>
 
-        {/* Legend */}
-        <div class="canvas-legend">
-          <div class="canvas-legend__row">
-            <span class="particle-sample"></span>
-            <span>{fil ? 'Daloy ng Hangin (Streamlines)' : 'Wind Streamlines'}</span>
-          </div>
-          <div class="canvas-legend__row">
-            <span class="corridor-sample"></span>
-            <span>{fil ? 'Ruta ng Bangka' : 'Boat Corridors'}</span>
-          </div>
-        </div>
+    {/* Panel 2: Windy.com Interactive Embed (Lazy load on user click, zero external fetch on build) */}
+    <div class="weather-map__panel" id="panel-windy" role="tabpanel" hidden>
+      <div id="windy-placeholder" class="windy-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-6);min-height:360px;background:var(--palette-slate-950);text-align:center;border-radius:var(--radius-md)">
+        <p style="margin-bottom:var(--space-3);color:var(--palette-slate-300);font-size:var(--text-sm);max-width:420px">
+          {fil ? 'Maaaring buksan ang live radar at satellite ng Windy.com para sa Tuluran Island at Taytay Bay kapag may koneksyon sa internet.' : 'Load the live interactive Windy.com radar and satellite map for Tuluran Island and Taytay Bay.'}
+        </p>
+        <button type="button" id="btn-load-windy" class="btn btn--primary" style="min-height:48px;padding:0 var(--space-4);font-weight:600">
+          <Icon name="wind" size={18} />
+          <span>{fil ? 'Buksan ang Windy Live Radar' : 'Load Windy Live Radar'}</span>
+        </button>
+      </div>
+      <iframe
+        id="windy-iframe"
+        title={fil ? 'Windy Interactive Weather Map para sa Tuluran Island' : 'Windy Interactive Weather Map for Tuluran Island'}
+        data-src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=10&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&pressure=true`}
+        class="windy-frame"
+        loading="lazy"
+        allowfullscreen
+        style="display:none"
+      ></iframe>
+      <div class="windy-attribution">
+        <span class="small muted">
+          {fil ? 'Datos at Modelo ng Hangin: ECMWF / GFS sa pamamagitan ng Windy.com · Naka-sentro sa Pulo ng Tuluran' : 'Wind model and streamlines provided by ECMWF / GFS via Windy.com · Centered on Tuluran Island'}
+        </span>
       </div>
     </div>
   </div>
@@ -596,6 +601,23 @@ const LAYERS = [
   var mapWrap = document.getElementById('weather-map-section')
 
   var currentLayer = 'wind'
+  var btnLoadWindy = document.getElementById('btn-load-windy')
+  var windyPlaceholder = document.getElementById('windy-placeholder')
+
+  function activateWindy() {
+    if (iframe) {
+      if (!iframe.src || iframe.style.display === 'none') {
+        var baseSrc = iframe.getAttribute('data-src') || ''
+        iframe.src = baseSrc
+        iframe.style.display = 'block'
+        if (windyPlaceholder) windyPlaceholder.style.display = 'none'
+      }
+    }
+  }
+
+  if (btnLoadWindy) {
+    btnLoadWindy.addEventListener('click', activateWindy)
+  }
 
   // Tab switching
   if (tabWindy && tabCanvas && panelWindy && panelCanvas) {
@@ -610,6 +632,7 @@ const LAYERS = [
       panelCanvas.classList.remove('weather-map__panel--active')
       panelCanvas.hidden = true
       if (layersBar) layersBar.style.display = 'flex'
+      activateWindy()
     })
 
     tabCanvas.addEventListener('click', function() {

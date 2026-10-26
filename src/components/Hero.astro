@@ -31,7 +31,7 @@ import Icon from './Icon.astro'
 import { SITE } from '@/lib/content/site'
 import { CHART_GEOMETRY } from '@/features/chart/geometry'
 import { TUMBOD_BOUNDS, TUMBOD_BOUNDARY } from '@/features/chart/boundary'
-import { prefix, type Locale } from '@/lib/i18n'
+import { getDictionary, prefix, type Locale } from '@/lib/i18n'
 
 interface Props {
   locale: Locale
@@ -40,6 +40,7 @@ interface Props {
 const { locale } = Astro.props
 const fil = locale === 'fil'
 const p = prefix(locale)
+const t = getDictionary(locale)
 
 /**
  * THE SEAL PLACEHOLDERS ARE GONE FROM THE HERO. Two dashed circles reading
@@ -203,218 +204,6 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
 ---
 
 <section class="hero" aria-labelledby="hero-title">
-  {/* ── Media strip ─────────────────────────────────────────── */}
-  <div class="hero__media">
-    {/*
-      `tabindex="0"` because this is a scrollable region whose slides contain
-      nothing focusable — axe `scrollable-region-focusable`. Without it a
-      keyboard user can see the strip but cannot scroll it at all. With it,
-      arrow keys work natively. It takes a role and a name so it is announced
-      as a group rather than an unlabelled box.
-    */}
-    <div
-      class="hero__track"
-      id="hero-track"
-      tabindex="0"
-      role="group"
-      aria-label={fil ? 'Mga larawan ng barangay' : 'Barangay images'}
-    >
-      <div class="hero__slide" id="hero-map">
-        {/* Poster: real coastline, inline, 0 KB extra, offline-safe. */}
-        <div class="hero__poster" id="hero-poster">
-          <svg
-            viewBox={CHART_GEOMETRY.viewBox}
-            preserveAspectRatio="xMidYMid slice"
-            aria-hidden="true"
-            class="hero__postersvg"
-          >
-            {CHART_GEOMETRY.contours.map((d) => <path d={d} class="hero__contour" />)}
-            <path d={CHART_GEOMETRY.islandPath} class="hero__island" />
-          </svg>
-        </div>
-        {/* Live satellite mounts here after idle. */}
-        <div class="hero__map" id="hero-map-mount" aria-hidden="true"></div>
-      </div>
-
-      {/*
-        Video slides, one per entry in SLIDES.
-
-        `preload="none"` on every one: three clips totalling 14 MB must never
-        be fetched because someone opened the homepage. A clip downloads only
-        when its slide is actually reached, and the poster stands in until
-        then. That is also why `<source>` carries `data-src` rather than `src`
-        — a bare `src` inside a `<video>` is fetched by some browsers even at
-        `preload="none"`, which would defeat the whole arrangement.
-      */}
-      {
-        VIDEOS.map((s) => (
-          <div class="hero__slide hero__slide--video" id={s.id}>
-            <video
-              class="hero__video"
-              data-hero-video
-              poster={s.poster}
-              preload="none"
-              muted
-              loop
-              playsinline
-              disablepictureinpicture
-              aria-label={fil ? s.altFil : s.altEn}
-            >
-              <source data-src={s.src} type="video/mp4" />
-            </video>
-          </div>
-        ))
-      }
-
-      {/* Divs, not list items. `role="group"` on the track (needed to give the
-          focusable scroll region a name) replaces a <ul>'s implicit list role,
-          which leaves any <li> children orphaned — axe `listitem`. These are
-          carousel panels, not a list, so the semantics were wrong anyway. */}
-      {/*
-        Each slide shows its 20 KB thumbnail as a background immediately — it
-        is already downloaded for the strip below — so a slide is never blank,
-        and the full photograph fades in over it.
-      */}
-      {
-        PHOTOS.map((s) => (
-          <div
-            class="hero__slide hero__slide--photo"
-            id={s.id}
-            style={`background-image:url(${s.thumb})`}
-          >
-            {/*
-              `data-src`, NOT `src`.
-
-              `loading="lazy"` did not defer these. Inside a horizontal
-              scroll container Chromium fetched all three eagerly — 387 KB
-              competing with the satellite tiles, which pushed the homepage
-              LCP element (a map tile) from ~1.6 s to 3.7 s and blew the
-              budget. The observer below sets `src` when a slide is actually
-              approached, which is deterministic rather than a heuristic.
-
-              Explicit width/height still reserve the correct box, so CLS
-              stays at 0.000.
-            */}
-            <img
-              class="hero__photo"
-              data-src={s.src}
-              alt={fil ? s.altFil : s.altEn}
-              width={s.w}
-              height={s.h}
-              decoding="async"
-            />
-            {/* No script, no observer — so load it the ordinary way. */}
-            <noscript>
-              <img
-                class="hero__photo hero__photo--noscript"
-                src={s.src}
-                alt={fil ? s.altFil : s.altEn}
-                width={s.w}
-                height={s.h}
-              />
-            </noscript>
-          </div>
-        ))
-      }
-    </div>
-
-  </div>
-
-  <div class="hero__scrim" aria-hidden="true"></div>
-
-  {/*
-    The map label lives OUTSIDE the strip for the same stacking reason as the
-    chevrons — inside a slide it renders beneath the scrim and reads as a
-    smudge. It is shown only while the map slide is the active one, which the
-    carousel's observer toggles.
-
-    It is pinned to the ISLAND, not to a corner: the script keeps it over the
-    boundary's centroid as the map zooms, so the name always labels the thing
-    it names. Until the live map arrives it sits where the poster's island is.
-  */}
-  <p class="hero__mapbadge" id="hero-mapbadge">
-    <span class="hero__mapbadge-name">Barangay Tumbod</span>
-    <Icon name="pin" size={22} />
-  </p>
-
-  {/*
-    MAP CONTROLS — `hidden` until the live map exists.
-
-    Every one of these drives Leaflet. With no JS, no network or a blocked CDN
-    the slide is still the inline poster, and a zoom button with nothing to
-    zoom is exactly the dead control the map button on /kontak exists to avoid.
-    So the script unhides them, and only after `whenReady`.
-  */}
-  <div class="hero__mapchrome" id="hero-mapchrome" hidden>
-    <details class="hero__basemap" id="hero-basemap">
-      <summary class="hero__glassbtn">
-        <Icon name="layers" size={18} />
-        <span id="hero-basemap-label">{fil ? 'Satelayt' : 'Satellite'}</span>
-        <Icon name="chevron-down" size={16} />
-      </summary>
-      <div class="hero__basemap-panel" role="group" aria-label={fil ? 'Uri ng mapa' : 'Map type'}>
-        <button type="button" data-basemap="satellite" aria-pressed="true">
-          {fil ? 'Satelayt' : 'Satellite'}
-        </button>
-        <button type="button" data-basemap="street" aria-pressed="false">
-          {fil ? 'Kalsada' : 'Street'}
-        </button>
-      </div>
-    </details>
-
-    <div class="hero__zoom">
-      <button
-        class="hero__glassbtn hero__glassbtn--icon"
-        type="button"
-        id="hero-zoom-in"
-        aria-label={fil ? 'I-zoom papasok' : 'Zoom in'}
-      >
-        <Icon name="plus" size={18} />
-      </button>
-      <button
-        class="hero__glassbtn hero__glassbtn--icon"
-        type="button"
-        id="hero-zoom-out"
-        aria-label={fil ? 'I-zoom palabas' : 'Zoom out'}
-      >
-        <Icon name="minus" size={18} />
-      </button>
-      <button
-        class="hero__glassbtn hero__glassbtn--icon"
-        type="button"
-        id="hero-recenter"
-        aria-label={fil ? 'Ibalik sa gitna ang barangay' : 'Recentre on the barangay'}
-      >
-        <Icon name="locate" size={18} />
-      </button>
-    </div>
-  </div>
-
-  {/*
-    WCAG 2.2.2: anything that moves for more than five seconds needs a way to
-    stop it. This lives OUTSIDE the media strip for the same stacking reason as
-    the chevrons — inside a slide it sat beneath `.hero__inner`, which swallowed
-    every click, so the pause control could not be operated at all. Shown only
-    while the video slide is active.
-  */}
-  <button class="hero__videobtn" id="hero-video-btn" type="button" hidden>
-    <span id="hero-video-btn-label">{fil ? "I-pause ang video" : "Pause video"}</span>
-  </button>
-
-  {/*
-    Chevrons are SIBLINGS of the media strip, not children of it.
-    `.hero__media` establishes its own stacking context, so a button inside it
-    can never rise above the scrim that covers it — it would render dimmed and
-    sit underneath an overlay that swallows the click. Enhancement only:
-    hidden until script proves it can scroll the strip.
-  */}
-  <button class="hero__chev hero__chev--prev" id="hero-prev" type="button" hidden>
-    <Icon name="chevron-left" size={26} title={fil ? 'Nakaraang larawan' : 'Previous image'} />
-  </button>
-  <button class="hero__chev hero__chev--next" id="hero-next" type="button" hidden>
-    <Icon name="chevron-right" size={26} title={fil ? 'Susunod na larawan' : 'Next image'} />
-  </button>
-
   {/* ── Copy ────────────────────────────────────────────────── */}
   <div class="hero__inner">
     <p class="hero__eyebrow">{fil ? 'Maligayang pagdating sa' : 'Welcome to'}</p>
@@ -447,81 +236,277 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
 
   </div>
 
-  {/*
-    ── Filmstrip ──────────────────────────────────────────────────
-    A SIBLING of the copy column, not a child of it. In the reference the
-    thumbnails run the full width of the hero beneath the headline; inside
-    `.hero__inner` they were capped at the 34rem copy measure and only four of
-    the six were reachable without scrolling.
-  */}
-  <div class="hero__filmstrip">
-    {/* Thumbnails are ANCHORS, so they navigate the strip with no JS. */}
-    <ul class="hero__thumbs" aria-label={fil ? 'Pumili ng larawan' : 'Choose an image'}>
-      {
-        SLIDES.map((s, i) => (
-          <li>
-            {/* A SMALL derivative, not the full photograph. A CSS background
-                on a visible element is never lazy, so pointing these at the
-                originals downloaded all four (~540 KB) the moment the page
-                opened and quietly defeated `loading="lazy"` on the slides.
-                The derivatives total 72 KB. See scripts/build-thumbs.mjs. */}
-            <a
-              href={`#${s.id}`}
-              class={`hero__thumb${i === 0 ? ' is-active' : ''}${
-                s.kind === 'video' || s.kind === 'photo' ? ' hero__thumb--image' : ''
-              }`}
-              data-thumb={s.id}
-              style={
-                s.kind === 'video'
-                  ? `background-image:url(${s.poster})`
-                  : s.kind === 'photo'
-                    ? `background-image:url(${s.thumb})`
-                    : undefined
-              }
-            >
-              {/* The map thumbnail shows the map, drawn from the same real
-                  coastline — the reference has satellite imagery in slot one,
-                  and a flat teal rectangle beside five photographs read as a
-                  broken image. Inline SVG, so it costs nothing. */}
-              {s.kind === 'map' && (
-                <svg
-                  viewBox={CHART_GEOMETRY.viewBox}
-                  preserveAspectRatio="xMidYMid slice"
-                  aria-hidden="true"
-                  class="hero__thumbsvg"
-                >
-                  <path d={CHART_GEOMETRY.islandPath} class="hero__island" />
-                </svg>
-              )}
-              {/* Visually hidden: the reference strip is unlettered, and the
-                  images say what they are. The anchor still needs a name. */}
-              <span class="hero__thumblabel">{fil ? s.labelFil : s.labelEn}</span>
-            </a>
-          </li>
-        ))
-      }
-    </ul>
+  <div class="hero__gallery">
+    <div class="hero__gallery-heading">
+      <span>{t.home.galleryHighlights}</span>
+      <a href={`${p}/larawan`}>
+        {t.home.viewGallery}
+        <Icon name="chevron-right" size={16} />
+      </a>
+    </div>
+    <div class="hero__stage">
+      {/* ── Media strip ─────────────────────────────────────────── */}
+      <div class="hero__media">
+        {/*
+          `tabindex="0"` because this is a scrollable region whose slides contain
+          nothing focusable — axe `scrollable-region-focusable`. Without it a
+          keyboard user can see the strip but cannot scroll it at all. With it,
+          arrow keys work natively. It takes a role and a name so it is announced
+          as a group rather than an unlabelled box.
+        */}
+        <div
+          class="hero__track"
+          id="hero-track"
+          tabindex="0"
+          role="group"
+          aria-label={fil ? 'Mga larawan ng barangay' : 'Barangay images'}
+        >
+          <div class="hero__slide" id="hero-map">
+            {/* Poster: real coastline, inline, 0 KB extra, offline-safe. */}
+            <div class="hero__poster" id="hero-poster">
+              <svg
+                viewBox={CHART_GEOMETRY.viewBox}
+                preserveAspectRatio="xMidYMid slice"
+                aria-hidden="true"
+                class="hero__postersvg"
+              >
+                {CHART_GEOMETRY.contours.map((d) => <path d={d} class="hero__contour" />)}
+                <path d={CHART_GEOMETRY.islandPath} class="hero__island" />
+              </svg>
+            </div>
+            {/* Live satellite mounts here after idle. */}
+            <div class="hero__map" id="hero-map-mount" aria-hidden="true"></div>
+          </div>
 
-    {/*
-      Pagination. `aria-hidden` and untabbable ON PURPOSE: it is a second copy
-      of the thumbnail list directly above it, and shipping six more tab stops
-      that go to the same six places is noise for a keyboard or screen-reader
-      user. It stays clickable for a pointer, which is all it is for.
-    */}
-    <ul class="hero__dots" aria-hidden="true">
-      {
-        SLIDES.map((s, i) => (
-          <li>
-            <a
-              href={`#${s.id}`}
-              tabindex="-1"
-              class={`hero__dot${i === 0 ? ' is-active' : ''}`}
-              data-thumb={s.id}
-            />
-          </li>
-        ))
-      }
-    </ul>
+          {/*
+            Video slides, one per entry in SLIDES.
+
+            `preload="none"` on every one: three clips totalling 14 MB must never
+            be fetched because someone opened the homepage. A clip downloads only
+            when its slide is actually reached, and the poster stands in until
+            then. That is also why `<source>` carries `data-src` rather than `src`
+            — a bare `src` inside a `<video>` is fetched by some browsers even at
+            `preload="none"`, which would defeat the whole arrangement.
+          */}
+          {
+            VIDEOS.map((s) => (
+              <div class="hero__slide hero__slide--video" id={s.id}>
+                <video
+                  class="hero__video"
+                  data-hero-video
+                  poster={s.poster}
+                  preload="none"
+                  muted
+                  loop
+                  playsinline
+                  disablepictureinpicture
+                  aria-label={fil ? s.altFil : s.altEn}
+                >
+                  <source data-src={s.src} type="video/mp4" />
+                </video>
+              </div>
+            ))
+          }
+
+          {/* Divs, not list items. `role="group"` on the track (needed to give the
+              focusable scroll region a name) replaces a <ul>'s implicit list role,
+              which leaves any <li> children orphaned — axe `listitem`. These are
+              carousel panels, not a list, so the semantics were wrong anyway. */}
+          {/*
+            Each slide shows its 20 KB thumbnail as a background immediately — it
+            is already downloaded for the strip below — so a slide is never blank,
+            and the full photograph fades in over it.
+          */}
+          {
+            PHOTOS.map((s) => (
+              <div
+                class="hero__slide hero__slide--photo"
+                id={s.id}
+                style={`background-image:url(${s.thumb})`}
+              >
+                {/*
+                  `data-src`, NOT `src`.
+
+                  `loading="lazy"` did not defer these. Inside a horizontal
+                  scroll container Chromium fetched all three eagerly — 387 KB
+                  competing with the satellite tiles, which pushed the homepage
+                  LCP element (a map tile) from ~1.6 s to 3.7 s and blew the
+                  budget. The observer below sets `src` when a slide is actually
+                  approached, which is deterministic rather than a heuristic.
+
+                  Explicit width/height still reserve the correct box, so CLS
+                  stays at 0.000.
+                */}
+                <img
+                  class="hero__photo"
+                  data-src={s.src}
+                  alt={fil ? s.altFil : s.altEn}
+                  width={s.w}
+                  height={s.h}
+                  decoding="async"
+                />
+                {/* No script, no observer — so load it the ordinary way. */}
+                <noscript>
+                  <img
+                    class="hero__photo hero__photo--noscript"
+                    src={s.src}
+                    alt={fil ? s.altFil : s.altEn}
+                    width={s.w}
+                    height={s.h}
+                  />
+                </noscript>
+              </div>
+            ))
+          }
+        </div>
+
+      </div>
+
+
+      {/* The map label follows the island as the live map zooms. */}
+      <p class="hero__mapbadge" id="hero-mapbadge">
+        <span class="hero__mapbadge-name">Barangay Tumbod</span>
+        <Icon name="pin" size={22} />
+      </p>
+
+      {/*
+        MAP CONTROLS — `hidden` until the live map exists.
+
+        Every one of these drives Leaflet. With no JS, no network or a blocked CDN
+        the slide is still the inline poster, and a zoom button with nothing to
+        zoom is exactly the dead control the map button on /kontak exists to avoid.
+        So the script unhides them, and only after `whenReady`.
+      */}
+      <div class="hero__mapchrome" id="hero-mapchrome" hidden>
+        <details class="hero__basemap" id="hero-basemap">
+          <summary class="hero__glassbtn">
+            <Icon name="layers" size={18} />
+            <span id="hero-basemap-label">{fil ? 'Satelayt' : 'Satellite'}</span>
+            <Icon name="chevron-down" size={16} />
+          </summary>
+          <div class="hero__basemap-panel" role="group" aria-label={fil ? 'Uri ng mapa' : 'Map type'}>
+            <button type="button" data-basemap="satellite" aria-pressed="true">
+              {fil ? 'Satelayt' : 'Satellite'}
+            </button>
+            <button type="button" data-basemap="street" aria-pressed="false">
+              {fil ? 'Kalsada' : 'Street'}
+            </button>
+          </div>
+        </details>
+
+        <div class="hero__zoom">
+          <button
+            class="hero__glassbtn hero__glassbtn--icon"
+            type="button"
+            id="hero-zoom-in"
+            aria-label={fil ? 'I-zoom papasok' : 'Zoom in'}
+          >
+            <Icon name="plus" size={18} />
+          </button>
+          <button
+            class="hero__glassbtn hero__glassbtn--icon"
+            type="button"
+            id="hero-zoom-out"
+            aria-label={fil ? 'I-zoom palabas' : 'Zoom out'}
+          >
+            <Icon name="minus" size={18} />
+          </button>
+          <button
+            class="hero__glassbtn hero__glassbtn--icon"
+            type="button"
+            id="hero-recenter"
+            aria-label={fil ? 'Ibalik sa gitna ang barangay' : 'Recentre on the barangay'}
+          >
+            <Icon name="locate" size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* A visible pause control is required for videos that autoplay. */}
+      <button class="hero__videobtn" id="hero-video-btn" type="button" hidden>
+        <span id="hero-video-btn-label">{fil ? "I-pause ang video" : "Pause video"}</span>
+      </button>
+
+      {/* Enhanced navigation sits above the media inside its own stage. */}
+      <button class="hero__chev hero__chev--prev" id="hero-prev" type="button" hidden>
+        <Icon name="chevron-left" size={26} title={fil ? 'Nakaraang larawan' : 'Previous image'} />
+      </button>
+      <button class="hero__chev hero__chev--next" id="hero-next" type="button" hidden>
+        <Icon name="chevron-right" size={26} title={fil ? 'Susunod na larawan' : 'Next image'} />
+      </button>
+
+    </div>
+
+    {/* Thumbnails stay outside the stage, keeping imagery unobstructed. */}
+    <div class="hero__filmstrip">
+      {/* Thumbnails are ANCHORS, so they navigate the strip with no JS. */}
+      <ul class="hero__thumbs" aria-label={fil ? 'Pumili ng larawan' : 'Choose an image'}>
+        {
+          SLIDES.map((s, i) => (
+            <li>
+              {/* A SMALL derivative, not the full photograph. A CSS background
+                  on a visible element is never lazy, so pointing these at the
+                  originals downloaded all four (~540 KB) the moment the page
+                  opened and quietly defeated `loading="lazy"` on the slides.
+                  The derivatives total 72 KB. See scripts/build-thumbs.mjs. */}
+              <a
+                href={`#${s.id}`}
+                class={`hero__thumb${i === 0 ? ' is-active' : ''}${
+                  s.kind === 'video' || s.kind === 'photo' ? ' hero__thumb--image' : ''
+                }`}
+                data-thumb={s.id}
+                style={
+                  s.kind === 'video'
+                    ? `background-image:url(${s.poster})`
+                    : s.kind === 'photo'
+                      ? `background-image:url(${s.thumb})`
+                      : undefined
+                }
+              >
+                {/* The map thumbnail shows the map, drawn from the same real
+                    coastline — the reference has satellite imagery in slot one,
+                    and a flat teal rectangle beside five photographs read as a
+                    broken image. Inline SVG, so it costs nothing. */}
+                {s.kind === 'map' && (
+                  <svg
+                    viewBox={CHART_GEOMETRY.viewBox}
+                    preserveAspectRatio="xMidYMid slice"
+                    aria-hidden="true"
+                    class="hero__thumbsvg"
+                  >
+                    <path d={CHART_GEOMETRY.islandPath} class="hero__island" />
+                  </svg>
+                )}
+                {/* Visually hidden: the reference strip is unlettered, and the
+                    images say what they are. The anchor still needs a name. */}
+                <span class="hero__thumblabel">{fil ? s.labelFil : s.labelEn}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+
+      {/*
+        Pagination. `aria-hidden` and untabbable ON PURPOSE: it is a second copy
+        of the thumbnail list directly above it, and shipping six more tab stops
+        that go to the same six places is noise for a keyboard or screen-reader
+        user. It stays clickable for a pointer, which is all it is for.
+      */}
+      <ul class="hero__dots" aria-hidden="true">
+        {
+          SLIDES.map((s, i) => (
+            <li>
+              <a
+                href={`#${s.id}`}
+                tabindex="-1"
+                class={`hero__dot${i === 0 ? ' is-active' : ''}`}
+                data-thumb={s.id}
+              />
+            </li>
+          ))
+        }
+      </ul>
+    </div>
   </div>
 </section>
 
@@ -729,7 +714,10 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
             entries.forEach(function (e) {
               if (!e.isIntersecting) return
               thumbs.forEach(function (t) {
-                t.classList.toggle('is-active', t.getAttribute('data-thumb') === e.target.id)
+                var active = t.getAttribute('data-thumb') === e.target.id
+                t.classList.toggle('is-active', active)
+                if (active) t.setAttribute('aria-current', 'true')
+                else t.removeAttribute('aria-current')
               })
               var i = slides.indexOf(e.target)
               prev.disabled = i <= 0
@@ -741,13 +729,20 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
               var badge = document.getElementById('hero-mapbadge')
               if (badge) badge.classList.toggle('is-visible', onMap)
               var chrome = document.getElementById('hero-mapchrome')
-              if (chrome) chrome.classList.toggle('is-visible', onMap)
+              if (chrome) {
+                chrome.classList.toggle('is-visible', onMap)
+                var mapMount = document.getElementById('hero-map-mount')
+                chrome.hidden = !onMap || !mapMount || !mapMount.classList.contains('is-ready')
+              }
 
               // A video plays only while its own slide is on screen, and never
               // keeps running in the background burning data. Pause FIRST, so
               // moving from one clip to the next never leaves two running.
               var vid = e.target.querySelector('[data-hero-video]')
-              if (vbtn) vbtn.classList.toggle('is-visible', !!vid)
+              if (vbtn) {
+                vbtn.hidden = !vid
+                vbtn.classList.toggle('is-visible', !!vid)
+              }
               pauseVideo()
               if (vid) onVideoSlide(vid)
               else current = null
@@ -865,14 +860,9 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
         }).addTo(map)
 
         /*
-         * FRAMING. Three things cover parts of this map and the island must
-         * clear all of them: the copy column and its scrim down the left, the
-         * filmstrip across the bottom, and the control cluster on the right.
-         * Fitting to the raw container centres the island behind the headline.
+         * The map has its own stage, separate from copy and thumbnails.
+         * Reserve room for the desktop zoom controls inside that stage.
          */
-        var wide = window.innerWidth >= 960
-        var copyColumn = wide ? Math.round(window.innerWidth * 0.4) : 0
-        var strip = wide ? 190 : 150
 
         var ISLAND = [
           [bounds.south, bounds.west],
@@ -881,8 +871,8 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
 
         var frame = function (animate) {
           map.fitBounds(ISLAND, {
-            paddingTopLeft: [copyColumn + 32, 56],
-            paddingBottomRight: [wide ? 110 : 32, strip],
+            paddingTopLeft: [24, 24],
+            paddingBottomRight: [mount.clientWidth >= 560 ? 88 : 24, 32],
             animate: !!animate,
           })
         }
@@ -982,26 +972,21 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
             placeBadge()
             syncZoom()
             if (chrome) {
-              chrome.hidden = false
               // Only over the map — the controls mean nothing on a photograph.
               var active = document.querySelector('[data-thumb].is-active')
-              chrome.classList.toggle(
-                'is-visible',
-                !active || active.getAttribute('data-thumb') === 'hero-map',
-              )
+              var onMap = !active || active.getAttribute('data-thumb') === 'hero-map'
+              chrome.hidden = !onMap
+              chrome.classList.toggle('is-visible', onMap)
             }
           }, 400)
         })
 
-        // The frame is width-dependent (copy column, filmstrip), so it has to
-        // be recomputed when the window changes shape.
+        // Refit inside the resized stage after a viewport/orientation change.
         var resizeTimer
         window.addEventListener('resize', function () {
           clearTimeout(resizeTimer)
           resizeTimer = setTimeout(function () {
-            wide = window.innerWidth >= 960
-            copyColumn = wide ? Math.round(window.innerWidth * 0.4) : 0
-            strip = wide ? 190 : 150
+            map.invalidateSize({ animate: false })
             map.setMinZoom(0)
             frame(false)
             map.setMinZoom(map.getZoom() - 1)

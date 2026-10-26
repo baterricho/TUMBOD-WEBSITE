@@ -39,6 +39,8 @@ export const dictionaryEn: Dictionary = {
   },
 
   home: {
+    galleryHighlights: 'Island highlights',
+    viewGallery: 'View gallery',
     title: 'Today in Tumbod',
     seaNow: 'Sea today',
     nextTrip: 'Next boat',

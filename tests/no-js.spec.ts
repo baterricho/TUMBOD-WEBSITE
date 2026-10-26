@@ -73,3 +73,23 @@ test('no-JS: the language toggle works as a plain link', async ({ page }) => {
   await page.getByRole('link', { name: 'English', exact: true }).click()
   await expect(page).toHaveURL(/\/en\/ligtas/)
 })
+
+for (const route of ['/', '/en']) {
+  test(`no-JS: homepage gallery remains separate and navigable: ${route}`, async ({ page, javaScriptEnabled }) => {
+    test.skip(javaScriptEnabled !== false, 'This checks the native no-JavaScript fallback.')
+    await page.goto(route)
+    await page.locator('.hero__thumb[data-thumb="hero-falls"]').click()
+    const stage = page.locator('.hero__stage')
+    const copy = page.locator('.hero__inner')
+    const stageBox = await stage.boundingBox()
+    const copyBox = await copy.boundingBox()
+    expect(stageBox!.y).toBeGreaterThanOrEqual(copyBox!.y + copyBox!.height)
+    const photo = page.locator('#hero-falls noscript img')
+    await expect(photo).toBeVisible()
+    await expect.poll(() => photo.evaluate((el) => {
+      const img = el as HTMLImageElement
+      const rect = img.getBoundingClientRect()
+      return img.complete && img.naturalWidth > 0 && rect.x >= 0 && rect.right <= window.innerWidth
+    })).toBe(true)
+  })
+}

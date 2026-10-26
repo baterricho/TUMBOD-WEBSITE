@@ -49,6 +49,8 @@ export const dictionaryFil = {
   },
 
   home: {
+    galleryHighlights: 'Mga tampok na tanawin',
+    viewGallery: 'Lahat ng larawan',
     title: 'Ngayon sa Tumbod',
     seaNow: 'Dagat ngayon',
     nextTrip: 'Susunod na biyahe',

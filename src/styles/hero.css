@@ -15,9 +15,7 @@
 /*
  * Explicit stacking order, bottom to top:
  *   0  media strip
- *   1  scrim
- *   2  copy
- *   3  chevrons
+ *   3  map and playback controls, chevrons
  * The media was on a negative layer when the hero was a bare gradient. With a
  * real scroll strip that no longer works: a negative layer sits behind the
  * hero's own background, and anything interactive inside it is unreachable.
@@ -26,10 +24,6 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-}
-
-.hero__scrim {
-  z-index: 1;
 }
 
 .hero__inner {
@@ -186,21 +180,7 @@
   filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.9));
 }
 
-@media (min-width: 60rem) {
-  .hero__mapbadge {
-    /* Poster fallback only — clears the copy column. */
-    left: 66%;
-    font-size: var(--text-lg);
-  }
-}
-
-/*
- * Not on a phone. There is no copy column to sit beside at 412px — the
- * headline fills the hero — so the label landed squarely on top of the primary
- * call to action, printing "Barangay Tumbod" through the middle of "Mga
- * serbisyo at requirements". Nothing is lost: the <h1> two lines above says
- * the same words, and the map is a backdrop at this width.
- */
+/* The welcome heading already names the island on narrow screens. */
 @media (max-width: 60rem) {
   .hero__mapbadge {
     display: none;
@@ -671,74 +651,6 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   }
 }
 
-/* ── Layout at width ────────────────────────────────────────────
-   On a wide screen the copy occupies the left half and the map stays visible
-   on the right, as in the reference. The scrim becomes a left-to-right
-   gradient so the imagery is not dimmed across its whole width. */
-
-/*
- * Two rows: the copy takes the flexible one, the filmstrip hugs the bottom.
- * Without explicit rows the hero's `align-items: end` did nothing once the
- * strip became a second flow child, and both sat at the top of a 900px box.
- */
-.hero {
-  grid-template-rows: 1fr auto;
-}
-
-@media (min-width: 60rem) {
-  /* The reference hero is tall — the map needs room to be a map rather than a
-     band of texture behind a headline. `max-height` is lifted with it; at
-     820px the island was cropped top and bottom at every desktop width. */
-  .hero {
-    min-height: 900px;
-    max-height: none;
-  }
-
-  .hero__inner {
-    max-width: 1280px;
-    align-self: center;
-    padding-block: var(--space-6);
-  }
-
-  .hero__title,
-  .hero__lede,
-  .hero__cta,
-  .hero__eyebrow,
-  .hero__place {
-    max-width: 34rem;
-  }
-
-  /*
-   * Left-to-right, so only the copy column is dimmed and the imagery keeps its
-   * colour on the right. The second layer is a floor wash that puts enough
-   * dark under the filmstrip for white borders and grey dots to read over a
-   * bright reef.
-   */
-  .hero__scrim {
-    background:
-      linear-gradient(
-        100deg,
-        rgb(15 23 42 / 0.95) 0%,
-        rgb(15 23 42 / 0.86) 30%,
-        rgb(15 23 42 / 0.3) 58%,
-        rgb(15 23 42 / 0.08) 100%
-      ),
-      linear-gradient(0deg, rgb(15 23 42 / 0.72) 0%, rgb(15 23 42 / 0) 30%);
-  }
-
-  /* Oversized, and wrapped to two lines the way the reference sets it. */
-  .hero__title {
-    font-size: clamp(3.25rem, 5vw, 4.5rem);
-    max-width: 9ch;
-    letter-spacing: -0.015em;
-  }
-
-  .hero__lede {
-    max-width: 32ch;
-    font-size: var(--text-base);
-  }
-}
-
 /* ── Supporting bits ────────────────────────────────────────────── */
 
 .hero__eyebrow {
@@ -914,5 +826,167 @@ html:not([data-reveal-ready]) .hero__mapbadge {
 @media (prefers-reduced-motion: reduce) {
   .hero__photo {
     transition: none;
+  }
+}
+
+/* The welcome copy and the gallery own separate grid cells at every width.
+   Keep the stage in normal flow so text wrapping and zoom cannot cover media. */
+.hero {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: 0;
+  max-height: none;
+  padding: var(--space-5) max(var(--space-4), calc((100vw - 1280px) / 2));
+}
+
+.hero::after {
+  content: none;
+}
+
+.hero__inner {
+  padding: 0;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.hero__title {
+  max-width: none;
+  font-size: clamp(2rem, 5vw, 3.75rem);
+  line-height: 1.12;
+}
+
+.hero__eyebrow {
+  font-size: var(--text-sm);
+}
+
+.hero__lede {
+  display: block;
+  max-width: 46ch;
+  font-size: var(--text-base);
+}
+
+.hero__cta {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.hero__cta .btn {
+  justify-content: flex-start;
+  padding-block: var(--space-2);
+}
+
+.hero__cta .btn--ghost {
+  color: var(--action-ink);
+}
+
+.hero__gallery {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.hero__gallery-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--action-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.hero__gallery-heading a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  color: var(--action-ink);
+  text-underline-offset: 4px;
+}
+
+.hero__stage {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-card);
+  background: var(--surface-sunken);
+}
+
+.hero__chev {
+  top: 50%;
+  width: 44px;
+  height: 44px;
+}
+
+.hero__chev--prev {
+  left: var(--space-2);
+}
+
+.hero__chev--next {
+  right: var(--space-2);
+}
+
+.hero__mapchrome {
+  inset-block: var(--space-3) var(--space-5);
+  right: var(--space-3);
+}
+
+.hero__mapbadge {
+  font-size: var(--text-sm);
+}
+
+.hero__videobtn {
+  top: var(--space-3);
+}
+
+.hero__filmstrip {
+  padding: 0;
+  min-height: 0;
+  gap: var(--space-2);
+}
+
+.hero__thumbs {
+  gap: var(--space-2);
+  scroll-snap-type: x proximity;
+}
+
+.hero__thumbs > li {
+  flex: 1 0 4.5rem;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.hero__thumb {
+  height: 3.5rem;
+  border-radius: var(--r-inner);
+}
+
+.hero__thumb.is-active {
+  transform: none;
+}
+
+@media (min-width: 60rem) {
+  .hero {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    grid-template-rows: auto;
+    gap: var(--space-7);
+    padding-block: var(--space-7);
+  }
+
+  .hero__inner {
+    gap: var(--space-4);
+  }
+
+  .hero__thumb {
+    height: 4.5rem;
+  }
+
+  .hero__thumbs > li {
+    flex-basis: 0;
   }
 }

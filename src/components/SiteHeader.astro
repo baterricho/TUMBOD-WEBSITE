@@ -971,4 +971,25 @@ const isCurrent = (href: string) => pathname === href
       display: none;
     }
   }
+  /* Keep the identity and all four 44px controls inside narrow phone screens. */
+  @media (max-width: 360px) {
+    .siteheader__bar {
+      padding-inline: var(--space-2);
+      gap: var(--space-1);
+    }
+    .siteheader__actions {
+      gap: 0;
+    }
+    .siteheader__bar > .brand {
+      gap: var(--space-1);
+    }
+    .siteheader__bar > .brand .brand__seal {
+      width: 32px;
+      height: 32px;
+    }
+    .siteheader__bar > .brand .brand__name {
+      font-size: var(--text-sm);
+    }
+  }
+
 </style>

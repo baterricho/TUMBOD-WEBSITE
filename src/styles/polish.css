@@ -82,13 +82,16 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-full);
-  border: 2px solid var(--nav-indicator);
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface-raised));
-  color: var(--ink-strong);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-xs);
-  letter-spacing: 0.02em;
+  overflow: hidden;
+  background: transparent;
+}
+
+.brand__seal-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: var(--radius-full);
 }
 
 .brand__text {

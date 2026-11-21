@@ -187,7 +187,7 @@ function renderLogin(message?: string) {
   const form = el(
     'form',
     { class: 'a-login' },
-    el('span', { class: 'a-seal' }, 'BT'),
+    el('img', { class: 'a-seal', src: '/brand-seal.png', alt: '', width: '44', height: '44' }),
     txt('h1', 'a-logintitle', 'Barangay Tumbod'),
     txt('p', 'a-loginsub', 'Content Management System'),
     el('div', { class: 'a-field' }, txt('label', 'a-label', 'Email'), email),
@@ -224,7 +224,7 @@ function renderShell() {
     el(
       'div',
       { class: 'a-brand' },
-      el('span', { class: 'a-seal' }, 'BT'),
+      el('img', { class: 'a-seal', src: '/brand-seal.png', alt: '', width: '36', height: '36' }),
       el('div', { class: 'a-brandtext' }, txt('span', 'a-brandname', 'Barangay Tumbod'), txt('span', 'a-brandsub', 'CMS')),
     ),
   )

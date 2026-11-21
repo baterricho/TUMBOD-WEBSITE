@@ -21,7 +21,7 @@
    v2 — 2026-08-07, the Deep Coastal Oceanic theme changed every precached font
    filename. Without the bump, existing installs keep serving a tier-1 cache
    whose font entries no longer exist on the origin. */
-const CACHE_VERSION = 'v4'
+const CACHE_VERSION = 'v5'
 const TIER1 = `tumbod-critical-${CACHE_VERSION}`
 const TIER2 = `tumbod-important-${CACHE_VERSION}`
 const TIER3 = `tumbod-nice-${CACHE_VERSION}`
@@ -75,6 +75,7 @@ const CRITICAL_URLS = [
   '/fonts/inter-latin-400-italic.woff2',
   '/fonts/plus-jakarta-sans-latin-700-normal.woff2',
   '/fonts/ibm-plex-mono-latin-400-normal.woff2',
+  '/brand-seal.png',
 ]
 
 const TIER2_PREFIXES = ['/serbisyo', '/opisyal', '/kontak', '/tungkol', '/kalendaryo', '/form']

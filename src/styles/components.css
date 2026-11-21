@@ -1058,15 +1058,26 @@ input[type='radio'] {
 
 /* ── Mobile Touch Target & Bottom Dock Clearance ────────────── */
 
-@media (max-width: 768px) {
+@media (max-width: 60rem) {
   button,
   .btn,
   a.btn,
+  .btn--sm,
+  a.btn--sm,
   summary {
     min-height: 44px;
   }
+}
 
-  #main {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 16px));
+@media (max-width: 768px) {
+  .btn,
+  a.btn {
+    white-space: normal;
+    text-align: center;
+    max-width: 100%;
+  }
+
+  .sitefooter {
+    padding-bottom: calc(var(--space-6) + 76px + env(safe-area-inset-bottom, 16px));
   }
 }

@@ -1040,10 +1040,20 @@ a.a-stat:hover, a.a-stat:focus-visible {
   .a-form { max-width: none; }
   .a-mediagrid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .a-btn,
+  .a-btn--sm,
+  .a-mdbtn,
   .a-navitem,
+  .a-checkline,
   .a-select,
   .a-input,
   .a-search input {
     min-height: 44px;
+  }
+  .a-select,
+  .a-input,
+  .a-textarea,
+  .a-form select,
+  .a-search input {
+    font-size: 16px;
   }
 }

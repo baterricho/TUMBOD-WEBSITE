@@ -144,9 +144,9 @@ const active = SEVERITY_CONFIG[severity]
   </div>
 
   <div class="banner__quicklinks">
-    <a href="#fishing-forecast-trends" class="btn btn--secondary btn--sm" data-plain>
+    <a href="#telemetry" class="btn btn--secondary btn--sm" data-plain>
       <Icon name="bar-chart" size={14} />
-      <span>{fil ? '5-Araw na Forecast' : '5-Day Trends'}</span>
+      <span>{fil ? 'Kasalukuyang Datos' : 'Live Telemetry'}</span>
     </a>
     <a href="#emergency-directory" class="btn btn--secondary btn--sm" data-plain>
       <Icon name="phone" size={14} />
@@ -307,6 +307,9 @@ const active = SEVERITY_CONFIG[severity]
   }
 
   .banner-hotline-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     font-size: var(--text-sm);
     font-weight: 700;
     color: var(--alert-emergency-on-surface);
@@ -319,5 +322,26 @@ const active = SEVERITY_CONFIG[severity]
     gap: var(--space-2);
     padding-top: var(--space-3);
     border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 640px) {
+    .realtime-safety-banner {
+      padding: var(--space-4);
+      gap: var(--space-3);
+    }
+
+    .banner__metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .banner-metric--hotline {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .banner__metrics {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 </style>

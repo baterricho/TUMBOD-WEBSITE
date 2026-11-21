@@ -778,6 +778,20 @@ html:not([data-reveal-ready]) .hero__mapbadge {
   background: #fbbf24;
 }
 
+@media (max-width: 60rem) {
+  .hero__dots {
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 30rem) {
+  .hero__cta-primary,
+  .hero__cta-secondary {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+}
+
 /* ── Desktop Asymmetric Grid ────────────────────────────────── */
 
 @media (min-width: 60rem) {

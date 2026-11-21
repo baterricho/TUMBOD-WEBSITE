@@ -275,6 +275,18 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
   .hotline-empty {
     margin-top: var(--space-4);
   }
+
+  @media (max-width: 36rem) {
+    .hotcard__actions {
+      width: 100%;
+    }
+
+    .hotcard__actions > .hotcard__cta,
+    .hotcard__actions > .hotcard__copy-btn {
+      flex: 1;
+      justify-content: center;
+    }
+  }
 </style>
 
 <script is:inline define:vars={{ fil }}>

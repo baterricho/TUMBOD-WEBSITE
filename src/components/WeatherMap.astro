@@ -828,27 +828,54 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
     line-height: 1.5;
   }
 
+  @media (max-width: 768px) {
+    .map-tab-btn,
+    .layer-pill,
+    .map-route-select {
+      min-height: 44px;
+    }
+
+    .map-route-select {
+      font-size: 16px;
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
   @media (max-width: 640px) {
     .weather-map-wrapper {
       padding: var(--space-4);
     }
 
     .weather-map__stage {
-      height: 440px;
+      height: 460px;
+    }
+
+    .satellite-map-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .leaflet-stage {
+      flex: 1;
+      min-height: 0;
     }
 
     .marine-waypoint-card {
-      padding: 10px;
+      position: relative;
+      top: auto;
+      left: auto;
+      max-width: 100%;
+      width: 100%;
+      border-radius: 0;
+      border-inline: 0;
+      border-bottom: 0;
+      padding: 10px var(--space-3);
+      flex-shrink: 0;
     }
 
     .marine-waypoint-card__desc {
       display: none;
-    }
-
-    .map-tab-btn,
-    .layer-pill,
-    .map-route-select {
-      min-height: 44px;
     }
 
     .map-legend {
@@ -1400,13 +1427,24 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
         .catch(function () {})
     }
 
+    var conn = navigator.connection || {}
+    var slowOrMetered =
+      conn.saveData === true ||
+      conn.effectiveType === '2g' ||
+      conn.effectiveType === 'slow-2g'
+
     var mapHydrated = false
     function hydrateLiveMap() {
       if (mapHydrated) return
       mapHydrated = true
       syncHudWeather()
       if (activeMode === 'windy' && navigator.onLine !== false) {
-        activateWindy()
+        if (slowOrMetered) {
+          if (windyLoading) windyLoading.hidden = true
+          if (windyPlaceholder) windyPlaceholder.hidden = false
+        } else {
+          activateWindy()
+        }
       } else {
         initSatelliteMap()
       }
@@ -1430,6 +1468,7 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
           { rootMargin: '250px' },
         )
         mapIo.observe(mapWrap)
+        return
       }
       if ('requestIdleCallback' in window) {
         requestIdleCallback(hydrateLiveMap, { timeout: 1200 })

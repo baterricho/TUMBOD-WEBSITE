@@ -31,8 +31,6 @@ const alertLevel =
 ---
 
 <Section divider={false} class="section--airy">
-  <RealtimeWeatherWarningBanner locale={locale} report={report} />
-
   <div class="safety-page-header">
     <span class="chip chip--danger">
       <Icon name="shield" size={14} />
@@ -45,6 +43,8 @@ const alertLevel =
         : 'Official safety portal: real-time weather and sea warnings for fishermen and island residents, typhoon storm surge evacuation zones, and emergency rescue hotlines.'}
     </p>
   </div>
+
+  <RealtimeWeatherWarningBanner locale={locale} report={report} />
 </Section>
 
 <Section title={t.safety.currentStatus} titleId="status" divider={false}>
@@ -199,6 +199,7 @@ const alertLevel =
     display: grid;
     gap: var(--space-2);
     justify-items: start;
+    margin-bottom: var(--space-4);
   }
 
   .safety-note {

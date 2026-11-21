@@ -329,6 +329,7 @@
   grid-template-columns: 52px minmax(0, 1fr);
   gap: var(--space-3);
   align-items: center;
+  min-height: 44px;
   padding: var(--space-2);
   border-radius: var(--r-inner);
   color: inherit;
@@ -520,6 +521,7 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
+  min-height: 44px;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--r-inner);
   border: 1px solid var(--line);
@@ -652,7 +654,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
+  min-height: 44px;
   padding-inline: var(--space-3);
   border-radius: var(--r-inner);
   background: var(--alert-emergency);
@@ -766,6 +768,7 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
+  min-height: 44px;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--r-inner);
   border-left: 3px solid transparent;
@@ -841,7 +844,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: 40px;
+  min-height: 44px;
   border-radius: var(--r-inner);
   background: rgb(15 23 42 / 0.86);
   border: 1px solid rgb(255 255 255 / 0.28);

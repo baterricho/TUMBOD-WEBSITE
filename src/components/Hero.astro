@@ -802,7 +802,7 @@ const SLIDE_COUNT = SLIDES.length
        network, blocked CDN — nothing is lost but the imagery. */
     var mount = document.getElementById('hero-map-mount')
     var poster = document.getElementById('hero-poster')
-    if (!mount || !navigator.onLine) return
+    if (!mount || !navigator.onLine || slowNetwork) return
 
     var start = function () {
       var css = document.createElement('link')

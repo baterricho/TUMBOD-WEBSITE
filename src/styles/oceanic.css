@@ -459,7 +459,7 @@ a.hotcard:focus-visible {
   font-weight: 600;
 }
 
-@media (max-width: 26rem) {
+@media (max-width: 36rem) {
   .hotcard {
     flex-wrap: wrap;
   }

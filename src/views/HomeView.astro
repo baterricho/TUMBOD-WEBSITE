@@ -478,7 +478,15 @@ const exploreCards = [
         <a class="fcard" href={c.href} data-reveal="pending">
           <div class="fcard__media" aria-hidden="true">
             {c.image && (
-              <img src={c.image} alt="" class="fcard__media-thumb" loading="lazy" />
+              <img
+                src={c.image}
+                alt=""
+                class="fcard__media-thumb"
+                width="350"
+                height="197"
+                loading="lazy"
+                decoding="async"
+              />
             )}
             <span class="fcard__media-badge">{c.kicker}</span>
           </div>

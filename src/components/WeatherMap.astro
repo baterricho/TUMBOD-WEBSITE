@@ -205,8 +205,8 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
 
       <iframe
         id="windy-iframe"
-        title={fil ? 'Windy Live Interactive Weather Radar para sa Tuluran Island' : 'Windy Live Interactive Weather Radar for Tuluran Island'}
-        data-src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=11&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&pressure=true&message=true`}
+        title={fil ? 'Windy Live Interactive Weather Radar para sa Tumbod, Tuluran Island' : 'Windy Live Interactive Weather Radar for Tumbod, Tuluran Island'}
+        data-src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=11&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&pressure=true`}
         class="windy-frame"
         loading="lazy"
         referrerpolicy="no-referrer-when-downgrade"
@@ -214,22 +214,6 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
         allowfullscreen
         hidden
       ></iframe>
-
-      <div class="windy-attribution">
-        <span>
-          {fil
-            ? 'Live ECMWF / GFS · Windy.com · Pulo ng Tuluran'
-            : 'Live ECMWF / GFS · Windy.com · Tuluran Island'}
-        </span>
-        <a
-          href={windyDirectUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="windy-attribution__link"
-        >
-          Windy.com ↗
-        </a>
-      </div>
     </div>
 
     {/* Panel 2: Satellite Route Map (Synced Sea Channels + Mainland Palawan Highways) */}
@@ -323,6 +307,12 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
       </div>
     </div>
   </div>
+
+  <p class="weather-map__credits">
+    {fil
+      ? 'Satelayt: Esri, Maxar · Mapa at hangganan: OpenStreetMap contributors (ODbL) · Radar at lagay ng panahon: Windy at Open-Meteo'
+      : 'Satellite imagery: Esri, Maxar · Map data: OpenStreetMap contributors (ODbL) · Forecast: Windy & Open-Meteo'}
+  </p>
 </div>
 
 <style>
@@ -628,33 +618,6 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
     display: block;
   }
 
-  .windy-attribution {
-    position: absolute;
-    bottom: 8px;
-    left: 10px;
-    z-index: 10;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: rgb(10 22 40 / 0.9);
-    color: #cbd5e1;
-    border: 1px solid rgb(255 255 255 / 0.14);
-    padding: 4px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 11px;
-  }
-
-  .windy-attribution__link {
-    color: #7dd3fc;
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .windy-attribution__link:hover {
-    text-decoration: underline;
-    color: #ffffff;
-  }
-
   /* Satellite Map */
   .satellite-map-container {
     width: 100%;
@@ -828,6 +791,13 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
     line-height: 1.5;
   }
 
+  .weather-map__credits {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: 1.45;
+  }
+
   @media (max-width: 768px) {
     .map-tab-btn,
     .layer-pill,
@@ -939,11 +909,7 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
         lat +
         '&lon=' +
         lon +
-        '&detailLat=' +
-        lat +
-        '&detailLon=' +
-        lon +
-        '&marker=true&pressure=true&message=true'
+        '&pressure=true'
       )
     }
 
@@ -1220,6 +1186,7 @@ const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
             zoom: 12,
             scrollWheelZoom: false,
             zoomControl: true,
+            attributionControl: false,
           })
 
           var satellite = L.tileLayer(

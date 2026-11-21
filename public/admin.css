@@ -33,7 +33,7 @@
      and every panel starts looking like a different depth for no reason. */
   --ink: #0f172a;
   --ink-2: #334155;
-  --ink-3: #64748b;
+  --ink-3: #475569;
   --surface: #f8fafc;
   --panel: #ffffff;
   --panel-2: #f8fafc;
@@ -44,36 +44,35 @@
    * The site's own signals. Green = confirmed. Red = emergency, and nothing
    * else. Amber = provisional / sample, AND the government accent.
    *
-   * Every `--*-ink`-grade value here is a DARKENED stop, not the brief's fill
-   * value, for the same reason tokens.css darkens them: #16a34a is 3.30:1 on
-   * white and #f59e0b is 2.15:1, and this sheet uses these as label colours on
-   * white panels. The washes are the fill halves of the same hues.
+   * Every foreground signal stop is darkened to meet WCAG 2.2 AA (>= 4.5:1)
+   * against both white panels and its matching wash surface.
    */
   --green: #15803d;
   --green-ink: #14532d;
   --green-wash: #ecfdf5;
-  --red: #dc2626;
+  --red: #b91c1c;
   --red-wash: #fef2f2;
-  --amber: #b45309;
+  --amber: #92400e;
   --amber-wash: #fffbeb;
   --gold: #f59e0b;        /* the seal accent — FILL AND EDGE ONLY, never text */
   --blue: #0369a1;
   --blue-wash: #f0f9ff;
+  --focus: rgba(3, 105, 161, 0.22);
 
   /* 8px grid. Everything below is a multiple. */
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
   --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
 
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --r-xl: 20px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 14px;
   --r-full: 999px;
 
-  /* Tinted rather than black — depth on warm paper, not grey haze. */
-  --sh-1: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
-  --sh-2: 0 2px 4px rgb(15 23 42 / 0.04), 0 8px 20px -6px rgb(15 23 42 / 0.10);
-  --sh-3: 0 8px 16px -4px rgb(15 23 42 / 0.08), 0 24px 48px -12px rgb(15 23 42 / 0.18);
+  /* Restrained layered elevation matching the public site. */
+  --sh-1: 0 1px 2px rgb(15 23 42 / 0.05);
+  --sh-2: 0 4px 12px -2px rgb(15 23 42 / 0.08), 0 1px 3px rgb(15 23 42 / 0.04);
+  --sh-3: 0 16px 36px -8px rgb(15 23 42 / 0.16), 0 4px 12px -2px rgb(15 23 42 / 0.06);
 
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --sidebar-w: 268px;
@@ -100,6 +99,16 @@ body {
 
 h1, h2, h3, p, ul, ol { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
+
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
 
 #app {
   display: grid;
@@ -535,6 +544,12 @@ a.a-stat:hover, a.a-stat:focus-visible {
   vertical-align: middle;
 }
 
+.a-table th.num,
+.a-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .a-table tbody tr:last-child td { border-bottom: 0; }
 .a-table tbody tr { transition: background-color 120ms var(--ease); }
 .a-table tbody tr:hover { background: var(--panel-2); }
@@ -550,13 +565,13 @@ a.a-stat:hover, a.a-stat:focus-visible {
 
 .a-check { width: 16px; height: 16px; accent-color: var(--green); cursor: pointer; }
 
-/* Status pills */
+/* Status badges */
 .a-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 2px var(--s2);
-  border-radius: var(--r-full);
+  border-radius: var(--r-sm);
   font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
@@ -681,7 +696,7 @@ a.a-stat:hover, a.a-stat:focus-visible {
   border-radius: var(--r-sm);
   background: var(--amber-wash);
   border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
-  color: #b45309;
+  color: var(--amber);
 }
 
 .a-switch { display: flex; align-items: center; gap: var(--s3); cursor: pointer; }
@@ -858,7 +873,7 @@ a.a-stat:hover, a.a-stat:focus-visible {
   gap: var(--s2);
   max-width: min(90vw, 520px);
   padding: var(--s3) var(--s4);
-  border-radius: var(--r-full);
+  border-radius: var(--r-md);
   background: var(--ink);
   color: #fff;
   font-size: 13.5px;
@@ -938,7 +953,7 @@ a.a-stat:hover, a.a-stat:focus-visible {
   border-radius: var(--r-md);
   background: var(--amber-wash);
   border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
-  color: #b45309;
+  color: var(--amber);
   font-size: 13px;
   font-weight: 550;
 }
@@ -1024,4 +1039,11 @@ a.a-stat:hover, a.a-stat:focus-visible {
 
   .a-form { max-width: none; }
   .a-mediagrid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .a-btn,
+  .a-navitem,
+  .a-select,
+  .a-input,
+  .a-search input {
+    min-height: 44px;
+  }
 }

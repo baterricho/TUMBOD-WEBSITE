@@ -1,13 +1,7 @@
 ---
 /**
- * Ligtas body, locale-aware. The highest-priority page on the site.
- *
- * Not hypothetical preparedness: Typhoon Tino made landfall at Batas Island in
- * this municipality in November 2025 with storm surge above 3 m
- * (RESEARCH.md §4).
- *
- * Renders entirely from static fallbacks — no CMS dependency, no single point
- * of failure. No images required to be useful. Zero JS.
+ * LigtasView — Disaster preparedness, live maritime warnings, fishermen safety,
+ * evacuation sites, and offline-ready emergency instructions.
  */
 import Section from '@/components/Section.astro'
 import Alert from '@/components/Alert.astro'
@@ -32,21 +26,20 @@ const p = prefix(locale)
 
 const report = await fetchLiveMarineWeather()
 const cur = report.current
-const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel === 'caution' ? 'warning' : 'info'
-
+const alertLevel =
+  cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel === 'caution' ? 'warning' : 'info'
 ---
 
 <Section divider={false} class="section--airy">
-  {/* Real-Time Weather & Sea Warning Banner at the top of the Safety Panel */}
   <RealtimeWeatherWarningBanner locale={locale} report={report} />
 
   <div class="safety-page-header">
-    <div class="safety-header-badge">
-      <Icon name="shield" size={16} />
+    <span class="chip chip--danger">
+      <Icon name="shield" size={14} />
       <span>{fil ? 'BDRRMC at Kaligtasan sa Tuluran' : 'BDRRMC & Tuluran Island Disaster Safety'}</span>
-    </div>
+    </span>
     <h1 class="page-title">{t.safety.title}</h1>
-    <p class="safety-header-desc">
+    <p class="section-lede">
       {fil
         ? 'Opisyal na impormasyon sa kaligtasan, real-time na babala sa panahon at alon para sa mga mangingisda at mamamayan, lilikasan sa bagyo, at mga numerong matatawagan sa saklolo.'
         : 'Official safety portal: real-time weather and sea warnings for fishermen and island residents, typhoon storm surge evacuation zones, and emergency rescue hotlines.'}
@@ -54,7 +47,6 @@ const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel 
   </div>
 </Section>
 
-{/* 1. Answer first: current threat level & weather safety status */}
 <Section title={t.safety.currentStatus} titleId="status" divider={false}>
   <Alert level={alertLevel} locale={locale}>
     <strong>
@@ -63,54 +55,54 @@ const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel 
         : cur.safetyLevel === 'caution'
           ? fil ? 'MAY PAALALA: KATAMTAMANG ALON AT CHOP SA KIPOT' : 'ADVISORY: MODERATE SWELL & CHANNEL CHOP'
           : fil ? 'NORMAL NA KALAGAYAN: LIGTAS ANG KARAGATAN' : 'NORMAL CONDITIONS: WATERS GENERALLY CALM'}
-    </strong><br />
+    </strong>
+    <br />
     {fil ? cur.safetyExplanationFil : cur.safetyExplanationEn}
   </Alert>
-  <p style="margin-top:var(--space-2);font-size:var(--text-sm);color:var(--ink-muted)">
-    {t.safety.mayBeNewer}
-  </p>
+  <p class="safety-note">{t.safety.mayBeNewer}</p>
 </Section>
 
-{/* 2. Real-Time Marine Telemetry Snapshot (Zero-JS, Lightweight for Emergencies) */}
 <Section
   title={fil ? 'Kasalukuyang Datos ng Dagat at Hangin' : 'Live Marine Sea & Wind Snapshot'}
   titleId="telemetry"
   divider={true}
 >
-  <div class="emergency-telemetry-card card">
+  <div class="emergency-telemetry-card">
     <div class="telemetry-snapshot-grid">
       <div class="telemetry-snap-item">
         <span class="telemetry-snap-label">{fil ? 'Taas ng Alon' : 'Wave Height'}</span>
-        <strong class="telemetry-snap-val" style={`color: ${cur.waveHeightM > 1.2 ? 'var(--color-error-ink, #ef4444)' : 'var(--color-interactive, #0284c7)'}`}>
+        <strong
+          class={`telemetry-snap-val figure ${cur.waveHeightM > 1.2 ? 'telemetry-snap-val--danger' : 'telemetry-snap-val--calm'}`}
+        >
           {cur.waveHeightM} m
         </strong>
         <span class="telemetry-snap-sub">{fil ? cur.waveStateFil : cur.waveStateEn}</span>
       </div>
       <div class="telemetry-snap-item">
         <span class="telemetry-snap-label">{fil ? 'Bilis ng Hangin' : 'Wind Speed'}</span>
-        <strong class="telemetry-snap-val">
-          {cur.windSpeedKph} km/h
-        </strong>
-        <span class="telemetry-snap-sub">{fil ? cur.windCardinalFil : cur.windCardinal} ({cur.windDirectionDeg}°)</span>
+        <strong class="telemetry-snap-val figure">{cur.windSpeedKph} km/h</strong>
+        <span class="telemetry-snap-sub">
+          {fil ? cur.windCardinalFil : cur.windCardinal} ({cur.windDirectionDeg}°)
+        </span>
       </div>
       <div class="telemetry-snap-item">
         <span class="telemetry-snap-label">{fil ? 'Temperatura' : 'Temperature'}</span>
-        <strong class="telemetry-snap-val">
-          {cur.temperature}°C
-        </strong>
+        <strong class="telemetry-snap-val figure">{cur.temperature}°C</strong>
         <span class="telemetry-snap-sub">{fil ? cur.weatherDescFil : cur.weatherDescEn}</span>
       </div>
     </div>
     <div class="telemetry-snapshot-cta">
-      <a href={`${p}/panahon`} class="btn btn--primary" style="display:inline-flex;align-items:center;gap:8px;min-height:48px;font-weight:600">
-        <Icon name="wind" size={18} />
-        <span>{fil ? 'Buksan ang Kumpletong Live Radar, Tsart at Mapa ng Panahon →' : 'View Full Interactive Weather, Sea Chart & Radar →'}</span>
+      <a href={`${p}/panahon`} class="btn btn--primary" data-plain>
+        <Icon name="wind" size={16} />
+        <span>
+          {fil ? 'Buksan ang Kumpletong Live Radar at Mapa ng Panahon' : 'Open Full Weather Chart & Live Radar'}
+        </span>
+        <Icon name="chevron-right" size={16} />
       </a>
     </div>
   </div>
 </Section>
 
-{/* 3. Dedicated Fisherman & Island Resident Weather Warning System */}
 <Section
   title={fil ? 'Babala sa Panahon at Kaligtasan ng mga Mangingisda' : 'Fishermen Weather Warnings & Maritime Directives'}
   titleId="mangingisda-safety"
@@ -119,13 +111,12 @@ const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel 
   <FishermanWeatherSafety locale={locale} report={report} />
 </Section>
 
-{/* 6. Structured Emergency Contact Directory (Mobile-Optimized Table for Low-End Devices) */}
 <Section title={t.safety.callNow} titleId="hotlines" divider={true}>
   <EmergencyContactDirectory locale={locale} />
 </Section>
 
 <Section title={t.safety.whereToEvacuate} titleId="evacuation">
-  <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+  <div class="evac-list">
     {
       EVACUATION_SITES.map((site) => (
         <div class="card">
@@ -133,16 +124,16 @@ const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel 
             <Placeholder value={site.name} display="block" />
           ) : (
             <>
-              <p style="font-family:var(--font-display);font-size:var(--text-lg)">{site.name}</p>
+              <p class="card__title">{site.name}</p>
               <p class="small muted">
                 {!isPlaceholder(site.purok) && <span>{t.safety.purok}: {site.purok}</span>}
                 {!isPlaceholder(site.capacity) && (
                   <span> · {t.safety.capacity}: <span class="figure">{site.capacity}</span></span>
                 )}
               </p>
-              {!isPlaceholder(site.accessNoteFil) && <p style="margin-top:var(--space-2)">{site.accessNoteFil}</p>}
+              {!isPlaceholder(site.accessNoteFil) && <p class="evac-note">{site.accessNoteFil}</p>}
               {!isPlaceholder(site.contactPerson) && (
-                <p class="small muted" style="margin-top:var(--space-1)">{site.contactPerson}</p>
+                <p class="small muted evac-contact">{site.contactPerson}</p>
               )}
             </>
           )}
@@ -158,14 +149,11 @@ const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel 
 </Section>
 
 <Section title={t.safety.beforeTyphoon} titleId="checklist">
-  <ul style="list-style:none;padding:0;margin:0">
+  <ul class="typhoon-checklist list-reset">
     {
       TYPHOON_CHECKLIST.map((item) => (
-        <li style="display:flex;gap:var(--space-3);align-items:flex-start;min-height:44px;padding-block:var(--space-1)">
-          <span
-            aria-hidden="true"
-            style="width:20px;height:20px;margin-top:3px;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);flex-shrink:0"
-          ></span>
+        <li class="typhoon-checklist__item">
+          <span class="typhoon-checklist__box" aria-hidden="true"></span>
           <span>{fil ? item.labelFil : item.labelEn}</span>
         </li>
       ))
@@ -173,17 +161,12 @@ const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel 
   </ul>
 </Section>
 
-{/*
-  VERIFIED and operationally decisive: most bangka serving this island are
-  under 3 GT, so a cancellation is often a binding municipality-wide
-  prohibition rather than an operator's choice (RESEARCH.md §4).
-*/}
 <Section title={t.safety.seaTravel} titleId="sea-travel">
-  <p class="is-water" style="max-width:var(--measure)">{t.safety.coastGuardRule}</p>
+  <p class="is-water prose-line">{t.safety.coastGuardRule}</p>
 </Section>
 
 <Section title={t.safety.noSignal} titleId="no-signal">
-  <ul style="padding-inline-start:var(--space-5);max-width:var(--measure);line-height:1.7;display:grid;gap:var(--space-2)">
+  <ul class="no-signal-list">
     <li>
       <strong>{fil ? 'Radyong De-Baterya:' : 'Battery-Powered Radio:'}</strong>{' '}
       {fil ? 'Makinig sa mga ulat panahon mula sa PAGASA at mga lokal na istasyon sa Palawan.' : 'Tune in to regional disaster and PAGASA bulletins on AM/FM frequencies.'}
@@ -205,85 +188,136 @@ const alertLevel = cur.safetyLevel === 'danger' ? 'emergency' : cur.safetyLevel 
       {fil ? 'Kung ligtas ang daan, magtungo sa Barangay Hall o evacuation center para sa beripikadong impormasyon at tulong.' : 'If pathways are safe, proceed directly to the Barangay Hall or designated evacuation center.'}
     </li>
   </ul>
-  <p style="margin-top:var(--space-4)">
+  <p class="safety-cta-row">
     <a href={`${p}/ligtas/hotline`}>{t.nav.emergencyLabel} →</a>
   </p>
 </Section>
 
 <style>
-.safety-page-header {
-  max-width: var(--measure);
-}
+  .safety-page-header {
+    max-width: var(--measure);
+    display: grid;
+    gap: var(--space-2);
+    justify-items: start;
+  }
 
-.safety-header-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  background: var(--palette-coral-100);
-  color: var(--palette-coral-800);
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-caps);
-  margin-bottom: var(--space-2);
-}
+  .safety-note {
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
 
-.safety-header-desc {
-  font-size: var(--text-lg);
-  color: var(--palette-slate-600);
-  line-height: 1.6;
-  margin-top: var(--space-2);
-}
+  .emergency-telemetry-card {
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-inline-start: 3px solid var(--accent);
+    background: var(--surface-raised);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    gap: var(--space-4);
+  }
 
-.emergency-telemetry-card {
-  padding: var(--space-4);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
+  .telemetry-snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+    gap: var(--space-3);
+  }
 
-.telemetry-snapshot-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
+  .telemetry-snap-item {
+    padding: var(--space-3);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    display: grid;
+    gap: 4px;
+  }
 
-.telemetry-snap-item {
-  padding: var(--space-3);
-  background: var(--surface-sunken);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+  .telemetry-snap-label {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+  }
 
-.telemetry-snap-label {
-  font-size: var(--text-xs);
-  color: var(--ink-muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+  .telemetry-snap-val {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    color: var(--ink-strong);
+  }
 
-.telemetry-snap-val {
-  font-size: var(--text-xl);
-  font-weight: 800;
-  color: var(--ink-strong);
-}
+  .telemetry-snap-val--danger {
+    color: var(--alert-emergency-on-surface);
+  }
 
-.telemetry-snap-sub {
-  font-size: var(--text-xs);
-  color: var(--ink-muted);
-}
+  .telemetry-snap-val--calm {
+    color: var(--interactive);
+  }
 
-.telemetry-snapshot-cta {
-  border-top: 1px solid var(--line);
-  padding-top: var(--space-3);
-  margin-top: var(--space-2);
-}
+  .telemetry-snap-sub {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+
+  .telemetry-snapshot-cta {
+    border-top: 1px solid var(--line);
+    padding-top: var(--space-3);
+  }
+
+  .evac-list {
+    display: grid;
+    gap: var(--space-3);
+    max-width: var(--measure);
+  }
+
+  .evac-note {
+    margin-top: var(--space-2);
+  }
+
+  .evac-contact {
+    margin-top: var(--space-1);
+  }
+
+  .typhoon-checklist {
+    display: grid;
+    gap: var(--space-2);
+    max-width: var(--measure);
+  }
+
+  .typhoon-checklist__item {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+  }
+
+  .typhoon-checklist__box {
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .prose-line {
+    max-width: var(--measure);
+  }
+
+  .no-signal-list {
+    padding-inline-start: var(--space-5);
+    max-width: var(--measure);
+    line-height: 1.65;
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .safety-cta-row {
+    margin-top: var(--space-4);
+  }
 </style>
-

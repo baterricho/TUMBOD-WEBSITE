@@ -2,15 +2,27 @@
 /**
  * InteractiveCrossingPlanner.astro
  *
- * An interactive, accessible sea crossing planner for Tuluran Island residents
- * and visitors. Calculates crossing times, tide considerations, vessel rules,
- * and Coast Guard advisories for sea travel between mainland Palawan and Barangay Tumbod.
+ * Two-tier Palawan travel planner connecting Barangay Tumbod (Tuluran Island)
+ * to adjacent island/Sound landings and mainland Palawan via Liminangcong Port.
  *
- * Works with zero JavaScript (sensible defaults and static information),
- * and upgrades to dynamic real-time calculations when JavaScript is available.
+ *   - Network A (Sea Routes): Boat / Bangka ONLY (zero land vehicles).
+ *   - Network B (Mainland Palawan): Van / Bus / Motorcycle / Private Vehicle
+ *     ONLY on road legs; multi-leg summary automatically adds Leg 1 (Boat to
+ *     Liminangcong Port) + Leg 2 (Road highway) when departing from Tumbod.
+ *   - Zero fare or peso pricing rendered anywhere.
+ *   - Synchronizes selection live with WeatherMap via `tumbod:route-change`.
  */
 import Icon from './Icon.astro'
 import type { Locale } from '@/lib/i18n'
+import {
+  LOCATIONS,
+  SEA_ROUTES,
+  MAINLAND_ROUTES,
+  SEA_VESSELS,
+  ROAD_VEHICLES,
+  composeSeaJourney,
+  formatMinutesRange,
+} from '@/lib/content/palawan-routes'
 
 interface Props {
   locale: Locale
@@ -19,249 +31,348 @@ interface Props {
 const { locale } = Astro.props
 const fil = locale === 'fil'
 
-const ROUTES = [
-  {
-    id: 'taytay-tumbod',
-    nameFil: 'Taytay Pier (Mainland) ↔ Tumbod Pantalan',
-    nameEn: 'Taytay Pier (Mainland) ↔ Tumbod Pier',
-    distanceKm: 8.4,
-    durationMin: '25–35',
-    notesFil: 'Pangunahing ruta ng mga residente at kargamento. Dumaraan sa bukas na look.',
-    notesEn: 'Primary crossing for residents and goods. Traverses the open bay channel.',
-    riskFil: 'Maaaring maalon kapag may hanging Amihan o Habagat.',
-    riskEn: 'Can be choppy during Northeast or Southwest monsoon winds.',
-  },
-  {
-    id: 'tumbod-sharkfin',
-    nameFil: 'Tumbod Pantalan ↔ Shark Fin Bay / Silangan',
-    nameEn: 'Tumbod Pier ↔ Shark Fin Bay / East Cove',
-    distanceKm: 4.2,
-    durationMin: '15–20',
-    notesFil: 'Protektadong ruta sa loob ng look; mas kalmado ang tubig.',
-    notesEn: 'Sheltered route inside the bay; usually calmer waters.',
-    riskFil: 'Mababaw ang bahura tuwing low tide.',
-    riskEn: 'Reef flats are shallow during low tide.',
-  },
-  {
-    id: 'tumbod-falls',
-    nameFil: 'Tumbod Pantalan ↔ Talon sa Baybayin (North)',
-    nameEn: 'Tumbod Pier ↔ Shoreline Falls (North)',
-    distanceKm: 6.1,
-    durationMin: '20–25',
-    notesFil: 'Daan patungo sa talon at hilagang komunidad ng Tuluran.',
-    notesEn: 'Route towards the falls and northern Tuluran settlements.',
-    riskFil: 'Matarik ang baybayin; mag-ingat sa pagdaong.',
-    riskEn: 'Steep coastline; caution required when mooring.',
-  },
-]
+const primaryMainland = MAINLAND_ROUTES.filter((r) => r.group === 'primary')
+const northCentralMainland = MAINLAND_ROUTES.filter((r) => r.group === 'northern-central')
+const southMainland = MAINLAND_ROUTES.filter((r) => r.group === 'southern')
 
-const VESSELS = [
-  {
-    id: 'small-bangka',
-    nameFil: 'Bangkang de-katig (< 3 Gross Tons)',
-    nameEn: 'Outrigger boat (< 3 Gross Tons)',
-    descFil: 'Karaniwang bangkang pangisda o pantawid. Sakop ng mahigpit na Coast Guard advisory kapag may gale warning.',
-    descEn: 'Common fishing or crossing outrigger. Strictly regulated by Coast Guard under gale warnings.',
-    safeWaveMeters: 1.2,
-  },
-  {
-    id: 'passenger-bangka',
-    nameFil: 'Bangkang Pampasahero (3–10 GT)',
-    nameEn: 'Passenger Bangka (3–10 GT)',
-    descFil: 'Mas malaking bangkang may lisensya para sa mga residente at kargamento.',
-    descEn: 'Larger licensed passenger vessel for residents and heavy provisions.',
-    safeWaveMeters: 2.0,
-  },
-  {
-    id: 'patrol-boat',
-    nameFil: 'Barangay / MDRRMO Patrol Boat',
-    nameEn: 'Barangay / Rescue Patrol Boat',
-    descFil: 'Bangkang pang-emergency at opisyal na pag-inspeksyon ng barangay.',
-    descEn: 'Emergency response and official inspection vessel.',
-    safeWaveMeters: 2.5,
-  },
-]
-
-const firstRoute = ROUTES[0]!
+const initialJourney = composeSeaJourney('tumbod-to-liminangcong')
+const initOrigin = LOCATIONS[initialJourney.originId]!
+const initDest = LOCATIONS[initialJourney.destinationId]!
+const p = fil ? '' : '/en'
 ---
 
-<div class="crossing-planner" id="crossing-planner" data-reveal="pending">
-  <div class="crossing-planner__header">
-    <div class="crossing-planner__icon-box" aria-hidden="true">
-      <Icon name="anchor" size={26} />
+<section class="rp" id="crossing-planner" aria-labelledby="rp-heading" data-reveal="pending">
+  <header class="rp__head">
+    <div class="rp__titlewrap">
+      <div class="rp__icon" aria-hidden="true">
+        <Icon name="anchor" size={20} />
+      </div>
+      <div>
+        <h3 class="rp__title" id="rp-heading">
+          {fil ? 'Plano ng Biyahe: Dagat at Palawan Mainland' : 'Palawan Sea & Mainland Travel Planner'}
+        </h3>
+        <p class="rp__subtitle">
+          {
+            fil
+              ? 'Piliin ang biyaheng pandagat mula Tumbod o rutang panlupa mula Liminangcong Port patungong Taytay, Puerto Princesa, at ibang bayan ng Palawan.'
+              : 'Plan island boat trips from Tumbod or mainland Palawan highway journeys via Liminangcong Port.'
+          }
+        </p>
+      </div>
     </div>
-    <div>
-      <h3 class="crossing-planner__title">
-        {fil ? 'Gabay sa Pagtawid sa Tuluran Strait' : 'Tuluran Strait Crossing Planner'}
-      </h3>
-      <p class="crossing-planner__subtitle">
+
+    {/* Segmented Category Switch: Island Boat Trips vs Mainland Palawan */}
+    <div class="rp__tabs" role="tablist" aria-label={fil ? 'Kategorya ng Biyahe' : 'Travel Category'}>
+      <button
+        type="button"
+        id="rp-tab-sea"
+        class="rp__tab is-active"
+        role="tab"
+        aria-selected="true"
+        data-network="sea"
+      >
+        <Icon name="bangka" size={15} />
+        <span>{fil ? 'Biyaheng Bangka (Dagat)' : 'Island Boat Trips'}</span>
+      </button>
+      <button
+        type="button"
+        id="rp-tab-mainland"
+        class="rp__tab"
+        role="tab"
+        aria-selected="false"
+        data-network="mainland"
+      >
+        <Icon name="pin" size={15} />
+        <span>{fil ? 'Mainland Palawan (Kalsada)' : 'Mainland Palawan'}</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="rp__grid">
+    {/* ── Controls Column ─────────────────────────────────────── */}
+    <div class="rp__controls">
+      {/* Mode A: Island Boat Trips Controls */}
+      <div id="rp-panel-sea" class="rp__panel">
+        <div class="rp__field">
+          <label for="rp-sea-route" class="form-label">
+            {fil ? 'Rutang Pandagat (Mula ↔ Patungo)' : 'Sea Route (From → To)'}
+          </label>
+          <select id="rp-sea-route" class="select">
+            {
+              SEA_ROUTES.map((r, i) => {
+                const from = LOCATIONS[r.fromId]!
+                const to = LOCATIONS[r.toId]!
+                return (
+                  <option value={r.id} selected={i === 0}>
+                    {(fil ? from.nameFil : from.nameEn).replace(' (Tuluran Island)', '').replace(' (Coastal Gateway)', '')}{' '}
+                    → {(fil ? to.nameFil : to.nameEn).replace(' (Coastal Gateway)', '').replace(' (Malampaya Sound)', '')}{' '}
+                    ({r.distanceKm} km)
+                  </option>
+                )
+              })
+            }
+          </select>
+        </div>
+
+        <div class="rp__field">
+          <label for="rp-vessel" class="form-label">
+            {fil ? 'Uri ng Bangka (Pandagat Lamang)' : 'Vessel Type (Boat Only)'}
+          </label>
+          <select id="rp-vessel" class="select">
+            {
+              Object.values(SEA_VESSELS).map((v, i) => (
+                <option value={v.id} selected={i === 0}>
+                  {fil ? v.nameFil : v.nameEn}
+                </option>
+              ))
+            }
+          </select>
+          <span class="form-help">
+            {
+              fil
+                ? 'Bangka lamang ang maaaring gamitin sa mga isla at komunidad sa loob ng Malampaya Sound.'
+                : 'Only boat transport serves Tumbod and Sound destinations — land vehicles cannot operate over water.'
+            }
+          </span>
+        </div>
+      </div>
+
+      {/* Mode B: Mainland Palawan Controls (Hidden initially) */}
+      <div id="rp-panel-mainland" class="rp__panel" hidden>
+        <div class="rp__field">
+          <span class="form-label">{fil ? 'Pinanggalingan (From)' : 'Starting Point'}</span>
+          <div class="rp__origin-toggle" role="group" aria-label={fil ? 'Pinanggalingan' : 'Starting Point'}>
+            <button
+              type="button"
+              id="rp-origin-tumbod"
+              class="rp__origin-btn is-active"
+              aria-pressed="true"
+              data-origin="tumbod"
+            >
+              {fil ? 'Mula Tumbod (Bangka + Kalsada)' : 'From Tumbod (Boat + Road)'}
+            </button>
+            <button
+              type="button"
+              id="rp-origin-liminangcong"
+              class="rp__origin-btn"
+              aria-pressed="false"
+              data-origin="liminangcong"
+            >
+              {fil ? 'Mula Liminangcong Port (Kalsada)' : 'From Liminangcong Port (Road)'}
+            </button>
+          </div>
+        </div>
+
+        <div class="rp__field">
+          <label for="rp-dest-search" class="form-label">
+            {fil ? 'Hanapin ang Bayan / Lungsod sa Palawan' : 'Filter Palawan Destination'}
+          </label>
+          <input
+            id="rp-dest-search"
+            type="search"
+            class="input"
+            autocomplete="off"
+            placeholder={fil ? 'Hal. Taytay, Puerto Princesa, Quezon, Rizal...' : 'e.g. Taytay, Puerto Princesa, Quezon, Rizal...'}
+          />
+        </div>
+
+        <div class="rp__field">
+          <label for="rp-mainland-dest" class="form-label">
+            {fil ? 'Destinasyon sa Mainland Palawan' : 'Mainland Palawan Destination'}
+          </label>
+          <select id="rp-mainland-dest" class="select">
+            <optgroup label={fil ? 'Pangunahing Hub (Primary)' : 'Primary Hubs'}>
+              {
+                primaryMainland.map((r, i) => {
+                  const loc = LOCATIONS[r.toId]!
+                  return (
+                    <option value={r.toId} selected={i === 0}>
+                      {fil ? loc.nameFil : loc.nameEn} ({r.highwayKm} km {fil ? 'kalsada' : 'road'})
+                    </option>
+                  )
+                })
+              }
+            </optgroup>
+            <optgroup label={fil ? 'Hilaga at Gitnang Palawan' : 'Northern & Central Palawan'}>
+              {
+                northCentralMainland.map((r) => {
+                  const loc = LOCATIONS[r.toId]!
+                  return (
+                    <option value={r.toId}>
+                      {fil ? loc.nameFil : loc.nameEn} ({r.highwayKm} km {fil ? 'kalsada' : 'road'})
+                    </option>
+                  )
+                })
+              }
+            </optgroup>
+            <optgroup label={fil ? 'Timog Palawan (Rizal, Quezon, Brooke’s Point...)' : 'Southern Palawan (Quezon, Rizal...)'}>
+              {
+                southMainland.map((r) => {
+                  const loc = LOCATIONS[r.toId]!
+                  return (
+                    <option value={r.toId}>
+                      {fil ? loc.nameFil : loc.nameEn} ({r.highwayKm} km {fil ? 'kalsada' : 'road'})
+                    </option>
+                  )
+                })
+              }
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="rp__field">
+          <label for="rp-vehicle" class="form-label">
+            {fil ? 'Sasakyan sa Mainland (Kalsada Lamang)' : 'Mainland Vehicle (Road Leg Only)'}
+          </label>
+          <select id="rp-vehicle" class="select">
+            {
+              Object.values(ROAD_VEHICLES).map((v, i) => (
+                <option value={v.id} selected={i === 0}>
+                  {fil ? v.nameFil : v.nameEn}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+      </div>
+
+      {/* Provenance & Distance Note */}
+      <p class="rp__note" id="rp-source-note">
         {
           fil
-            ? 'Interactive na gabay sa oras ng biyahe, lagay ng dagat, at kaligtasan bago tumawid.'
-            : 'Interactive guide for crossing durations, sea conditions, and safety before departure.'
+            ? 'Ang distansya sa kalsada ay base sa OpenStreetMap highway network at ang pagtawid sa dagat ay sukat sa katubigan ng Malampaya Sound. Ipinapakita rito ang layo at tinatayang tagal lamang.'
+            : 'Road distances follow verified OpenStreetMap highway geometry and sea crossings trace coastal water channels. Displays distance, transport mode, and estimated travel time only.'
         }
       </p>
     </div>
-  </div>
 
-  <div class="crossing-planner__grid">
-    {/* Left Column: Interactive Controls */}
-    <div class="crossing-planner__controls">
-      {/* Route Selector */}
-      <div class="crossing-planner__field">
-        <label for="crossing-route-select" class="crossing-planner__label">
-          <Icon name="pin" size={16} />
-          {fil ? 'Piliin ang Ruta ng Biyahe' : 'Select Crossing Route'}
-        </label>
-        <select id="crossing-route-select" class="crossing-planner__select">
-          {ROUTES.map((r, i) => (
-            <option value={r.id} selected={i === 0}>
-              {fil ? r.nameFil : r.nameEn} ({r.distanceKm} km)
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Vessel Selector */}
-      <div class="crossing-planner__field">
-        <label for="crossing-vessel-select" class="crossing-planner__label">
-          <Icon name="bangka" size={16} />
-          {fil ? 'Uri ng Bangka / Sasakyang Pandagat' : 'Vessel Type'}
-        </label>
-        <select id="crossing-vessel-select" class="crossing-planner__select">
-          {VESSELS.map((v, i) => (
-            <option value={v.id} selected={i === 0}>
-              {fil ? v.nameFil : v.nameEn}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Time of Day / Target Departure */}
-      <div class="crossing-planner__field">
-        <label for="crossing-time-select" class="crossing-planner__label">
-          <Icon name="clock" size={16} />
-          {fil ? 'Oras ng Pag-alis (PST)' : 'Departure Window (PST)'}
-        </label>
-        <select id="crossing-time-select" class="crossing-planner__select">
-          <option value="now" selected>{fil ? 'Ngayon Na (Kasalukuyang Oras)' : 'Depart Now (Current Time)'}</option>
-          <option value="morning">{fil ? 'Umaga (06:00 - 09:00) · Kadalasang kalmado' : 'Morning (06:00 - 09:00) · Usually calm'}</option>
-          <option value="midday">{fil ? 'Tanghali (10:00 - 13:00) · Katamtamang alon' : 'Midday (10:00 - 13:00) · Moderate sea'}</option>
-          <option value="afternoon">{fil ? 'Hapon (14:00 - 17:00) · Paglakas ng simoy' : 'Afternoon (14:00 - 17:00) · Breezy chop'}</option>
-        </select>
-      </div>
-    </div>
-
-    {/* Right Column: Dynamic Status & Calculation Results */}
-    <div class="crossing-planner__results" id="crossing-results">
-      <div class="crossing-planner__card">
-        <div class="crossing-planner__status-badge" id="crossing-status-badge">
-          <span class="crossing-status-dot"></span>
-          <span id="crossing-status-text">
-            {fil ? 'Ligtas ang Paglalayag' : 'Sailing Permitted'}
+    {/* ── Unified Single Route Summary Card ───────────────────── */}
+    <article class="rp__summary" aria-live="polite">
+      <div class="rp__summary-top">
+        <div class="rp__badges">
+          <span class="chip chip--info" id="rp-mode-badge">
+            <Icon name="bangka" size={14} />
+            <span>{fil ? 'Bangka / Sea Route Only' : 'Boat / Sea Route Only'}</span>
+          </span>
+          <span class="chip chip--warn" id="rp-approx-badge" hidden={!initialJourney.hasApproximateLanding}>
+            {fil ? 'Tinatayang daungan' : 'Approx. coastal landing'}
           </span>
         </div>
 
-        <div class="crossing-planner__metrics">
-          <div class="crossing-metric">
-            <span class="crossing-metric__label">{fil ? 'Tinatayang Tagal' : 'Est. Duration'}</span>
-            <span class="crossing-metric__val figure" id="crossing-duration">25–35 min</span>
-          </div>
-          <div class="crossing-metric">
-            <span class="crossing-metric__label">{fil ? 'Distansya' : 'Distance'}</span>
-            <span class="crossing-metric__val figure" id="crossing-distance">8.4 km</span>
-          </div>
-          <div class="crossing-metric">
-            <span class="crossing-metric__label">{fil ? 'Kasalukuyang Taog' : 'Tide Status'}</span>
-            <span class="crossing-metric__val" id="crossing-tide">
-              {fil ? 'Katamtamang Taog' : 'Mid Tide'}
-            </span>
-          </div>
-        </div>
-
-        <div class="crossing-planner__notes-box" id="crossing-notes">
-          <p id="crossing-route-note">
-            {fil ? firstRoute.notesFil : firstRoute.notesEn}
-          </p>
-          <p class="crossing-planner__risk" id="crossing-risk-note">
-            <strong>{fil ? 'Paalala: ' : 'Advisory: '}</strong>
-            <span>{fil ? firstRoute.riskFil : firstRoute.riskEn}</span>
-          </p>
-        </div>
-
-        {/* Safety pre-departure checklist */}
-        <div class="crossing-planner__checklist">
-          <p class="crossing-planner__checklist-title">
-            <Icon name="shield" size={16} />
-            {fil ? 'Checklist Bago Pumalaot:' : 'Pre-Departure Checklist:'}
-          </p>
-          <ul class="crossing-planner__checkitems" id="crossing-checkitems">
-            <li>
-              <label class="crossing-check-label">
-                <input type="checkbox" class="crossing-checkbox" checked />
-                <span>{fil ? 'May sapat na life jacket (busal) ang bawat sakay' : 'Life vests for every passenger'}</span>
-              </label>
-            </li>
-            <li>
-              <label class="crossing-check-label">
-                <input type="checkbox" class="crossing-checkbox" checked />
-                <span>{fil ? 'Nakabalot sa waterproof / dry bag ang mahahalagang gamit' : 'Waterproof dry bag for essential gear'}</span>
-              </label>
-            </li>
-            <li>
-              <label class="crossing-check-label">
-                <input type="checkbox" class="crossing-checkbox" />
-                <span>{fil ? 'Nai-report ang biyahe sa pantalan o Bantay Dagat' : 'Trip logged with pier master / sea patrol'}</span>
-              </label>
-            </li>
-          </ul>
-        </div>
-
-        <div class="crossing-planner__actions">
-          <button type="button" class="btn btn--secondary btn--sm" id="crossing-copy-btn">
-            <Icon name="copy" size={16} />
-            <span id="crossing-copy-label">{fil ? 'Kopyahin ang Plano' : 'Copy Trip Summary'}</span>
-          </button>
-          <a href={`${fil ? '' : '/en'}/ligtas`} class="btn btn--ghost btn--sm">
-            <Icon name="shield" size={16} />
-            {fil ? 'Tingnan ang Opisyal na Advisory' : 'Official Coast Advisory'}
-          </a>
-        </div>
-        <p id="crossing-copy-status" role="status" class="crossing-copy-toast" hidden></p>
+        <h4 class="rp__route-title" id="rp-route-title">
+          {(fil ? initOrigin.nameFil : initOrigin.nameEn)} → {(fil ? initDest.nameFil : initDest.nameEn)}
+        </h4>
+        <p class="rp__route-sub" id="rp-route-sub">
+          {fil ? initDest.roleFil : initDest.roleEn}
+        </p>
       </div>
-    </div>
+
+      {/* Metrics Strip: Sea km, Road km, Total km, Est. Time (ZERO FARE) */}
+      <dl class="rp__metrics">
+        <div class="rp__metric">
+          <dt>{fil ? 'Distansya sa Dagat' : 'Sea Distance'}</dt>
+          <dd class="figure num" id="rp-sea-km">{initialJourney.seaDistanceKm} km</dd>
+        </div>
+        <div class="rp__metric">
+          <dt>{fil ? 'Distansya sa Kalsada' : 'Road Distance'}</dt>
+          <dd class="figure num" id="rp-road-km">0 km</dd>
+        </div>
+        <div class="rp__metric">
+          <dt>{fil ? 'Kabuuang Layo' : 'Total Distance'}</dt>
+          <dd class="figure num" id="rp-total-km">{initialJourney.totalDistanceKm} km</dd>
+        </div>
+        <div class="rp__metric">
+          <dt>{fil ? 'Tinatayang Oras*' : 'Est. Travel Time*'}</dt>
+          <dd class="figure" id="rp-est-time">{formatMinutesRange(initialJourney.estTotalMinutes, fil)}</dd>
+        </div>
+      </dl>
+
+      {/* Journey Legs Breakdown */}
+      <div class="rp__legs">
+        <p class="rp__legs-label">
+          {fil ? 'Hakbang ng Biyahe' : 'Journey Breakdown'}
+        </p>
+        <ol class="rp__leg-list" id="rp-leg-list">
+          <li class="rp__leg">
+            <span class="rp__leg-num" aria-hidden="true">1</span>
+            <div class="rp__leg-body">
+              <strong>{fil ? 'Bangka · Dagat' : 'Boat · Sea Leg'}: {initialJourney.seaDistanceKm} km</strong>
+              <span>{fil ? initialJourney.legs[0]!.summaryFil : initialJourney.legs[0]!.summaryEn}</span>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      {/* Advisory Box */}
+      <div class="rp__advisory" id="rp-advisory-box">
+        <Icon name="warning" size={16} />
+        <p id="rp-advisory-text">
+          {fil ? initialJourney.advisoryFil : initialJourney.advisoryEn}
+        </p>
+      </div>
+
+      <p class="rp__est-disclaimer">
+        {
+          fil
+            ? '*Tantya lamang ang tagal ng biyahe (hindi garantisadong nakapirming iskedyul) at maaaring magbago ayon sa alon, panahon, at paglipat sa Liminangcong Port.'
+            : '*Travel durations are estimates (not fixed operator schedules) and vary with sea state, highway traffic, and transfer wait time at Liminangcong Port.'
+        }
+      </p>
+
+      {/* Actions */}
+      <div class="rp__actions">
+        <button type="button" class="btn btn--primary btn--sm" id="rp-show-on-map">
+          <Icon name="pin" size={15} />
+          <span>{fil ? 'Tingnan sa Satelayt na Mapa' : 'View Route on Satellite Map'}</span>
+        </button>
+        <button type="button" class="btn btn--secondary btn--sm" id="rp-copy-btn">
+          <Icon name="copy" size={15} />
+          <span>{fil ? 'Kopyahin ang Detalye' : 'Copy Route Info'}</span>
+        </button>
+        <a href={`${p}/ligtas`} class="btn btn--ghost btn--sm" data-plain>
+          <span>{fil ? 'Abiso sa Paglalayag' : 'Sea Safety Policy'}</span>
+        </a>
+      </div>
+      <p id="rp-copy-status" role="status" class="rp__copy-status" hidden></p>
+    </article>
   </div>
-</div>
+</section>
 
 <style>
-  .crossing-planner {
+  .rp {
     background: var(--surface-raised);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    padding: var(--space-5);
     margin-block: var(--space-5);
     box-shadow: var(--shadow-sm);
-    transition: box-shadow var(--dur-normal) var(--ease-out);
+    display: grid;
+    gap: var(--space-4);
   }
 
-  .crossing-planner:hover {
-    box-shadow: var(--shadow-md);
+  .rp__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--line);
   }
 
-  .crossing-planner__header {
+  .rp__titlewrap {
     display: flex;
     align-items: flex-start;
     gap: var(--space-3);
-    margin-bottom: var(--space-4);
-    border-bottom: 1px solid var(--line);
-    padding-bottom: var(--space-3);
+    max-width: 42rem;
   }
 
-  .crossing-planner__icon-box {
+  .rp__icon {
     width: 44px;
     height: 44px;
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--interactive) 12%, transparent);
+    border-radius: var(--r-inner);
+    background: var(--interactive-surface);
+    border: 1px solid var(--interactive-border);
     color: var(--interactive);
     display: flex;
     align-items: center;
@@ -269,317 +380,644 @@ const firstRoute = ROUTES[0]!
     flex-shrink: 0;
   }
 
-  .crossing-planner__title {
+  .rp__title {
+    margin: 0;
     font-size: var(--text-lg);
     font-weight: 700;
     color: var(--ink-strong);
-    margin: 0;
   }
 
-  .crossing-planner__subtitle {
+  .rp__subtitle {
+    margin: 4px 0 0;
     font-size: var(--text-sm);
     color: var(--ink-muted);
-    margin: 2px 0 0;
+    line-height: 1.5;
   }
 
-  .crossing-planner__grid {
+  .rp__tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    padding: 3px;
+    gap: 4px;
+  }
+
+  .rp__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--ink-muted);
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+  }
+
+  .rp__tab:hover {
+    color: var(--ink-strong);
+  }
+
+  .rp__tab.is-active {
+    background: var(--action);
+    color: var(--action-ink);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .rp__grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
   }
 
-  @media (min-width: 768px) {
-    .crossing-planner__grid {
-      grid-template-columns: 1.1fr 1fr;
+  @media (min-width: 54rem) {
+    .rp__grid {
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
       align-items: start;
     }
   }
 
-  .crossing-planner__controls {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+  .rp__controls {
+    display: grid;
+    gap: var(--space-4);
   }
 
-  .crossing-planner__field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+  .rp__panel {
+    display: grid;
+    gap: var(--space-4);
   }
 
-  .crossing-planner__label {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-caps);
-    color: var(--ink-muted);
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
+  .rp__panel[hidden] {
+    display: none;
   }
 
-  .crossing-planner__select {
-    width: 100%;
+  .rp__field {
+    display: grid;
+    gap: 6px;
+  }
+
+  .rp__origin-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  @media (max-width: 30rem) {
+    .rp__origin-toggle {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .rp__origin-btn {
     min-height: 44px;
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-md);
+    padding: 8px 10px;
+    border-radius: var(--r-inner);
     border: 1px solid var(--line-strong);
     background: var(--surface);
     color: var(--ink);
-    font-size: var(--text-sm);
     font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-align: left;
     cursor: pointer;
-    transition: border-color var(--dur-fast);
+    transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
   }
 
-  .crossing-planner__select:focus-visible {
-    outline: 2px solid var(--interactive);
-    outline-offset: 1px;
+  .rp__origin-btn:hover {
     border-color: var(--interactive);
   }
 
-  .crossing-planner__card {
+  .rp__origin-btn.is-active {
+    background: var(--interactive-surface);
+    border-color: var(--interactive);
+    color: var(--interactive);
+  }
+
+  .rp__note {
+    margin: 0;
+    padding: var(--space-3);
+    border-radius: var(--r-inner);
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: 1.5;
+  }
+
+  /* Single Route Summary Card */
+  .rp__summary {
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: var(--r-card);
     padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .crossing-planner__status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 6px var(--space-3);
-    border-radius: var(--radius-full);
-    font-size: var(--text-sm);
-    font-weight: 600;
-    background: color-mix(in srgb, var(--status-open) 12%, transparent);
-    color: var(--status-open-ink);
-    border: 1px solid color-mix(in srgb, var(--status-open) 30%, transparent);
-    align-self: flex-start;
-  }
-
-  .crossing-status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: var(--radius-full);
-    background: currentColor;
-    box-shadow: 0 0 6px currentColor;
-    animation: crossingPulse 2s infinite ease-in-out;
-  }
-
-  @keyframes crossingPulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.85); }
-  }
-
-  .crossing-planner__metrics {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-2);
-    border-block: 1px solid var(--line);
-    padding-block: var(--space-2);
+    gap: var(--space-4);
   }
 
-  .crossing-metric {
+  .rp__summary-top {
+    display: grid;
+    gap: 6px;
+  }
+
+  .rp__badges {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
-  .crossing-metric__label {
+  .rp__route-title {
+    margin: 2px 0 0;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--ink-strong);
+    line-height: 1.25;
+  }
+
+  .rp__route-sub {
+    margin: 0;
     font-size: var(--text-xs);
     color: var(--ink-muted);
   }
 
-  .crossing-metric__val {
+  .rp__metrics {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr));
+    gap: var(--space-3);
+    padding-block: var(--space-3);
+    border-block: 1px solid var(--line);
+  }
+
+  .rp__metric {
+    display: grid;
+    gap: 2px;
+  }
+
+  .rp__metric dt {
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--ink-muted);
+  }
+
+  .rp__metric dd {
+    margin: 0;
     font-size: var(--text-base);
     font-weight: 700;
     color: var(--ink-strong);
   }
 
-  .crossing-planner__notes-box {
-    font-size: var(--text-sm);
-    color: var(--ink);
-    line-height: var(--leading-snug);
+  .rp__legs {
+    display: grid;
+    gap: var(--space-2);
   }
 
-  .crossing-planner__notes-box p {
-    margin: 0 0 var(--space-1);
-  }
-
-  .crossing-planner__risk {
-    color: var(--ink-muted);
-    font-size: var(--text-xs);
-  }
-
-  .crossing-planner__checklist {
-    background: color-mix(in srgb, var(--interactive) 4%, transparent);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    padding: var(--space-2) var(--space-3);
-  }
-
-  .crossing-planner__checklist-title {
+  .rp__legs-label {
+    margin: 0;
     font-size: var(--text-xs);
     font-weight: 700;
-    color: var(--ink-strong);
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    margin: 0 0 var(--space-1);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--ink-muted);
   }
 
-  .crossing-planner__checkitems {
-    list-style: none;
-    padding: 0;
+  .rp__leg-list {
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .crossing-check-label {
-    display: flex;
-    align-items: center;
+    padding: 0;
+    list-style: none;
+    display: grid;
     gap: var(--space-2);
+  }
+
+  .rp__leg-list :global(.rp__leg) {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--r-inner);
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+  }
+
+  .rp__leg-list :global(.rp__leg-num) {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--interactive-surface);
+    border: 1px solid var(--interactive-border);
+    color: var(--interactive);
+    font-family: var(--font-mono);
     font-size: var(--text-xs);
-    cursor: pointer;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
 
-  .crossing-checkbox {
-    accent-color: var(--interactive);
-    width: 15px;
-    height: 15px;
+  .rp__leg-list :global(.rp__leg-body) {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
   }
 
-  .crossing-planner__actions {
+  .rp__leg-list :global(.rp__leg-body strong) {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+  }
+
+  .rp__leg-list :global(.rp__leg-body span) {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: 1.45;
+  }
+
+  .rp__advisory {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--r-inner);
+    background: var(--status-caution-surface);
+    border: 1px solid var(--status-caution-border);
+    color: var(--status-caution-ink);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+  }
+
+  .rp__advisory svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .rp__advisory p {
+    margin: 0;
+  }
+
+  .rp__est-disclaimer {
+    margin: 0;
+    font-size: 11px;
+    color: var(--ink-muted);
+    line-height: 1.45;
+  }
+
+  .rp__actions {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
-    margin-top: var(--space-1);
   }
 
-  .btn--sm {
-    min-height: 38px;
-    padding: 6px var(--space-3);
-    font-size: var(--text-xs);
-  }
-
-  .crossing-copy-toast {
-    font-size: var(--text-xs);
-    color: var(--status-open-ink);
-    font-weight: 600;
+  .rp__copy-status {
     margin: 0;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--status-open-ink);
+  }
+
+  @media (max-width: 640px) {
+    .rp {
+      padding: var(--space-4);
+    }
+
+    .rp__tab {
+      min-height: 44px;
+    }
   }
 </style>
 
-<script is:inline define:vars={{ routes: ROUTES, vessels: VESSELS, fil }}>
+<script
+  is:inline
+  define:vars={{
+    locations: LOCATIONS,
+    seaRoutes: SEA_ROUTES,
+    mainlandRoutes: MAINLAND_ROUTES,
+    seaVessels: SEA_VESSELS,
+    roadVehicles: ROAD_VEHICLES,
+    fil,
+  }}
+>
   ;(function () {
-    var routeSelect = document.getElementById('crossing-route-select')
-    var vesselSelect = document.getElementById('crossing-vessel-select')
-    var timeSelect = document.getElementById('crossing-time-select')
+    var tabSea = document.getElementById('rp-tab-sea')
+    var tabMainland = document.getElementById('rp-tab-mainland')
+    var panelSea = document.getElementById('rp-panel-sea')
+    var panelMainland = document.getElementById('rp-panel-mainland')
 
-    var durEl = document.getElementById('crossing-duration')
-    var distEl = document.getElementById('crossing-distance')
-    var tideEl = document.getElementById('crossing-tide')
-    var noteEl = document.getElementById('crossing-route-note')
-    var riskEl = document.getElementById('crossing-risk-note')
-    var badgeEl = document.getElementById('crossing-status-badge')
-    var badgeTextEl = document.getElementById('crossing-status-text')
-    var copyBtn = document.getElementById('crossing-copy-btn')
-    var copyStatus = document.getElementById('crossing-copy-status')
+    var seaRouteSelect = document.getElementById('rp-sea-route')
+    var vesselSelect = document.getElementById('rp-vessel')
+    var originTumbodBtn = document.getElementById('rp-origin-tumbod')
+    var originLimBtn = document.getElementById('rp-origin-liminangcong')
+    var destSearch = document.getElementById('rp-dest-search')
+    var mainlandSelect = document.getElementById('rp-mainland-dest')
+    var vehicleSelect = document.getElementById('rp-vehicle')
 
-    if (!routeSelect || !vesselSelect) return
+    var modeBadge = document.getElementById('rp-mode-badge')
+    var approxBadge = document.getElementById('rp-approx-badge')
+    var titleEl = document.getElementById('rp-route-title')
+    var subEl = document.getElementById('rp-route-sub')
+    var seaKmEl = document.getElementById('rp-sea-km')
+    var roadKmEl = document.getElementById('rp-road-km')
+    var totalKmEl = document.getElementById('rp-total-km')
+    var timeEl = document.getElementById('rp-est-time')
+    var legList = document.getElementById('rp-leg-list')
+    var advisoryText = document.getElementById('rp-advisory-text')
+    var showMapBtn = document.getElementById('rp-show-on-map')
+    var copyBtn = document.getElementById('rp-copy-btn')
+    var copyStatus = document.getElementById('rp-copy-status')
 
-    function calculateTide(timeChoice) {
-      var d = new Date()
-      var hour = d.getHours()
-      if (timeChoice === 'morning') hour = 7
-      if (timeChoice === 'midday') hour = 12
-      if (timeChoice === 'afternoon') hour = 15
+    if (!tabSea || !tabMainland || !seaRouteSelect || !mainlandSelect) return
 
-      // Semi-diurnal tide cycle estimate for Taytay/Shark Fin Bay
-      var cycle = hour % 12
-      if (cycle >= 4 && cycle <= 7) {
-        return fil ? 'Mababang Tubig (Low Tide / Kati)' : 'Low Tide (Shallow Reefs)'
-      } else if (cycle >= 10 || cycle <= 1) {
-        return fil ? 'Mataas na Tubig (High Tide / Taog)' : 'High Tide (Deep Channel)'
-      }
-      return fil ? 'Katamtamang Taog (Mid Tide)' : 'Mid Tide (Safe Nav)'
+    var network = 'sea'
+    var startFromTumbod = true
+    var activeJourney = null
+
+    function fmtTime(range) {
+      var min = range[0]
+      var max = range[1]
+      if (max < 90) return '~' + min + '–' + max + ' min'
+      var h1 = (min / 60).toFixed(1).replace(/\.0$/, '')
+      var h2 = (max / 60).toFixed(1).replace(/\.0$/, '')
+      return fil ? '~' + h1 + '–' + h2 + ' oras' : '~' + h1 + '–' + h2 + ' hrs'
     }
 
-    function update() {
-      var routeId = routeSelect.value
-      var vesselId = vesselSelect.value
-      var timeChoice = timeSelect ? timeSelect.value : 'now'
-
-      var route = routes.find(function (r) { return r.id === routeId }) || routes[0]
-      var vessel = vessels.find(function (v) { return v.id === vesselId }) || vessels[0]
-
-      if (durEl) durEl.textContent = route.durationMin + ' min'
-      if (distEl) distEl.textContent = route.distanceKm + ' km'
-      if (noteEl) noteEl.textContent = fil ? route.notesFil : route.notesEn
-      if (riskEl) {
-        var riskSpan = riskEl.querySelector('span')
-        if (riskSpan) riskSpan.textContent = fil ? route.riskFil : route.riskEn
-      }
-
-      var tide = calculateTide(timeChoice)
-      if (tideEl) tideEl.textContent = tide
-
-      // Vessel + wave risk assessment
-      if (badgeTextEl && badgeEl) {
-        if (vessel.id === 'small-bangka' && route.id === 'taytay-tumbod') {
-          badgeTextEl.textContent = fil ? 'Mag-ingat sa Alon (Kailangan ng Busal)' : 'Caution (Lifejackets Mandatory)'
-          badgeEl.style.color = 'var(--status-caution-ink, #b45309)'
-          badgeEl.style.backgroundColor = 'color-mix(in srgb, var(--status-caution, #f59e0b) 12%, transparent)'
-          badgeEl.style.borderColor = 'color-mix(in srgb, var(--status-caution, #f59e0b) 30%, transparent)'
-        } else {
-          badgeTextEl.textContent = fil ? 'Ligtas ang Paglalayag' : 'Sailing Permitted'
-          badgeEl.style.color = 'var(--status-open-ink, #047857)'
-          badgeEl.style.backgroundColor = 'color-mix(in srgb, var(--status-open, #10b981) 12%, transparent)'
-          badgeEl.style.borderColor = 'color-mix(in srgb, var(--status-open, #10b981) 30%, transparent)'
+    function computeJourney() {
+      if (network === 'sea') {
+        var r = seaRoutes.find(function (x) { return x.id === seaRouteSelect.value }) || seaRoutes[0]
+        var v = seaVessels[vesselSelect.value] || seaVessels['small-bangka']
+        return {
+          id: r.id,
+          network: 'sea',
+          originId: r.fromId,
+          destinationId: r.toId,
+          seaKm: r.distanceKm,
+          roadKm: 0,
+          totalKm: r.distanceKm,
+          estMin: r.estMinutes,
+          approx: r.approximateLanding,
+          modeLabel: fil ? 'Bangka / Dagat Lamang (' + v.nameFil + ')' : 'Boat Only (' + v.nameEn + ')',
+          advisory: fil ? r.cautionFil : r.cautionEn,
+          legs: [
+            {
+              network: 'sea',
+              title: (fil ? 'Bangka · Dagat: ' : 'Boat · Sea Leg: ') + r.distanceKm + ' km (' + fmtTime(r.estMinutes) + ')',
+              desc: fil ? r.notesFil : r.notesEn,
+              path: r.path,
+            },
+          ],
         }
       }
+
+      var road = mainlandRoutes.find(function (x) { return x.toId === mainlandSelect.value }) || mainlandRoutes[0]
+      // Restrict vehicle options to verified modes for this corridor
+      Array.prototype.forEach.call(vehicleSelect.options, function (opt) {
+        var allowed = road.modes.indexOf(opt.value) !== -1
+        opt.disabled = !allowed
+      })
+      if (road.modes.indexOf(vehicleSelect.value) === -1) {
+        vehicleSelect.value = road.modes[0]
+      }
+      var veh = roadVehicles[vehicleSelect.value] || roadVehicles.van
+      var rMin = Math.round(road.driveMinutes * veh.timeFactor)
+      var rMax = Math.round(road.driveMinutes * (veh.timeFactor + 0.16))
+      var allowedLabels = road.modes
+        .map(function (m) {
+          if (m === 'van') return 'Van'
+          if (m === 'bus') return 'Bus'
+          if (m === 'motorcycle') return fil ? 'Motorsiklo' : 'Motorcycle'
+          return fil ? 'Pribadong Sasakyan' : 'Private Car'
+        })
+        .join(' · ')
+
+      var roadLeg = {
+        network: 'mainland',
+        title:
+          (fil ? 'Kalsada · ' : 'Road Leg · ') +
+          (fil ? veh.nameFil : veh.nameEn) +
+          ': ' +
+          road.highwayKm +
+          ' km (' +
+          fmtTime([rMin, rMax]) +
+          ')',
+        desc:
+          (fil ? 'Daan: ' + road.viaFil : 'Highway corridor: ' + road.viaEn) +
+          (fil ? ' · Maaaring sasakyan: ' : ' · Supported modes: ') +
+          allowedLabels,
+        path: road.path,
+      }
+
+      if (!startFromTumbod) {
+        return {
+          id: 'road-' + road.toId,
+          network: 'mainland',
+          originId: 'liminangcong',
+          destinationId: road.toId,
+          seaKm: 0,
+          roadKm: road.highwayKm,
+          totalKm: road.highwayKm,
+          estMin: [rMin, rMax],
+          approx: false,
+          modeLabel: fil ? 'Kalsada Lamang: ' + allowedLabels : 'Road Only: ' + allowedLabels,
+          advisory: fil
+            ? 'Direktang biyaheng kalsada mula Liminangcong Port. Walang tawid-dagat sa rutang ito.'
+            : 'Road highway leg departing Liminangcong Port. No sea crossing on this leg.',
+          legs: [roadLeg],
+        }
+      }
+
+      var seaCross = seaRoutes[0]
+      var totalKm = Number((seaCross.distanceKm + road.highwayKm).toFixed(1))
+      return {
+        id: 'multi-' + road.toId,
+        network: 'mainland',
+        originId: 'tumbod',
+        destinationId: road.toId,
+        seaKm: seaCross.distanceKm,
+        roadKm: road.highwayKm,
+        totalKm: totalKm,
+        estMin: [seaCross.estMinutes[0] + rMin, seaCross.estMinutes[1] + rMax],
+        approx: false,
+        modeLabel: fil ? '2 Yugto: Bangka + ' + allowedLabels : 'Multi-Leg: Boat + ' + allowedLabels,
+        advisory: fil
+          ? 'Hiwalay ang paglipat sa Liminangcong Port (Leg 1 bangka, Leg 2 highway van/bus). Hindi garantisadong direktang koneksyon; sundin ang payo sa lagay ng dagat.'
+          : 'Transfer required at Liminangcong Port (Leg 1 by boat, Leg 2 by road). Not a guaranteed direct service — Leg 1 depends on Endeavor Strait sea conditions.',
+        legs: [
+          {
+            network: 'sea',
+            title:
+              (fil ? 'Yugto 1 (Bangka sa Dagat): ' : 'Leg 1 (Boat · Sea): ') +
+              seaCross.distanceKm +
+              ' km (' +
+              fmtTime(seaCross.estMinutes) +
+              ')',
+            desc: fil
+              ? 'Pantalan ng Tumbod → Liminangcong Port (patawid ng Endeavor Strait).'
+              : 'Tumbod Pier → Liminangcong Port across Endeavor Strait.',
+            path: seaCross.path,
+          },
+          roadLeg,
+        ],
+      }
     }
 
-    routeSelect.addEventListener('change', update)
-    vesselSelect.addEventListener('change', update)
-    if (timeSelect) timeSelect.addEventListener('change', update)
-    update()
+    function render(dispatchSync) {
+      activeJourney = computeJourney()
+      var origin = locations[activeJourney.originId]
+      var dest = locations[activeJourney.destinationId]
+
+      if (titleEl && origin && dest) {
+        titleEl.textContent = (fil ? origin.nameFil : origin.nameEn) + ' → ' + (fil ? dest.nameFil : dest.nameEn)
+      }
+      if (subEl && dest) {
+        subEl.textContent = fil ? dest.roleFil : dest.roleEn
+      }
+      if (modeBadge) {
+        var span = modeBadge.querySelector('span')
+        if (span) span.textContent = activeJourney.modeLabel
+      }
+      if (approxBadge) {
+        approxBadge.hidden = !activeJourney.approx
+      }
+      if (seaKmEl) seaKmEl.textContent = activeJourney.seaKm + ' km'
+      if (roadKmEl) roadKmEl.textContent = activeJourney.roadKm + ' km'
+      if (totalKmEl) totalKmEl.textContent = activeJourney.totalKm + ' km'
+      if (timeEl) timeEl.textContent = fmtTime(activeJourney.estMin)
+      if (advisoryText) advisoryText.textContent = activeJourney.advisory
+
+      if (legList) {
+        legList.innerHTML = ''
+        activeJourney.legs.forEach(function (leg, idx) {
+          var li = document.createElement('li')
+          li.className = 'rp__leg'
+          var num = document.createElement('span')
+          num.className = 'rp__leg-num'
+          num.setAttribute('aria-hidden', 'true')
+          num.textContent = String(idx + 1)
+          var body = document.createElement('div')
+          body.className = 'rp__leg-body'
+          var strong = document.createElement('strong')
+          strong.textContent = leg.title
+          var desc = document.createElement('span')
+          desc.textContent = leg.desc
+          body.appendChild(strong)
+          body.appendChild(desc)
+          li.appendChild(num)
+          li.appendChild(body)
+          legList.appendChild(li)
+        })
+      }
+
+      if (dispatchSync) {
+        window.__tumbodActiveJourney = activeJourney
+        window.dispatchEvent(new CustomEvent('tumbod:route-change', { detail: activeJourney }))
+      }
+    }
+
+    function setNetwork(nextNet) {
+      network = nextNet
+      var isSea = network === 'sea'
+      tabSea.classList.toggle('is-active', isSea)
+      tabSea.setAttribute('aria-selected', isSea ? 'true' : 'false')
+      tabMainland.classList.toggle('is-active', !isSea)
+      tabMainland.setAttribute('aria-selected', !isSea ? 'true' : 'false')
+      if (panelSea) panelSea.hidden = !isSea
+      if (panelMainland) panelMainland.hidden = isSea
+      render(true)
+    }
+
+    tabSea.addEventListener('click', function () { setNetwork('sea') })
+    tabMainland.addEventListener('click', function () { setNetwork('mainland') })
+
+    if (originTumbodBtn && originLimBtn) {
+      originTumbodBtn.addEventListener('click', function () {
+        startFromTumbod = true
+        originTumbodBtn.classList.add('is-active')
+        originTumbodBtn.setAttribute('aria-pressed', 'true')
+        originLimBtn.classList.remove('is-active')
+        originLimBtn.setAttribute('aria-pressed', 'false')
+        render(true)
+      })
+      originLimBtn.addEventListener('click', function () {
+        startFromTumbod = false
+        originLimBtn.classList.add('is-active')
+        originLimBtn.setAttribute('aria-pressed', 'true')
+        originTumbodBtn.classList.remove('is-active')
+        originTumbodBtn.setAttribute('aria-pressed', 'false')
+        render(true)
+      })
+    }
+
+    if (destSearch && mainlandSelect) {
+      destSearch.addEventListener('input', function () {
+        var q = destSearch.value.trim().toLowerCase()
+        var firstVisible = null
+        Array.prototype.forEach.call(mainlandSelect.options, function (opt) {
+          var match = !q || opt.text.toLowerCase().indexOf(q) !== -1
+          opt.hidden = !match
+          if (match && !firstVisible) firstVisible = opt
+        })
+        if (firstVisible && mainlandSelect.selectedOptions[0] && mainlandSelect.selectedOptions[0].hidden) {
+          mainlandSelect.value = firstVisible.value
+          render(true)
+        }
+      })
+    }
+
+    seaRouteSelect.addEventListener('change', function () { render(true) })
+    if (vesselSelect) vesselSelect.addEventListener('change', function () { render(true) })
+    mainlandSelect.addEventListener('change', function () { render(true) })
+    if (vehicleSelect) vehicleSelect.addEventListener('change', function () { render(true) })
+
+    if (showMapBtn) {
+      showMapBtn.addEventListener('click', function () {
+        render(true)
+        window.dispatchEvent(new CustomEvent('tumbod:focus-satellite-route', { detail: activeJourney }))
+        var mapEl = document.getElementById('weather-map-section')
+        if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
 
     if (copyBtn) {
       copyBtn.addEventListener('click', function () {
-        var route = routes.find(function (r) { return r.id === routeSelect.value }) || routes[0]
-        var vessel = vessels.find(function (v) { return v.id === vesselSelect.value }) || vessels[0]
-        var tide = tideEl ? tideEl.textContent : ''
-
-        var text = [
-          '⚓ Plano ng Pagtawid sa Pulo ng Tuluran',
-          'Ruta: ' + (fil ? route.nameFil : route.nameEn),
-          'Distansya: ' + route.distanceKm + ' km (Tinatayang ' + route.durationMin + ' minuto)',
-          'Bangka: ' + (fil ? vessel.nameFil : vessel.nameEn),
-          'Lagay ng Tubig / Taog: ' + tide,
-          'Paalala: Magsuot ng life vest at siguraduhing ligtas ang panahon bago pumalaot.',
-          'Barangay Tumbod, Taytay, Palawan'
-        ].join('\n')
-
-        navigator.clipboard.writeText(text).then(function () {
+        if (!activeJourney) return
+        var o = locations[activeJourney.originId]
+        var d = locations[activeJourney.destinationId]
+        var lines = [
+          (fil ? 'Ruta: ' : 'Route: ') + (fil ? o.nameFil : o.nameEn) + ' -> ' + (fil ? d.nameFil : d.nameEn),
+          (fil ? 'Sasakyan: ' : 'Transport: ') + activeJourney.modeLabel,
+          (fil ? 'Distansya sa Dagat: ' : 'Sea Distance: ') + activeJourney.seaKm + ' km',
+          (fil ? 'Distansya sa Kalsada: ' : 'Road Distance: ') + activeJourney.roadKm + ' km',
+          (fil ? 'Kabuuang Layo: ' : 'Total Distance: ') + activeJourney.totalKm + ' km (' + fmtTime(activeJourney.estMin) + ')',
+        ].concat(
+          activeJourney.legs.map(function (l, i) { return String(i + 1) + '. ' + l.title }),
+        )
+        var text = lines.join('\n')
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
           if (copyStatus) {
             copyStatus.hidden = false
-            copyStatus.textContent = fil ? '✓ Nakopya ang plano sa clipboard!' : '✓ Trip summary copied to clipboard!'
-            setTimeout(function () { copyStatus.hidden = true }, 3000)
+            copyStatus.textContent = fil ? 'Maaaring i-screenshot ang planong ito.' : 'Take a screenshot of this route.'
           }
-        }).catch(function () {
-          if (copyStatus) {
-            copyStatus.hidden = false
-            copyStatus.textContent = fil ? 'Maaaring i-screenshot ang planong ito.' : 'Take a screenshot of this plan.'
-          }
-        })
+          return
+        }
+        navigator.clipboard
+          .writeText(text)
+          .then(function () {
+            if (copyStatus) {
+              copyStatus.hidden = false
+              copyStatus.textContent = fil ? 'Nakopya ang detalye ng ruta.' : 'Route summary copied to clipboard.'
+              setTimeout(function () { copyStatus.hidden = true }, 3000)
+            }
+          })
+          .catch(function () {})
       })
     }
+
+    render(false)
   })()
 </script>

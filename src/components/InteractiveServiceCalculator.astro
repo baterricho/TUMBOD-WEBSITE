@@ -2,10 +2,9 @@
 /**
  * InteractiveServiceCalculator.astro
  *
- * Interactive Barangay Document & Fee Calculator for residents of Barangay Tumbod.
- * Allows residents to select document type, see fee exemptions under RA 11261
- * (First Time Jobseekers Assistance Act) or Senior/PWD discounts, review what IDs
- * to bring before riding the boat to the hall, and check off requirements dynamically.
+ * Interactive Barangay Document & Fee Calculator with RA 11261 / Senior / PWD
+ * fee waivers. Server-renders default requirements for full zero-JS resilience
+ * and upgrades to persistent interactive checklists when JavaScript runs.
  */
 import Icon from './Icon.astro'
 import type { Locale } from '@/lib/i18n'
@@ -142,36 +141,34 @@ const APPLICANT_TYPES = [
 ]
 
 const firstService = SERVICES_CONFIG[0]!
+const defaultReqs = fil ? firstService.requirementsFil : firstService.requirementsEn
 ---
 
 <div class="service-calc" id="service-calc" data-reveal="pending">
   <div class="service-calc__header">
     <div class="service-calc__icon-wrap" aria-hidden="true">
-      <Icon name="document" size={26} />
+      <Icon name="document" size={22} />
     </div>
     <div>
       <h3 class="service-calc__title">
-        {fil ? 'Interactive na Gabay at Kalkulador ng Dokumento' : 'Interactive Document & Fee Calculator'}
+        {fil ? 'Gabay at Kalkulador ng Dokumento' : 'Document Fee & Requirements Calculator'}
       </h3>
       <p class="service-calc__subtitle">
-        {
-          fil
-            ? 'Piliin ang kailangang serbisyo upang malaman ang bayad, mga diskwento sa batas, at kailangang dalhin bago pumunta sa hall.'
-            : 'Select a service to check official fees, legal waivers under RA 11261, and what to bring before your crossing.'
-        }
+        {fil
+          ? 'Alamin ang bayad, legal na diskwento (RA 11261), at mga kailangang dalhin bago magtungo sa hall.'
+          : 'Check standard fees, RA 11261 waivers, and required documents before visiting the barangay hall.'}
       </p>
     </div>
   </div>
 
   <div class="service-calc__body">
-    {/* Step 1: Controls */}
+    {/* Step 1: Selectors */}
     <div class="service-calc__inputs">
       <div class="service-calc__field">
-        <label for="calc-service-select" class="service-calc__label">
-          <Icon name="document" size={16} />
-          {fil ? 'Anong dokumento ang kailangan mo?' : 'Which document do you need?'}
+        <label for="calc-service-select" class="form-label">
+          {fil ? 'Dokumento na kailangan' : 'Document needed'}
         </label>
-        <select id="calc-service-select" class="service-calc__select">
+        <select id="calc-service-select">
           {SERVICES_CONFIG.map((s, idx) => (
             <option value={s.slug} selected={idx === 0}>
               {fil ? s.nameFil : s.nameEn}
@@ -181,11 +178,10 @@ const firstService = SERVICES_CONFIG[0]!
       </div>
 
       <div class="service-calc__field">
-        <label for="calc-applicant-select" class="service-calc__label">
-          <Icon name="check" size={16} />
-          {fil ? 'Katayuan ng Aplikante (Diskwento o Libre):' : 'Applicant Status (Discounts & Waivers):'}
+        <label for="calc-applicant-select" class="form-label">
+          {fil ? 'Katayuan ng aplikante (Diskwento o Libre)' : 'Applicant status (Discounts & waivers)'}
         </label>
-        <select id="calc-applicant-select" class="service-calc__select">
+        <select id="calc-applicant-select">
           {APPLICANT_TYPES.map((a, idx) => (
             <option value={a.id} selected={idx === 0}>
               {fil ? a.labelFil : a.labelEn}
@@ -197,21 +193,19 @@ const firstService = SERVICES_CONFIG[0]!
       <div class="service-calc__ra-note" id="calc-ra-note" hidden>
         <Icon name="info" size={16} />
         <span>
-          {
-            fil
-              ? 'RA 11261 (First Time Jobseekers Assistance Act): Libre ang unang kopya ng Barangay Clearance at iba pang sertipiko kapag maghahanap ng trabaho.'
-              : 'RA 11261: First copy of Barangay Clearance and basic certifications are 100% free when seeking first-time employment.'
-          }
+          {fil
+            ? 'RA 11261 (First Time Jobseekers Assistance Act): Libre ang unang kopya ng Barangay Clearance at sertipiko kapag maghahanap ng trabaho.'
+            : 'RA 11261: First copy of Barangay Clearance and basic certifications are 100% free for first-time jobseekers.'}
         </span>
       </div>
     </div>
 
-    {/* Step 2: Live Summary Box */}
+    {/* Step 2: Summary & Checklist */}
     <div class="service-calc__summary">
       <div class="service-calc__bill-box">
         <div class="service-calc__fee-row">
-          <span class="service-calc__fee-label">{fil ? 'Kalkuladong Bayad:' : 'Computed Fee:'}</span>
-          <span class="service-calc__fee-val figure" id="calc-fee-val">₱50.00</span>
+          <span class="service-calc__fee-label">{fil ? 'Kalkuladong Bayad' : 'Estimated Fee'}</span>
+          <span class="service-calc__fee-val figure" id="calc-fee-val" aria-live="polite">₱50.00</span>
         </div>
         <div class="service-calc__time-row">
           <span class="service-calc__subtext">
@@ -225,28 +219,35 @@ const firstService = SERVICES_CONFIG[0]!
         </div>
       </div>
 
-      {/* Checklist of requirements */}
       <div class="service-calc__reqs">
         <div class="service-calc__reqs-head">
           <h4 class="service-calc__reqs-title">
-            <Icon name="checklist" size={16} />
-            {fil ? 'Listahan ng Kailangang Dalhin:' : 'Requirements Checklist:'}
+            <Icon name="checklist" size={15} />
+            <span>{fil ? 'Mga Kailangang Dalhin' : 'Requirements Checklist'}</span>
           </h4>
-          <span class="service-calc__progress-badge" id="calc-progress-badge">0 / 4</span>
+          <span class="chip" id="calc-progress-badge">0 / {defaultReqs.length}</span>
         </div>
 
-        <ul class="service-calc__req-list" id="calc-req-list">
-          {/* Populated dynamically */}
+        {/* SSR default checklist ensures zero-JS visitors always see required items */}
+        <ul class="service-calc__req-list list-reset" id="calc-req-list">
+          {defaultReqs.map((req) => (
+            <li>
+              <label class="service-calc__req-item">
+                <input type="checkbox" class="service-calc__req-checkbox" data-req-id={req.id} />
+                <span>{req.text}</span>
+              </label>
+            </li>
+          ))}
         </ul>
       </div>
 
       <div class="service-calc__actions">
         <button type="button" class="btn btn--secondary btn--sm" id="calc-copy-btn">
-          <Icon name="copy" size={16} />
+          <Icon name="copy" size={15} />
           <span id="calc-copy-text">{fil ? 'Kopyahin ang Listahan' : 'Copy Checklist'}</span>
         </button>
         <button type="button" class="btn btn--ghost btn--sm no-print" id="calc-print-btn">
-          <Icon name="print" size={16} />
+          <Icon name="print" size={15} />
           <span>{fil ? 'I-print ang Slip' : 'Print Slip'}</span>
         </button>
       </div>
@@ -258,9 +259,9 @@ const firstService = SERVICES_CONFIG[0]!
 <style>
   .service-calc {
     background: var(--surface-raised);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    padding: var(--space-5);
     margin-block: var(--space-5);
     box-shadow: var(--shadow-sm);
   }
@@ -271,14 +272,15 @@ const firstService = SERVICES_CONFIG[0]!
     gap: var(--space-3);
     margin-bottom: var(--space-4);
     border-bottom: 1px solid var(--line);
-    padding-bottom: var(--space-3);
+    padding-bottom: var(--space-4);
   }
 
   .service-calc__icon-wrap {
     width: 44px;
     height: 44px;
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--interactive) 12%, transparent);
+    border-radius: var(--r-inner);
+    background: var(--interactive-surface);
+    border: 1px solid var(--interactive-border);
     color: var(--interactive);
     display: flex;
     align-items: center;
@@ -296,96 +298,66 @@ const firstService = SERVICES_CONFIG[0]!
   .service-calc__subtitle {
     font-size: var(--text-sm);
     color: var(--ink-muted);
-    margin: 2px 0 0;
+    margin: 4px 0 0;
   }
 
   .service-calc__body {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
   }
 
   @media (min-width: 768px) {
     .service-calc__body {
-      grid-template-columns: 1fr 1.2fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
       align-items: start;
     }
   }
 
   .service-calc__inputs {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+    display: grid;
+    gap: var(--space-4);
   }
 
   .service-calc__field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .service-calc__label {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-caps);
-    color: var(--ink-muted);
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-  }
-
-  .service-calc__select {
-    width: 100%;
-    min-height: 44px;
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--line-strong);
-    background: var(--surface);
-    color: var(--ink);
-    font-size: var(--text-sm);
-    font-family: inherit;
-    cursor: pointer;
-  }
-
-  .service-calc__select:focus-visible {
-    outline: 2px solid var(--interactive);
-    border-color: var(--interactive);
+    display: grid;
+    gap: 6px;
   }
 
   .service-calc__ra-note {
     display: flex;
     align-items: flex-start;
     gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--status-open) 10%, transparent);
+    padding: var(--space-3);
+    border-radius: var(--r-inner);
+    background: var(--status-open-surface);
     color: var(--status-open-ink);
-    border: 1px solid color-mix(in srgb, var(--status-open) 25%, transparent);
+    border: 1px solid var(--status-open-border);
     font-size: var(--text-xs);
-    line-height: var(--leading-snug);
+    line-height: 1.5;
   }
 
   .service-calc__summary {
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: var(--r-card);
     padding: var(--space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+    display: grid;
+    gap: var(--space-4);
   }
 
   .service-calc__bill-box {
     border-bottom: 1px solid var(--line);
     padding-bottom: var(--space-3);
+    display: grid;
+    gap: var(--space-2);
   }
 
   .service-calc__fee-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: var(--space-2);
+    gap: var(--space-2);
   }
 
   .service-calc__fee-label {
@@ -396,7 +368,7 @@ const firstService = SERVICES_CONFIG[0]!
 
   .service-calc__fee-val {
     font-size: var(--text-2xl);
-    font-weight: 800;
+    font-weight: 700;
     color: var(--interactive);
   }
 
@@ -409,15 +381,16 @@ const firstService = SERVICES_CONFIG[0]!
   }
 
   .service-calc__subtext {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-1);
+    gap: 5px;
   }
 
   .service-calc__reqs-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--space-2);
     margin-bottom: var(--space-2);
   }
 
@@ -427,59 +400,41 @@ const firstService = SERVICES_CONFIG[0]!
     text-transform: uppercase;
     letter-spacing: var(--tracking-caps);
     color: var(--ink-strong);
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-1);
+    gap: 6px;
     margin: 0;
-  }
-
-  .service-calc__progress-badge {
-    font-size: var(--text-xs);
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--interactive) 15%, transparent);
-    color: var(--interactive);
   }
 
   .service-calc__req-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
+    display: grid;
+    gap: 4px;
   }
 
   .service-calc__req-item {
     display: flex;
     align-items: flex-start;
     gap: var(--space-2);
-    font-size: var(--text-xs);
-    line-height: var(--leading-snug);
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: var(--text-sm);
+    line-height: 1.45;
+    color: var(--ink);
     cursor: pointer;
-    padding: 4px 6px;
     border-radius: var(--radius-sm);
-    transition: background-color var(--dur-fast);
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    transition: border-color var(--motion-fast) var(--ease-standard);
   }
 
   .service-calc__req-item:hover {
-    background: color-mix(in srgb, var(--interactive) 4%, transparent);
-  }
-
-  .service-calc__req-checkbox {
-    width: 17px;
-    height: 17px;
-    margin-top: 1px;
-    accent-color: var(--interactive);
-    flex-shrink: 0;
+    border-color: var(--line-strong);
   }
 
   .service-calc__actions {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
-    margin-top: var(--space-2);
   }
 
   .service-calc__toast {
@@ -506,29 +461,44 @@ const firstService = SERVICES_CONFIG[0]!
 
     if (!serviceSelect || !applicantSelect) return
 
+    function updateProgress() {
+      if (!reqList || !progressBadge) return
+      var boxes = reqList.querySelectorAll('.service-calc__req-checkbox')
+      var checked = reqList.querySelectorAll('.service-calc__req-checkbox:checked')
+      progressBadge.textContent = checked.length + ' / ' + boxes.length
+      var done = checked.length === boxes.length && boxes.length > 0
+      progressBadge.className = done ? 'chip chip--open' : 'chip'
+    }
+
+    function persistTicks() {
+      if (!reqList) return
+      var state = {}
+      reqList.querySelectorAll('.service-calc__req-checkbox').forEach(function (cb) {
+        state[cb.dataset.reqId] = cb.checked
+      })
+      try {
+        localStorage.setItem('tumbod:calc:' + serviceSelect.value, JSON.stringify(state))
+      } catch (e) {}
+    }
+
     function render() {
       var serviceSlug = serviceSelect.value
       var applicantId = applicantSelect.value
-
       var s = config.find(function (item) { return item.slug === serviceSlug }) || config[0]
       var a = applicantTypes.find(function (item) { return item.id === applicantId }) || applicantTypes[0]
 
-      // Calculate fee
       var fee = s.standardFee * a.waiver
-      if (s.standardFee === 0 || fee === 0) {
-        if (feeVal) feeVal.textContent = fil ? 'LIBRE (₱0.00)' : 'FREE (₱0.00)'
-      } else {
-        if (feeVal) feeVal.textContent = '₱' + fee.toFixed(2)
+      if (feeVal) {
+        feeVal.textContent =
+          s.standardFee === 0 || fee === 0
+            ? fil ? 'LIBRE (₱0.00)' : 'FREE (₱0.00)'
+            : '₱' + fee.toFixed(2)
       }
 
-      if (raNote) {
-        raNote.hidden = a.id !== 'first-time'
-      }
-
+      if (raNote) raNote.hidden = a.id !== 'first-time'
       if (timeVal) timeVal.textContent = fil ? s.timeFil : s.timeEn
       if (officialVal) officialVal.textContent = fil ? s.officialFil : s.officialEn
 
-      // Build requirement list
       var reqs = fil ? s.requirementsFil : s.requirementsEn
       if (reqList) {
         reqList.innerHTML = ''
@@ -566,32 +536,6 @@ const firstService = SERVICES_CONFIG[0]!
       }
     }
 
-    function updateProgress() {
-      if (!reqList || !progressBadge) return
-      var boxes = reqList.querySelectorAll('.service-calc__req-checkbox')
-      var checked = reqList.querySelectorAll('.service-calc__req-checkbox:checked')
-      progressBadge.textContent = checked.length + ' / ' + boxes.length
-      if (checked.length === boxes.length && boxes.length > 0) {
-        progressBadge.style.backgroundColor = 'color-mix(in srgb, var(--status-open) 20%, transparent)'
-        progressBadge.style.color = 'var(--status-open-ink)'
-      } else {
-        progressBadge.style.backgroundColor = 'color-mix(in srgb, var(--interactive) 15%, transparent)'
-        progressBadge.style.color = 'var(--interactive)'
-      }
-    }
-
-    function persistTicks() {
-      if (!reqList) return
-      var serviceSlug = serviceSelect.value
-      var state = {}
-      reqList.querySelectorAll('.service-calc__req-checkbox').forEach(function (cb) {
-        state[cb.dataset.reqId] = cb.checked
-      })
-      try {
-        localStorage.setItem('tumbod:calc:' + serviceSlug, JSON.stringify(state))
-      } catch (e) {}
-    }
-
     serviceSelect.addEventListener('change', render)
     applicantSelect.addEventListener('change', render)
     render()
@@ -601,26 +545,43 @@ const firstService = SERVICES_CONFIG[0]!
         var s = config.find(function (item) { return item.slug === serviceSelect.value }) || config[0]
         var reqs = fil ? s.requirementsFil : s.requirementsEn
         var lines = [
-          '📋 Barangay Tumbod - ' + (fil ? s.nameFil : s.nameEn),
-          'Bayad: ' + (feeVal ? feeVal.textContent : '₱50.00'),
-          'Oras ng Pagproseso: ' + (fil ? s.timeFil : s.timeEn),
-          'Lalapitan: ' + (fil ? s.officialFil : s.officialEn),
+          'Barangay Tumbod — ' + (fil ? s.nameFil : s.nameEn),
+          (fil ? 'Bayad: ' : 'Fee: ') + (feeVal ? feeVal.textContent : '₱50.00'),
+          (fil ? 'Oras ng Pagproseso: ' : 'Processing Time: ') + (fil ? s.timeFil : s.timeEn),
+          (fil ? 'Lalapitan: ' : 'Contact: ') + (fil ? s.officialFil : s.officialEn),
           '',
-          'Mga kailangang dalhin:'
+          fil ? 'Mga kailangang dalhin:' : 'Requirements:',
         ]
         reqs.forEach(function (r) {
           lines.push(' [ ] ' + r.text)
         })
-        lines.push('')
-        lines.push('Barangay Tumbod Hall, Pulo ng Tuluran, Taytay, Palawan')
+        lines.push('', 'Barangay Tumbod Hall, Pulo ng Tuluran, Taytay, Palawan')
 
-        navigator.clipboard.writeText(lines.join('\n')).then(function () {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
           if (toast) {
             toast.hidden = false
-            toast.textContent = fil ? '✓ Nakopya ang checklist sa clipboard!' : '✓ Requirements copied to clipboard!'
-            setTimeout(function () { toast.hidden = true }, 3000)
+            toast.textContent = fil ? 'Maaaring i-print o i-screenshot ang listahan.' : 'You can print or screenshot this list.'
           }
-        })
+          return
+        }
+
+        navigator.clipboard
+          .writeText(lines.join('\n'))
+          .then(function () {
+            if (toast) {
+              toast.hidden = false
+              toast.textContent = fil ? 'Nakopya ang listahan sa clipboard.' : 'Requirements copied to clipboard.'
+              setTimeout(function () {
+                toast.hidden = true
+              }, 3000)
+            }
+          })
+          .catch(function () {
+            if (toast) {
+              toast.hidden = false
+              toast.textContent = fil ? 'Maaaring i-print o i-screenshot ang listahan.' : 'You can print or screenshot this list.'
+            }
+          })
       })
     }
 

@@ -2,9 +2,9 @@
 /**
  * EmergencyContactDirectory.astro
  *
- * Structured Emergency Contact Directory table within the Safety panel.
- * Contains clickable phone numbers for local officials, coast guard, and rescue teams,
- * optimized for mobile viewing on low-end devices with zero JavaScript overhead.
+ * Structured Emergency Contact Directory table within the Safety view.
+ * Responsive table-to-card layout on mobile, tabular figures, semantic dark/light
+ * tokens, and >=44px tap-to-dial actions with zero JS overhead.
  */
 import Icon from './Icon.astro'
 import type { Locale } from '@/lib/i18n'
@@ -150,437 +150,332 @@ const DIRECTORY: ContactEntry[] = [
   },
 ]
 
-const defaultBadgeStyle = { bg: '#fef3c7', color: '#b45309', border: '#fcd34d' }
-const categoryBadgeStyles: Record<string, { bg: string; color: string; border: string }> = {
-  coastguard: { bg: '#e0f2fe', color: '#0369a1', border: '#7dd3fc' },
-  rescue: { bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
-  official: { bg: '#fef3c7', color: '#b45309', border: '#fcd34d' },
-  health: { bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+const CATEGORY_CHIP: Record<ContactEntry['category'], string> = {
+  coastguard: 'chip chip--info',
+  rescue: 'chip chip--danger',
+  official: 'chip chip--warning',
+  health: 'chip chip--open',
 }
 ---
 
 <div class="emergency-directory-wrap" id="emergency-directory">
   <div class="directory-header">
     <div class="header-left">
-      <div class="header-pill">
-        <Icon name="phone" size={14} />
+      <span class="chip chip--danger">
+        <Icon name="phone" size={13} />
         <span>{fil ? 'Talaan ng Telepono' : 'Emergency Directory'}</span>
-      </div>
+      </span>
       <h3 class="directory-title">
         {fil ? 'Direktoryo ng mga Pang-emerhensyang Numero' : 'Emergency Contact Directory'}
       </h3>
       <p class="directory-subtitle">
         {fil
-          ? 'Pindutin ang mga numero upang agad na makatawag sa mga opisyal ng barangay, Coast Guard, at rescue team kahit mahina ang internet signal.'
-          : 'Tap phone numbers to dial barangay officials, Coast Guard, and rescue responders immediately, optimized for low-end mobile devices.'}
+          ? 'Pindutin ang mga numero upang agad na makatawag sa mga opisyal ng barangay, Coast Guard, at rescue team kahit mahina ang signal.'
+          : 'Tap any number below to dial barangay officials, Coast Guard, and rescue teams directly over cellular voice.'}
       </p>
     </div>
 
-    {/* Radio Frequencies Highlight */}
     <div class="marine-vhf-box">
-      <div class="vhf-icon">
+      <span class="vhf-icon" aria-hidden="true">
         <Icon name="radio" size={18} />
-      </div>
+      </span>
       <div class="vhf-text">
         <strong>{fil ? 'VHF Channel 16 (Distress)' : 'VHF Radio Ch. 16'}</strong>
-        <span>156.800 MHz — Taytay Coast Guard & Sea Patrol</span>
+        <span class="figure">156.800 MHz — Taytay Coast Guard</span>
       </div>
     </div>
   </div>
 
-  {/* Structured Directory Table / Mobile Cards */}
-  <div class="table-container">
-    <table class="directory-table" aria-label={fil ? 'Direktoryo ng Pang-emerhensyang Numero' : 'Emergency Contacts Table'}>
+  <div class="table-wrap">
+    <table
+      class="data-table directory-table"
+      aria-label={fil ? 'Direktoryo ng Pang-emerhensyang Numero' : 'Emergency Contacts Table'}
+    >
       <thead>
         <tr>
-          <th scope="col" style="width: 28%;">{fil ? 'Ahensya / Pangalan' : 'Agency / Official'}</th>
-          <th scope="col" style="width: 30%;">{fil ? 'Tungkulin at Saklaw' : 'Role & Jurisdiction'}</th>
-          <th scope="col" style="width: 22%;">{fil ? 'Oras / Antabay' : 'Availability'}</th>
-          <th scope="col" style="width: 20%; text-align: right;">{fil ? 'Tawagan (Click to Call)' : 'Action / Call'}</th>
+          <th scope="col">{fil ? 'Ahensya / Pangalan' : 'Agency / Official'}</th>
+          <th scope="col">{fil ? 'Tungkulin at Saklaw' : 'Role & Jurisdiction'}</th>
+          <th scope="col">{fil ? 'Oras / Antabay' : 'Availability'}</th>
+          <th scope="col" class="num">{fil ? 'Tawagan' : 'Call'}</th>
         </tr>
       </thead>
       <tbody>
-        {DIRECTORY.map((item) => {
-          const badgeStyle = categoryBadgeStyles[item.category] ?? defaultBadgeStyle
-          return (
-            <tr class={item.priority ? 'row--priority' : ''}>
-              {/* Agency & Official Name */}
-              <td class="cell-agency" data-label={fil ? 'Ahensya' : 'Agency'}>
-                <div class="agency-cell-content">
-                  <span
-                    class="category-badge"
-                    style={`background-color:${badgeStyle.bg}; color:${badgeStyle.color}; border: 1px solid ${badgeStyle.border};`}
-                  >
-                    {fil ? item.badgeFil : item.badgeEn}
-                  </span>
-                  <strong class="agency-name">{fil ? item.agencyFil : item.agencyEn}</strong>
-                  {item.contactPerson && (
-                    <span class="contact-person">
-                      <Icon name="user" size={12} />
-                      <span>{item.contactPerson}</span>
-                    </span>
-                  )}
-                  {item.channel && (
-                    <span class="radio-channel-tag">
-                      <Icon name="radio" size={11} />
-                      <span>{item.channel}</span>
-                    </span>
-                  )}
-                </div>
-              </td>
-
-              {/* Role */}
-              <td class="cell-role" data-label={fil ? 'Tungkulin' : 'Role'}>
-                <span class="role-desc">{fil ? item.roleFil : item.roleEn}</span>
-              </td>
-
-              {/* Availability */}
-              <td class="cell-avail" data-label={fil ? 'Antabay' : 'Hours'}>
-                <span class="avail-badge">
-                  <span class="avail-dot"></span>
-                  <span>{fil ? item.availabilityFil : item.availabilityEn}</span>
+        {DIRECTORY.map((item) => (
+          <tr class={item.priority ? 'row--priority' : ''}>
+            <td class="cell-agency">
+              <div class="agency-cell-content">
+                <span class={CATEGORY_CHIP[item.category]}>
+                  {fil ? item.badgeFil : item.badgeEn}
                 </span>
-              </td>
+                <strong class="agency-name">{fil ? item.agencyFil : item.agencyEn}</strong>
+                {item.contactPerson && (
+                  <span class="contact-person">
+                    <Icon name="user" size={12} />
+                    <span>{item.contactPerson}</span>
+                  </span>
+                )}
+                {item.channel && (
+                  <span class="radio-channel-tag figure">
+                    <Icon name="radio" size={12} />
+                    <span>{item.channel}</span>
+                  </span>
+                )}
+              </div>
+            </td>
 
-              {/* Clickable Phone Number */}
-              <td class="cell-action" data-label={fil ? 'Tawagan' : 'Call'}>
-                <div class="action-wrap">
-                  <a
-                    href={`tel:${item.number.replace(/[^0-9+]/g, '')}`}
-                    class={`call-button ${item.priority ? 'call-button--priority' : ''}`}
-                    aria-label={`${fil ? 'Tawagan ang' : 'Call'} ${fil ? item.agencyFil : item.agencyEn} sa ${item.displayNumber}`}
-                  >
-                    <Icon name="phone" size={14} />
-                    <span class="call-number">{item.displayNumber}</span>
-                  </a>
-                </div>
-              </td>
-            </tr>
-          )
-        })}
+            <td class="cell-role">
+              <span class="role-desc">{fil ? item.roleFil : item.roleEn}</span>
+            </td>
+
+            <td class="cell-avail">
+              <span class="avail-badge">
+                <span class="avail-dot" aria-hidden="true"></span>
+                <span>{fil ? item.availabilityFil : item.availabilityEn}</span>
+              </span>
+            </td>
+
+            <td class="cell-action num">
+              <div class="action-wrap">
+                <a
+                  href={`tel:${item.number.replace(/[^0-9+]/g, '')}`}
+                  class={`btn ${item.priority ? 'btn--danger' : 'btn--primary'} dir-call-btn`}
+                  aria-label={`${fil ? 'Tawagan ang' : 'Call'} ${fil ? item.agencyFil : item.agencyEn} sa ${item.displayNumber}`}
+                  data-plain
+                >
+                  <Icon name="phone" size={14} />
+                  <span class="figure">{item.displayNumber}</span>
+                </a>
+              </div>
+            </td>
+          </tr>
+        ))}
       </tbody>
     </table>
   </div>
 
-  {/* Mobile Offline Tips Footer */}
   <div class="directory-footer">
     <div class="footer-tip">
-      <Icon name="shield" size={16} />
+      <Icon name="shield" size={15} />
       <span>
         {fil
-          ? 'Tip sa Mahinang Signal: Kung walang data o load, direktang i-dial ang mga numerong ito sa cellular network. Gumagana ang voice call kahit walang 4G/LTE.'
-          : 'Low-Signal Tip: These numbers connect over 2G/3G voice even when mobile data or prepaid internet bundles are exhausted.'}
+          ? 'Tip sa Mahinang Signal: Direktang gumagana ang voice call sa 2G/3G kahit walang mobile data.'
+          : 'Low-Signal Tip: Voice calls connect over 2G/3G cellular even when mobile data is unavailable.'}
       </span>
     </div>
   </div>
 </div>
 
 <style>
-.emergency-directory-wrap {
-  background: var(--surface-card, #ffffff);
-  border: 1px solid var(--line, #e2e8f0);
-  border-radius: var(--radius-xl, 16px);
-  padding: var(--space-4, 20px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-  margin-top: var(--space-3, 16px);
-}
-
-.directory-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: var(--space-3, 14px);
-  margin-bottom: var(--space-4, 18px);
-  padding-bottom: var(--space-3, 14px);
-  border-bottom: 1px solid var(--line, #e2e8f0);
-}
-
-.header-left {
-  max-width: 650px;
-}
-
-.header-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--palette-forest-50, #f0fdf4);
-  color: var(--palette-forest-700, #15803d);
-  border: 1px solid var(--palette-forest-200, #bbf7d0);
-  padding: 3px 10px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 6px;
-}
-
-.directory-title {
-  margin: 0 0 6px;
-  font-size: var(--text-lg, 18px);
-  font-weight: 800;
-  color: var(--text-high, #0f172a);
-}
-
-.directory-subtitle {
-  margin: 0;
-  font-size: var(--text-sm, 13px);
-  color: var(--text-mid, #64748b);
-  line-height: 1.5;
-}
-
-.marine-vhf-box {
-  background: #0f172a;
-  color: #f8fafc;
-  border-radius: 12px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border: 1px solid #334155;
-}
-
-.vhf-icon {
-  color: #38bdf8;
-  flex-shrink: 0;
-}
-
-.vhf-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.vhf-text strong {
-  font-size: 13px;
-  color: #38bdf8;
-}
-
-.vhf-text span {
-  font-size: 11px;
-  color: #cbd5e1;
-}
-
-/* Table Container */
-.table-container {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.directory-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.directory-table th {
-  padding: 12px 14px;
-  background: var(--surface-bg-muted, #f8fafc);
-  color: var(--text-mid, #475569);
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-bottom: 2px solid var(--line, #cbd5e1);
-}
-
-.directory-table td {
-  padding: 14px;
-  border-bottom: 1px solid var(--line, #e2e8f0);
-  vertical-align: middle;
-}
-
-.directory-table tr:hover td {
-  background-color: var(--surface-bg-subtle, #f8fafc);
-}
-
-.row--priority td {
-  background-color: rgba(254, 242, 242, 0.35);
-}
-
-.agency-cell-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.category-badge {
-  display: inline-block;
-  align-self: flex-start;
-  padding: 2px 7px;
-  border-radius: 9999px;
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.agency-name {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text-high, #0f172a);
-}
-
-.contact-person {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--text-mid, #64748b);
-}
-
-.radio-channel-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #0284c7;
-  font-weight: 700;
-}
-
-.role-desc {
-  font-size: 13px;
-  color: var(--text-high, #334155);
-  line-height: 1.4;
-}
-
-.avail-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-mid, #475569);
-  font-weight: 600;
-}
-
-.avail-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #16a34a;
-  flex-shrink: 0;
-}
-
-/* Call Button */
-.action-wrap {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.call-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  min-height: 44px;
-  background: var(--palette-forest-600, #16a34a);
-  color: #ffffff;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 800;
-  text-decoration: none;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.call-button:hover {
-  background: var(--palette-forest-700, #15803d);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
-}
-
-.call-button--priority {
-  background: var(--palette-coral-600, #dc2626);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
-}
-
-.call-button--priority:hover {
-  background: var(--palette-coral-700, #b91c1c);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
-}
-
-.call-number {
-  letter-spacing: 0.02em;
-}
-
-/* Footer note */
-.directory-footer {
-  margin-top: var(--space-3, 14px);
-  padding-top: var(--space-3, 12px);
-  border-top: 1px solid var(--line, #e2e8f0);
-}
-
-.footer-tip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-mid, #64748b);
-  line-height: 1.4;
-}
-
-/* MOBILE OPTIMIZATION for low-end devices:
-   Table cards layout on screens <= 680px */
-@media (max-width: 680px) {
-  .directory-table,
-  .directory-table thead,
-  .directory-table tbody,
-  .directory-table th,
-  .directory-table td,
-  .directory-table tr {
-    display: block;
+  .emergency-directory-wrap {
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    margin-top: var(--space-4);
+    display: grid;
+    gap: var(--space-4);
   }
 
-  .directory-table thead {
-    display: none; /* Hide header row on small screens */
+  .directory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--line);
   }
 
-  .directory-table tr {
-    background: #ffffff;
-    border: 1px solid var(--line, #cbd5e1);
-    border-radius: 12px;
-    margin-bottom: 14px;
-    padding: 14px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  .header-left {
+    max-width: 60ch;
+    display: grid;
+    gap: 6px;
+    justify-items: start;
   }
 
-  .directory-table td {
-    padding: 6px 0;
-    border-bottom: none;
+  .directory-title {
+    margin: 0;
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--ink-strong);
   }
 
-  .cell-agency {
-    padding-bottom: 8px !important;
-    border-bottom: 1px solid #f1f5f9 !important;
-    margin-bottom: 8px;
+  .directory-subtitle {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: 1.55;
   }
 
-  .cell-role {
-    font-size: 12px;
-    color: #475569;
-    margin-bottom: 6px;
+  .marine-vhf-box {
+    background: var(--surface-inverse);
+    color: var(--ink-inverse);
+    border-radius: var(--r-inner);
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    border: 1px solid var(--line-strong);
   }
 
-  .cell-avail {
-    margin-bottom: 12px;
+  .vhf-icon {
+    color: var(--palette-amber-400);
+    flex-shrink: 0;
+    display: inline-flex;
   }
 
-  .cell-action {
-    padding-top: 10px !important;
-    border-top: 1px solid #f1f5f9 !important;
+  .vhf-text {
+    display: grid;
+    gap: 2px;
+  }
+
+  .vhf-text strong {
+    font-size: var(--text-sm);
+    color: var(--palette-white);
+  }
+
+  .vhf-text span {
+    font-size: var(--text-xs);
+    color: #cbd5e1;
+  }
+
+  .row--priority td {
+    background-color: var(--alert-emergency-surface);
+  }
+
+  .agency-cell-content {
+    display: grid;
+    gap: 4px;
+    justify-items: start;
+  }
+
+  .agency-name {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--ink-strong);
+  }
+
+  .contact-person {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+
+  .radio-channel-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--text-xs);
+    color: var(--interactive);
+    font-weight: 600;
+  }
+
+  .role-desc {
+    font-size: var(--text-sm);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+
+  .avail-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+
+  .avail-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-full);
+    background: var(--status-open);
+    flex-shrink: 0;
   }
 
   .action-wrap {
-    justify-content: stretch;
-    width: 100%;
+    display: flex;
+    justify-content: flex-end;
   }
 
-  .call-button {
-    width: 100%;
-    min-height: 48px; /* High-target tactile size for mobile */
-    font-size: 14px;
+  .directory-footer {
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
   }
-}
+
+  .footer-tip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: 1.45;
+  }
+
+  /* Responsive mobile cards */
+  @media (max-width: 680px) {
+    .emergency-directory-wrap {
+      padding: var(--space-4);
+    }
+
+    .table-wrap {
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      overflow: visible;
+    }
+
+    .directory-table,
+    .directory-table thead,
+    .directory-table tbody,
+    .directory-table th,
+    .directory-table td,
+    .directory-table tr {
+      display: block;
+    }
+
+    .directory-table thead {
+      display: none;
+    }
+
+    .directory-table tr {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-card);
+      margin-bottom: var(--space-3);
+      padding: var(--space-4);
+    }
+
+    .directory-table tr.row--priority {
+      border-color: var(--alert-emergency-border);
+      border-inline-start: 4px solid var(--alert-emergency);
+    }
+
+    .directory-table td {
+      padding: 6px 0;
+      border-bottom: 0;
+      background: transparent !important;
+      text-align: left !important;
+    }
+
+    .cell-agency {
+      padding-bottom: var(--space-2) !important;
+      border-bottom: 1px solid var(--line) !important;
+      margin-bottom: var(--space-2);
+    }
+
+    .cell-action {
+      padding-top: var(--space-3) !important;
+      border-top: 1px solid var(--line) !important;
+      margin-top: var(--space-2);
+    }
+
+    .action-wrap,
+    .dir-call-btn {
+      width: 100%;
+    }
+  }
 </style>

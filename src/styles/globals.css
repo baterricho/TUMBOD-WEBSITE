@@ -2,31 +2,19 @@
 @import "./fonts.css";
 @import "../lib/tokens/tokens.css";
 @import "./components.css";
-/* The civic-portal treatment (DECISION-redesign.md). Last, so it layers over
-   the original chart-led design rather than being interleaved with it. */
 @import "./redesign.css";
-/* Refinement pass over everything above — spacing, type scale, elevation,
-   the two permitted uses of glass. */
 @import "./polish.css";
-/* The hero grew into a media component of its own. */
 @import "./hero.css";
-/* The card vocabulary shared by the mega panels and the interior pages.
-   BEFORE mega.css, so the panels' own sizing still wins where it differs. */
 @import "./cards.css";
-/* News, Safety and Contact open full-width panels rather than navigating. */
 @import "./mega.css";
-/* The Deep Coastal Oceanic surface treatment — glass, radii, glow, chips.
-   LAST, so it wins over every sheet above without a single !important. */
 @import "./oceanic.css";
 
 /**
- * Global base styles — Barangay Tumbod
- * See DESIGN-SYSTEM.md. Nothing here sets component spacing; vertical rhythm
- * is owned by layout primitives only (§3).
+ * Global base styles — Barangay Tumbod.
+ * Exposes semantic CSS custom properties to Tailwind v4 and sets accessible
+ * base typography, links, focus outlines, reduced-motion, and print styles.
  */
 
-/* Expose semantic tokens to Tailwind utilities so `bg-surface`, `text-ink`
-   etc. resolve to the SAME variables the CSS uses. One source, not two. */
 @theme inline {
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
@@ -57,9 +45,10 @@
 }
 
 html {
-  /* WCAG 2.2 §2.4.11 — the sticky header must never obscure a focus target. */
-  scroll-padding-top: 72px;
+  scroll-behavior: smooth;
+  scroll-padding-top: 7rem;
   -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -72,14 +61,16 @@ body {
   font-synthesis-weight: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
 }
 
-h1, h2, h3, h4 {
+h1, h2, h3, h4, h5, h6 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-display);
+  color: var(--ink-strong);
   text-wrap: balance;
 }
 
@@ -98,71 +89,74 @@ button, input, select, textarea {
   color: inherit;
 }
 
-/* ── Focus. Reserved emergency red, on purpose (DESIGN-PLAN.md §2.5). ── */
+/* ── Focus (WCAG 2.4.7 & 2.4.11) ────────────────────────────── */
 
-:focus-visible {
+:focus-visible,
+:where(a, button, summary, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* Links carry an underline by default. On a site read by people with low
-   literacy and bad screens, "it's blue" is not enough of a signal.
+/* ── Links (explicit underline prevents colour-only link-in-text-block) ── */
 
-   `text-decoration: underline` is set EXPLICITLY because Tailwind's preflight
-   resets anchors to `text-decoration: inherit`. Without this line, links inside
-   muted text are distinguished by colour alone at 1.39:1 — caught by axe
-   (link-in-text-block, serious). Do not remove. */
 a {
   color: var(--interactive);
   text-decoration: underline;
   text-underline-offset: 0.2em;
+  text-decoration-thickness: from-font;
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
-/* Links that are visually buttons or tiles opt out individually; they carry
-   their own border and background as the affordance. */
 a[data-plain] {
   text-decoration: none;
 }
+
 a:hover {
   color: var(--interactive-hover);
 }
+
 a:visited {
   color: var(--interactive-visited);
 }
 
-/* ── The chart rule: land upright, water italic.
-   Borrowed from hydrographic convention (DESIGN-PLAN.md §1). ── */
+/* ── Hydrographic text conventions ──────────────────────────── */
 
 .is-land {
   font-style: normal;
 }
+
 .is-water {
   font-style: italic;
 }
 
-/* ── Utility: skip link ─────────────────────────────────────── */
+/* ── Skip link ──────────────────────────────────────────────── */
 
 .skip-link {
   position: absolute;
   left: var(--space-2);
   top: var(--space-2);
-  z-index: 100;
+  z-index: 120;
   padding: var(--space-3) var(--space-4);
   background: var(--surface-raised);
-  color: var(--ink);
-  box-shadow: var(--elev-2);
+  color: var(--ink-strong);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-md);
   border-radius: var(--radius-md);
+  font-weight: 600;
+  text-decoration: none;
   transform: translateY(-200%);
   transition: transform var(--motion-fast) var(--ease-standard);
 }
+
 .skip-link:focus-visible {
   transform: translateY(0);
 }
 
-/* ── Visually hidden but available to assistive tech ────────── */
+/* ── Visually hidden ────────────────────────────────────────── */
 
-.sr-only {
+.sr-only,
+.u-visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -174,7 +168,7 @@ a:visited {
   border: 0;
 }
 
-/* ── Tabular figures wherever numbers must align or be read aloud ── */
+/* ── Tabular figures for numbers, IDs, coordinates, fees ────── */
 
 .figure {
   font-family: var(--font-mono);
@@ -182,22 +176,20 @@ a:visited {
   letter-spacing: 0;
 }
 
-/* ── Placeholder marking (BUILD-PROMPT.md §0.2).
-   The magenta outline is DEVELOPMENT ONLY and is scoped to `html[data-env="dev"]`,
-   which Base.astro sets from import.meta.env.DEV. It was previously unscoped
-   and leaked into production builds — caught in design review.
-   Placeholders remain visible in production via their italic dotted-underline
-   treatment and their literal [[NEEDS DATA]] text; the build fails while any
-   launch-blocking one is reachable. ── */
+/* ── Development placeholder boundary indicator ─────────────── */
 
 html[data-env="dev"] [data-placeholder="true"] {
   outline: 1px dashed #ff00ff;
   outline-offset: 1px;
 }
 
-/* ── Motion. One orchestrated moment; everything else functional. ── */
+/* ── Reduced motion ─────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
@@ -208,20 +200,25 @@ html[data-env="dev"] [data-placeholder="true"] {
   }
 }
 
-/* ── Print. /ligtas will be photocopied in black and white and posted on
-   purok bulletin boards. It must survive that. ── */
+/* ── Print (/ligtas and requirements lists must print cleanly) ── */
 
 @media print {
-  :root {
+  :root,
+  html[data-theme="dark"] {
     --surface: #fff;
     --surface-raised: #fff;
+    --surface-sunken: #f8fafc;
     --ink: #000;
+    --ink-strong: #000;
     --ink-muted: #333;
     --line: #999;
+    --line-strong: #666;
   }
+
   .no-print {
     display: none !important;
   }
+
   a[href^="http"]::after {
     content: " (" attr(href) ")";
     font-size: var(--text-xs);

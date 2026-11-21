@@ -146,9 +146,9 @@ const ALERT_TEXT = {
     {fil ? 'Panahon at Dagat' : 'Marine Weather'}
   </h2>
 
-  <div class={`mega-weather ${curWeather.safetyLevel === 'danger' ? 'mega-weather--warning' : 'mega-weather--calm'}`}>
+  <div class={`mega-weather ${curWeather.safetyLevel === 'danger' ? 'mega-weather--dangerous' : curWeather.safetyLevel === 'caution' ? 'mega-weather--moderate' : ''}`}>
     <span class="mega-weather__icon">
-      <Icon name={curWeather.weatherCode <= 1 ? 'sun' : curWeather.weatherCode >= 60 ? 'droplet' : 'cloud'} size={40} />
+      <Icon name={curWeather.weatherCode <= 1 ? 'sun' : curWeather.weatherCode >= 60 ? 'droplet' : 'cloud'} size={36} />
     </span>
     <span class="mega-weather__temp">
       <span class="figure">{curWeather.temperature}</span>°C
@@ -164,21 +164,21 @@ const ALERT_TEXT = {
         <Icon name="bangka" size={14} />
         {fil ? 'Alon sa Kipot' : 'Wave Height'}
       </span>
-      <span class="mega-metric__value">{curWeather.waveHeightM} m</span>
+      <span class="mega-metric__value figure">{curWeather.waveHeightM} m</span>
     </li>
     <li>
       <span class="mega-metric__label">
         <Icon name="wind" size={14} />
         {fil ? 'Hangin' : 'Wind'}
       </span>
-      <span class="mega-metric__value">{curWeather.windSpeedKph} km/h {curWeather.windCardinal}</span>
+      <span class="mega-metric__value figure">{curWeather.windSpeedKph} km/h {curWeather.windCardinal}</span>
     </li>
     <li>
       <span class="mega-metric__label">
         <Icon name="shield" size={14} />
         {fil ? 'Kaligtasan' : 'Sea Safety'}
       </span>
-      <span class="mega-metric__value" style={`color:${curWeather.safetyLevel === 'danger' ? '#ef4444' : curWeather.safetyLevel === 'caution' ? '#f59e0b' : '#10b981'};font-weight:700;`}>
+      <span class="mega-metric__value" style={`color:${curWeather.safetyLevel === 'danger' ? 'var(--alert-emergency-on-surface)' : curWeather.safetyLevel === 'caution' ? 'var(--status-caution-ink)' : 'var(--status-open-ink)'};font-weight:700;`}>
         {fil ? curWeather.safetyTitleFil : curWeather.safetyTitleEn}
       </span>
     </li>

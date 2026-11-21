@@ -21,7 +21,7 @@ export interface FishingWeatherChartProps {
 
 interface CustomTooltipProps {
   active?: boolean
-  payload?: any[]
+  payload?: Array<{ payload?: DailyMarineWeather }>
   locale: 'fil' | 'en'
 }
 
@@ -29,7 +29,7 @@ function FishingCustomTooltip({ active, payload, locale }: CustomTooltipProps) {
   if (!active || !payload || !payload.length) return null
 
   const fil = locale === 'fil'
-  const data = payload[0]?.payload as DailyMarineWeather | undefined
+  const data = payload[0]?.payload
   if (!data) return null
 
   const wave = data.waveHeightMaxM
@@ -37,79 +37,74 @@ function FishingCustomTooltip({ active, payload, locale }: CustomTooltipProps) {
 
   let fishingRatingFil = 'Maganda para sa Pagpalaot'
   let fishingRatingEn = 'Favorable for Fishing'
-  let ratingColor = '#10b981'
+  let badgeClass = 'chip chip--open'
 
   if (wave >= 1.5 || wind >= 32) {
     fishingRatingFil = 'Delikado — Bawal Pumalaot'
     fishingRatingEn = 'Hazardous — No Sail'
-    ratingColor = '#ef4444'
+    badgeClass = 'chip chip--danger'
   } else if (wave >= 1.0 || wind >= 20) {
     fishingRatingFil = 'Mag-ingat — Choppy ang Kipot'
     fishingRatingEn = 'Caution — Moderate Chop'
-    ratingColor = '#f59e0b'
+    badgeClass = 'chip chip--warning'
   }
 
   return (
     <div
       style={{
-        background: '#0f172a',
-        color: '#f8fafc',
-        padding: '12px 16px',
+        background: 'var(--surface-raised)',
+        color: 'var(--ink)',
+        padding: '12px 14px',
         borderRadius: '8px',
-        border: '1px solid #334155',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+        border: '1px solid var(--line-strong)',
+        boxShadow: 'var(--shadow-lg)',
         fontSize: '12px',
         maxWidth: '260px',
       }}
     >
-      <div style={{ fontWeight: 800, fontSize: '14px', marginBottom: '4px', color: '#38bdf8' }}>
+      <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '2px', color: 'var(--ink-strong)' }}>
         {fil ? data.dayNameFil : data.dayNameEn} ({data.date})
       </div>
-      <div style={{ color: '#cbd5e1', marginBottom: '8px' }}>
+      <div style={{ color: 'var(--ink-muted)', marginBottom: '8px' }}>
         {fil ? data.weatherDescFil : data.weatherDescEn}
       </div>
 
-      <div
-        style={{
-          display: 'inline-block',
-          padding: '3px 8px',
-          borderRadius: '9999px',
-          backgroundColor: `${ratingColor}22`,
-          color: ratingColor,
-          fontWeight: 700,
-          border: `1px solid ${ratingColor}66`,
-          marginBottom: '10px',
-        }}
-      >
+      <div className={badgeClass} style={{ marginBottom: '10px' }}>
         {fil ? fishingRatingFil : fishingRatingEn}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         <div>
-          <span style={{ color: '#94a3b8', display: 'block', fontSize: '11px' }}>
+          <span style={{ color: 'var(--ink-muted)', display: 'block', fontSize: '11px' }}>
             {fil ? 'Taas ng Alon' : 'Max Wave'}
           </span>
-          <strong style={{ color: '#60a5fa', fontSize: '13px' }}>{data.waveHeightMaxM.toFixed(1)} m</strong>
-        </div>
-        <div>
-          <span style={{ color: '#94a3b8', display: 'block', fontSize: '11px' }}>
-            {fil ? 'Hangin' : 'Max Wind'}
-          </span>
-          <strong style={{ color: '#f59e0b', fontSize: '13px' }}>{Math.round(data.windMaxKph)} km/h</strong>
-        </div>
-        <div>
-          <span style={{ color: '#94a3b8', display: 'block', fontSize: '11px' }}>
-            {fil ? 'Temperatura' : 'Temp Range'}
-          </span>
-          <strong style={{ color: '#34d399', fontSize: '13px' }}>
-            {Math.round(data.tempMin)}° - {Math.round(data.tempMax)}°C
+          <strong className="figure" style={{ color: 'var(--interactive)', fontSize: '13px' }}>
+            {data.waveHeightMaxM.toFixed(1)} m
           </strong>
         </div>
         <div>
-          <span style={{ color: '#94a3b8', display: 'block', fontSize: '11px' }}>
+          <span style={{ color: 'var(--ink-muted)', display: 'block', fontSize: '11px' }}>
+            {fil ? 'Hangin' : 'Max Wind'}
+          </span>
+          <strong className="figure" style={{ color: 'var(--accent-strong)', fontSize: '13px' }}>
+            {Math.round(data.windMaxKph)} km/h
+          </strong>
+        </div>
+        <div>
+          <span style={{ color: 'var(--ink-muted)', display: 'block', fontSize: '11px' }}>
+            {fil ? 'Temperatura' : 'Temp Range'}
+          </span>
+          <strong className="figure" style={{ color: 'var(--status-open)', fontSize: '13px' }}>
+            {Math.round(data.tempMin)}° – {Math.round(data.tempMax)}°C
+          </strong>
+        </div>
+        <div>
+          <span style={{ color: 'var(--ink-muted)', display: 'block', fontSize: '11px' }}>
             {fil ? 'Tsansa ng Ulan' : 'Rain Chance'}
           </span>
-          <strong style={{ color: '#a78bfa', fontSize: '13px' }}>{data.precipProbMax}%</strong>
+          <strong className="figure" style={{ color: 'var(--ink-strong)', fontSize: '13px' }}>
+            {data.precipProbMax}%
+          </strong>
         </div>
       </div>
     </div>
@@ -120,189 +115,167 @@ export function FishingWeatherChart({ locale, dailyData }: FishingWeatherChartPr
   const fil = locale === 'fil'
   const [activeMetric, setActiveMetric] = useState<'sea' | 'rainTemp'>('sea')
 
-  // Use the 5-day forecast slice
   const fiveDayData = (dailyData && dailyData.length > 0 ? dailyData : []).slice(0, 5)
-
-  // Determine overall fishing advisories
   const maxWaveNext5Days = Math.max(...fiveDayData.map((d) => d.waveHeightMaxM || 0), 0)
+
+  if (fiveDayData.length === 0) {
+    return (
+      <div className="empty-state" id="fishing-forecast-trends">
+        <p className="empty-state__title">
+          {fil ? 'Walang magagamit na 5-araw na datos' : '5-Day Forecast Unavailable'}
+        </p>
+        <p className="empty-state__desc">
+          {fil
+            ? 'Hindi makakonekta sa marine telemetry ngayon. Sundin ang opisyal na abiso ng BDRRMC at Coast Guard.'
+            : 'Unable to load marine telemetry right now. Follow official BDRRMC and Coast Guard advisories.'}
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div
       id="fishing-forecast-trends"
       style={{
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '16px',
+        background: 'var(--surface-raised)',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--r-card)',
         padding: '20px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+        boxShadow: 'var(--shadow-sm)',
         fontFamily: 'inherit',
+        color: 'var(--ink)',
       }}
     >
-      {/* Header with Title and Mode Toggles */}
+      {/* Header & Segmented Metric Switcher */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           flexWrap: 'wrap',
           gap: '12px',
           marginBottom: '16px',
         }}
       >
         <div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '11px',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: '#0369a1',
-              backgroundColor: '#e0f2fe',
-              padding: '3px 10px',
-              borderRadius: '9999px',
-              marginBottom: '6px',
-            }}
-          >
-            <span>{fil ? '5-Araw na Ulat sa Tuluran Strait' : '5-Day Marine Trends'}</span>
-          </div>
+          <span className="chip chip--info" style={{ marginBottom: '6px' }}>
+            {fil ? '5-Araw na Ulat sa Tuluran Strait' : '5-Day Marine Trends'}
+          </span>
           <h3
             style={{
-              margin: 0,
+              margin: '4px 0 0',
               fontSize: '18px',
-              fontWeight: 800,
-              color: '#0f172a',
+              fontWeight: 700,
+              color: 'var(--ink-strong)',
             }}
           >
             {fil
               ? 'Talaan ng Panahon at Alon para sa Mangingisda'
               : '5-Day Marine & Fishing Weather Trends'}
           </h3>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--ink-muted)' }}>
             {fil
               ? 'Pagsusuri sa taas ng alon, bilis ng hangin, at ulan sa Look ng Taytay'
               : 'Forecasting wave swells, wind speeds, and precipitation for local banca operations'}
           </p>
         </div>
 
-        {/* View Switcher Tabs */}
         <div
+          role="group"
+          aria-label={fil ? 'Sukatan ng tsart' : 'Chart view'}
           style={{
             display: 'inline-flex',
-            backgroundColor: '#f1f5f9',
-            padding: '3px',
-            borderRadius: '10px',
-            border: '1px solid #e2e8f0',
+            backgroundColor: 'var(--surface-sunken)',
+            padding: '4px',
+            borderRadius: 'var(--r-inner)',
+            border: '1px solid var(--line)',
+            gap: '4px',
           }}
         >
           <button
             type="button"
+            aria-pressed={activeMetric === 'sea'}
             onClick={() => setActiveMetric('sea')}
             style={{
-              border: 'none',
-              background: activeMetric === 'sea' ? '#0284c7' : 'transparent',
-              color: activeMetric === 'sea' ? '#ffffff' : '#475569',
+              border: activeMetric === 'sea' ? '1px solid var(--line)' : '1px solid transparent',
+              background: activeMetric === 'sea' ? 'var(--surface-raised)' : 'transparent',
+              color: activeMetric === 'sea' ? 'var(--ink-strong)' : 'var(--ink-muted)',
               fontWeight: 700,
               fontSize: '12px',
-              padding: '6px 14px',
-              borderRadius: '8px',
+              minHeight: '36px',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              boxShadow: activeMetric === 'sea' ? '0 2px 6px rgba(2, 132, 199, 0.3)' : 'none',
+              boxShadow: activeMetric === 'sea' ? 'var(--shadow-sm)' : 'none',
             }}
           >
-            {fil ? 'Alon at Hangin (Sea State)' : 'Waves & Wind'}
+            {fil ? 'Alon at Hangin' : 'Waves & Wind'}
           </button>
           <button
             type="button"
+            aria-pressed={activeMetric === 'rainTemp'}
             onClick={() => setActiveMetric('rainTemp')}
             style={{
-              border: 'none',
-              background: activeMetric === 'rainTemp' ? '#0284c7' : 'transparent',
-              color: activeMetric === 'rainTemp' ? '#ffffff' : '#475569',
+              border: activeMetric === 'rainTemp' ? '1px solid var(--line)' : '1px solid transparent',
+              background: activeMetric === 'rainTemp' ? 'var(--surface-raised)' : 'transparent',
+              color: activeMetric === 'rainTemp' ? 'var(--ink-strong)' : 'var(--ink-muted)',
               fontWeight: 700,
               fontSize: '12px',
-              padding: '6px 14px',
-              borderRadius: '8px',
+              minHeight: '36px',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              boxShadow: activeMetric === 'rainTemp' ? '0 2px 6px rgba(2, 132, 199, 0.3)' : 'none',
+              boxShadow: activeMetric === 'rainTemp' ? 'var(--shadow-sm)' : 'none',
             }}
           >
-            {fil ? 'Ulan at Temperatura' : 'Rain & Temperature'}
+            {fil ? 'Ulan at Temperatura' : 'Rain & Temp'}
           </button>
         </div>
       </div>
 
-      {/* Recharts Chart Area */}
-      <div style={{ width: '100%', height: '320px', marginTop: '10px' }}>
+      {/* Recharts Visualization */}
+      <div style={{ width: '100%', height: '300px', marginTop: '8px' }}>
         <ResponsiveContainer width="100%" height="100%">
           {activeMetric === 'sea' ? (
-            <ComposedChart
-              data={fiveDayData}
-              margin={{ top: 20, right: 20, bottom: 20, left: 0 }}
-            >
+            <ComposedChart data={fiveDayData} margin={{ top: 18, right: 18, bottom: 16, left: 0 }}>
               <defs>
                 <linearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0284c7" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#0284c7" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="#0284c7" stopOpacity={0.28} />
+                  <stop offset="95%" stopColor="#0284c7" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line)" />
               <XAxis
                 dataKey={fil ? 'dayNameFil' : 'dayNameEn'}
-                tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
-                tickLine={{ stroke: '#cbd5e1' }}
-                axisLine={{ stroke: '#cbd5e1' }}
+                tick={{ fill: 'var(--ink-muted)', fontSize: 12, fontWeight: 600 }}
+                tickLine={{ stroke: 'var(--line)' }}
+                axisLine={{ stroke: 'var(--line)' }}
               />
-              {/* Left Y Axis for Wave Height in meters */}
               <YAxis
                 yAxisId="wave"
                 orientation="left"
                 domain={[0, (dataMax: number) => Math.max(Math.ceil(dataMax * 1.3), 3)]}
-                tick={{ fill: '#0284c7', fontSize: 11, fontWeight: 700 }}
+                tick={{ fill: 'var(--interactive)', fontSize: 11, fontWeight: 600 }}
                 unit=" m"
-                label={{
-                  value: fil ? 'Alon (m)' : 'Wave (m)',
-                  angle: -90,
-                  position: 'insideLeft',
-                  fill: '#0284c7',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  dy: 25,
-                }}
               />
-              {/* Right Y Axis for Wind Speed in km/h */}
               <YAxis
                 yAxisId="wind"
                 orientation="right"
                 domain={[0, (dataMax: number) => Math.max(Math.ceil(dataMax * 1.2), 40)]}
-                tick={{ fill: '#d97706', fontSize: 11, fontWeight: 700 }}
-                unit=" km/h"
-                label={{
-                  value: fil ? 'Hangin (km/h)' : 'Wind (km/h)',
-                  angle: 90,
-                  position: 'insideRight',
-                  fill: '#d97706',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  dy: 40,
-                }}
+                tick={{ fill: 'var(--accent-strong)', fontSize: 11, fontWeight: 600 }}
+                unit=" kph"
               />
               <Tooltip content={<FishingCustomTooltip locale={locale} />} />
-              <Legend wrapperStyle={{ paddingBottom: 10, fontSize: 12, fontWeight: 600 }} />
+              <Legend wrapperStyle={{ paddingTop: 8, fontSize: 12, fontWeight: 600 }} />
 
-              {/* Safety Reference Lines */}
               <ReferenceLine
                 yAxisId="wave"
                 y={1.5}
-                stroke="#ef4444"
+                stroke="#dc2626"
                 strokeDasharray="4 4"
                 strokeWidth={1.5}
                 label={{
-                  value: fil ? 'Bawal sa <3 GT (1.5m)' : 'No-Sail <3 GT (1.5m)',
+                  value: fil ? 'Bawal <3 GT (1.5m)' : 'No-Sail <3 GT (1.5m)',
                   position: 'insideTopLeft',
                   fill: '#dc2626',
                   fontSize: 10,
@@ -312,33 +285,31 @@ export function FishingWeatherChart({ locale, dailyData }: FishingWeatherChartPr
               <ReferenceLine
                 yAxisId="wave"
                 y={1.0}
-                stroke="#f59e0b"
+                stroke="#d97706"
                 strokeDasharray="3 3"
                 strokeWidth={1.2}
                 label={{
-                  value: fil ? 'Limitasyon ng Maliliit (1.0m)' : 'Small Banca Limit (1.0m)',
+                  value: fil ? 'Maliliit na bangka (1.0m)' : 'Small craft (1.0m)',
                   position: 'insideBottomLeft',
-                  fill: '#b45309',
+                  fill: '#d97706',
                   fontSize: 10,
                   fontWeight: 700,
                 }}
               />
 
-              {/* Wave Swell Area */}
               <Area
                 yAxisId="wave"
                 type="monotone"
                 dataKey="waveHeightMaxM"
                 name={fil ? 'Taas ng Alon (m)' : 'Wave Height (m)'}
                 stroke="#0284c7"
-                strokeWidth={3}
+                strokeWidth={2.5}
                 fillOpacity={1}
                 fill="url(#waveGradient)"
-                dot={{ r: 4, stroke: '#0284c7', strokeWidth: 2, fill: '#ffffff' }}
-                activeDot={{ r: 6, stroke: '#0284c7', strokeWidth: 2, fill: '#38bdf8' }}
+                dot={{ r: 3.5, stroke: '#0284c7', strokeWidth: 2, fill: 'var(--surface-raised)' }}
+                activeDot={{ r: 5.5, stroke: '#0284c7', strokeWidth: 2, fill: '#38bdf8' }}
               />
 
-              {/* Wind Speed Line */}
               <Line
                 yAxisId="wind"
                 type="monotone"
@@ -346,98 +317,70 @@ export function FishingWeatherChart({ locale, dailyData }: FishingWeatherChartPr
                 name={fil ? 'Lakas ng Hangin (km/h)' : 'Max Wind Speed (km/h)'}
                 stroke="#d97706"
                 strokeWidth={2.5}
-                dot={{ r: 4, stroke: '#d97706', strokeWidth: 2, fill: '#ffffff' }}
-                activeDot={{ r: 6, stroke: '#d97706', strokeWidth: 2, fill: '#fbbf24' }}
+                dot={{ r: 3.5, stroke: '#d97706', strokeWidth: 2, fill: 'var(--surface-raised)' }}
+                activeDot={{ r: 5.5, stroke: '#d97706', strokeWidth: 2, fill: '#fbbf24' }}
               />
             </ComposedChart>
           ) : (
-            <ComposedChart
-              data={fiveDayData}
-              margin={{ top: 20, right: 20, bottom: 20, left: 0 }}
-            >
-              <defs>
-                <linearGradient id="rainGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#818cf8" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#c7d2fe" stopOpacity={0.3} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+            <ComposedChart data={fiveDayData} margin={{ top: 18, right: 18, bottom: 16, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line)" />
               <XAxis
                 dataKey={fil ? 'dayNameFil' : 'dayNameEn'}
-                tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
-                tickLine={{ stroke: '#cbd5e1' }}
-                axisLine={{ stroke: '#cbd5e1' }}
+                tick={{ fill: 'var(--ink-muted)', fontSize: 12, fontWeight: 600 }}
+                tickLine={{ stroke: 'var(--line)' }}
+                axisLine={{ stroke: 'var(--line)' }}
               />
               <YAxis
                 yAxisId="temp"
                 orientation="left"
                 domain={[20, 36]}
-                tick={{ fill: '#059669', fontSize: 11, fontWeight: 700 }}
+                tick={{ fill: 'var(--status-open)', fontSize: 11, fontWeight: 600 }}
                 unit="°C"
-                label={{
-                  value: 'Temp (°C)',
-                  angle: -90,
-                  position: 'insideLeft',
-                  fill: '#059669',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  dy: 25,
-                }}
               />
               <YAxis
                 yAxisId="rain"
                 orientation="right"
                 domain={[0, 100]}
-                tick={{ fill: '#6366f1', fontSize: 11, fontWeight: 700 }}
+                tick={{ fill: 'var(--interactive)', fontSize: 11, fontWeight: 600 }}
                 unit="%"
-                label={{
-                  value: fil ? 'Ulan (%)' : 'Rain (%)',
-                  angle: 90,
-                  position: 'insideRight',
-                  fill: '#6366f1',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  dy: 25,
-                }}
               />
               <Tooltip content={<FishingCustomTooltip locale={locale} />} />
-              <Legend wrapperStyle={{ paddingBottom: 10, fontSize: 12, fontWeight: 600 }} />
+              <Legend wrapperStyle={{ paddingTop: 8, fontSize: 12, fontWeight: 600 }} />
 
-              {/* Rain Chance Bar */}
               <Bar
                 yAxisId="rain"
                 dataKey="precipProbMax"
                 name={fil ? 'Tsansa ng Ulan (%)' : 'Rain Probability (%)'}
-                fill="url(#rainGradient)"
-                radius={[6, 6, 0, 0]}
-                barSize={32}
+                fill="#0284c7"
+                fillOpacity={0.35}
+                radius={[4, 4, 0, 0]}
+                barSize={28}
               />
 
-              {/* Temp Max and Min Lines */}
               <Line
                 yAxisId="temp"
                 type="monotone"
                 dataKey="tempMax"
                 name={fil ? 'Mataas na Temp (°C)' : 'Max Temp (°C)'}
-                stroke="#ef4444"
+                stroke="#dc2626"
                 strokeWidth={2}
-                dot={{ r: 3, fill: '#ef4444' }}
+                dot={{ r: 3, fill: '#dc2626' }}
               />
               <Line
                 yAxisId="temp"
                 type="monotone"
                 dataKey="tempMin"
                 name={fil ? 'Mababang Temp (°C)' : 'Min Temp (°C)'}
-                stroke="#059669"
+                stroke="#16a34a"
                 strokeWidth={2}
-                dot={{ r: 3, fill: '#059669' }}
+                dot={{ r: 3, fill: '#16a34a' }}
               />
             </ComposedChart>
           )}
         </ResponsiveContainer>
       </div>
 
-      {/* 5-Day Card Summary Deck with Fishing Guidance */}
+      {/* 5-Day Summary Deck */}
       <div
         style={{
           display: 'grid',
@@ -445,7 +388,7 @@ export function FishingWeatherChart({ locale, dailyData }: FishingWeatherChartPr
           gap: '10px',
           marginTop: '16px',
           paddingTop: '16px',
-          borderTop: '1px solid #f1f5f9',
+          borderTop: '1px solid var(--line)',
         }}
       >
         {fiveDayData.map((day, idx) => {
@@ -454,55 +397,53 @@ export function FishingWeatherChart({ locale, dailyData }: FishingWeatherChartPr
           const isDanger = wave >= 1.5 || wind >= 32
           const isCaution = wave >= 1.0 || wind >= 20
 
-          const badgeBg = isDanger ? '#fee2e2' : isCaution ? '#fef3c7' : '#dcfce7'
-          const badgeColor = isDanger ? '#b91c1c' : isCaution ? '#b45309' : '#15803d'
+          const badgeClass = isDanger ? 'chip chip--danger' : isCaution ? 'chip chip--warning' : 'chip chip--open'
           const labelText = isDanger
-            ? fil ? 'Bawal Pumalaot' : 'No Sail'
+            ? fil ? 'Bawal' : 'No Sail'
             : isCaution
               ? fil ? 'Mag-ingat' : 'Caution'
-              : fil ? 'Ligtas Pumalaot' : 'Favorable'
+              : fil ? 'Ligtas' : 'Safe'
 
           return (
             <div
               key={day.date || idx}
               style={{
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--line)',
+                borderRadius: 'var(--r-inner)',
                 padding: '10px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
+                display: 'grid',
+                gap: '6px',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ fontSize: '12px', color: '#1e293b' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }}>
+                <strong style={{ fontSize: '12px', color: 'var(--ink-strong)' }}>
                   {fil ? day.dayNameFil : day.dayNameEn}
                 </strong>
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    padding: '2px 6px',
-                    borderRadius: '9999px',
-                    backgroundColor: badgeBg,
-                    color: badgeColor,
-                  }}
-                >
+                <span className={badgeClass} style={{ padding: '1px 6px', fontSize: '10px' }}>
                   {labelText}
                 </span>
               </div>
 
-              <div style={{ fontSize: '11px', color: '#64748b' }}>
+              <div style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
                 {fil ? day.weatherDescFil : day.weatherDescEn}
               </div>
 
-              <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                <span style={{ color: '#0369a1', fontWeight: 700 }}>
-                  ~{day.waveHeightMaxM.toFixed(1)}m alon
+              <div
+                className="figure"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '11px',
+                  paddingTop: '4px',
+                  borderTop: '1px solid var(--line)',
+                }}
+              >
+                <span style={{ color: 'var(--interactive)', fontWeight: 700 }}>
+                  {day.waveHeightMaxM.toFixed(1)}m
                 </span>
-                <span style={{ color: '#b45309', fontWeight: 700 }}>
-                  {Math.round(day.windMaxKph)}kph
+                <span style={{ color: 'var(--accent-strong)', fontWeight: 700 }}>
+                  {Math.round(day.windMaxKph)} km/h
                 </span>
               </div>
             </div>
@@ -510,30 +451,32 @@ export function FishingWeatherChart({ locale, dailyData }: FishingWeatherChartPr
         })}
       </div>
 
-      {/* Advisory Footnote */}
+      {/* Provenance Footnote */}
       <div
         style={{
-          marginTop: '12px',
+          marginTop: '14px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
           fontSize: '11px',
-          color: '#64748b',
+          color: 'var(--ink-muted)',
         }}
       >
         <span
+          aria-hidden="true"
           style={{
             display: 'inline-block',
             width: '8px',
             height: '8px',
             borderRadius: '9999px',
-            backgroundColor: maxWaveNext5Days >= 1.5 ? '#ef4444' : '#10b981',
+            backgroundColor: maxWaveNext5Days >= 1.5 ? 'var(--alert-emergency)' : 'var(--status-open)',
+            flexShrink: 0,
           }}
         />
         <span>
           {fil
-            ? 'Batay sa Open-Meteo High-Resolution Marine Models para sa Tuluran Island (10.93°N, 119.55°E). Sumunod lagi sa Coast Guard Sub-station Taytay.'
-            : 'Based on high-resolution Open-Meteo marine models for Tuluran Island (10.93°N, 119.55°E). Always heed Philippine Coast Guard Taytay advisories.'}
+            ? 'Batay sa Open-Meteo Marine Models para sa Tuluran Island. Sumunod lagi sa Coast Guard Sub-station Taytay.'
+            : 'Based on Open-Meteo marine models for Tuluran Island. Always follow Philippine Coast Guard Taytay advisories.'}
         </span>
       </div>
     </div>

@@ -132,10 +132,10 @@ export const DEMO_SEA_CONDITION = (observedAt: Date): SeaCondition => ({
 
 export const DEMO_BOAT_TRIP = (updatedAt: Date): BoatTrip => ({
   id: 'main',
-  route: 'Tumbod → Liminangcong',
+  route: 'Tumbod → Liminangcong Port (~0.7 km)',
   operator: `Bangkang "Malampaya Star" ${SAMPLE}`,
   departureTime: '6:00 AM',
-  fare: '₱120',
+  fare: '',
   status: 'uncertain',
   // The demo deliberately shows the Coast Guard case, because it is the one
   // residents most need explained (RESEARCH.md §4).

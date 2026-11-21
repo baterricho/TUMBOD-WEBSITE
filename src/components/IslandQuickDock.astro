@@ -1,18 +1,20 @@
 ---
 /**
- * IslandQuickDock.astro
+ * IslandQuickDock — Restraint-first floating utility dock & mobile bottom bar.
  *
- * An interactive, accessible floating dock ("Gabay sa Pulo") providing:
- *   1. Quick Emergency SOS popup with 1-tap dialable emergency numbers;
- *   2. Quick Sea Advisory status & crossing guidance toggle;
- *   3. Smooth Scroll-to-Top with real-time SVG circular scroll progress indicator;
- *   4. Instant search shortcut trigger.
- *
- * Fully keyboard accessible, respects prefers-reduced-motion, and degrades silently.
+ * - Desktop (>768px): Unobtrusive utility cluster (SOS dialog trigger + scroll
+ *   back-to-top with progress ring) — avoids duplicating the sticky header nav.
+ * - Mobile (<=768px): Ergonomic 5-item thumb bar (Home, Weather, SOS, Services,
+ *   Search) with >=44x44px targets and safe-area inset.
+ * - SOS Dialog: Strictly enforces verified-number & demo safety (never creates
+ *   `tel:` links for placeholders or unassigned demo/sample numbers).
  */
 import Icon from './Icon.astro'
+import Placeholder from './Placeholder.astro'
 import { getDictionary, type Locale, prefix } from '@/lib/i18n'
 import { getHotlines } from '@/lib/content/live-collections'
+import { IS_DEMO } from '@/lib/content/active'
+import { isPlaceholder } from '@/lib/content/placeholder'
 
 interface Props {
   locale: Locale
@@ -25,71 +27,93 @@ const p = prefix(locale)
 const t = getDictionary(locale)
 const homeHref = fil ? '/' : '/en'
 const isHome = pathname === homeHref || pathname === ''
-const HOTLINES = (await getHotlines()).items.slice(0, 5)
+const HOTLINES = (await getHotlines()).items.filter((h) => h.active).slice(0, 5)
+const searchHref = `${p}/hanapin`
 ---
 
-<aside class="quick-dock" id="quick-dock" aria-label={fil ? 'Mabilisang Tulong sa Pulo' : 'Island Quick Actions'}>
-  {/* Emergency Quick Modal / Drawer */}
+<aside class="quick-dock no-print" id="quick-dock" aria-label={fil ? 'Mabilisang Tulong sa Pulo' : 'Island Quick Actions'}>
+  {/* Accessible Emergency Quick Dialog */}
   <dialog id="dock-sos-dialog" class="dock-dialog" aria-labelledby="dock-sos-title">
     <div class="dock-dialog__content">
       <div class="dock-dialog__head">
-        <h3 id="dock-sos-title" class="dock-dialog__title">
-          <Icon name="phone" size={20} />
-          {fil ? 'Mga Numerong Pang-Emergency' : 'Emergency Hotlines'}
-        </h3>
-        <button type="button" class="dock-dialog__close" id="dock-sos-close" aria-label={fil ? 'Isara' : 'Close'}>
-          <Icon name="close" size={20} />
+        <h2 id="dock-sos-title" class="dock-dialog__title">
+          <Icon name="phone" size={18} />
+          <span>{fil ? 'Mga Numerong Pang-Emergency' : 'Emergency Hotlines'}</span>
+        </h2>
+        <button
+          type="button"
+          class="dock-dialog__close"
+          id="dock-sos-close"
+          aria-label={fil ? 'Isara' : 'Close'}
+        >
+          <Icon name="close" size={18} />
         </button>
       </div>
+
       <p class="dock-dialog__desc">
-        {fil ? 'Direktang numerong matatawagan para sa saklolo sa Pulo ng Tuluran:' : 'Immediate assistance contacts for Tuluran Island:'}
+        {fil
+          ? 'Beripikadong numerong matatawagan para sa saklolo sa Barangay Tumbod:'
+          : 'Verified emergency assistance numbers for Barangay Tumbod:'}
       </p>
 
-      <ul class="dock-sos-list">
-        {HOTLINES.map((h) => (
-          <li class="dock-sos-item">
-            <span class="dock-sos-label">{fil ? h.labelFil : h.labelEn}</span>
-            <a href={`tel:${String(h.number).replace(/[^\d+]/g, '')}`} class="dock-sos-btn">
-              <Icon name="phone" size={16} />
-              <span>{h.number}</span>
-            </a>
-          </li>
-        ))}
+      <ul class="dock-sos-list list-reset">
+        {HOTLINES.map((h) => {
+          const placeholder = isPlaceholder(h.number)
+          const dialable = !placeholder && !IS_DEMO
+          const cleanTel = !placeholder ? String(h.number).replace(/[^\d+]/g, '') : ''
+          return (
+            <li class="dock-sos-item">
+              <span class="dock-sos-label">{fil ? h.labelFil : h.labelEn}</span>
+              {dialable ? (
+                <a href={`tel:${cleanTel}`} class="dock-sos-btn" data-plain>
+                  <Icon name="phone" size={14} />
+                  <span class="figure">{h.number}</span>
+                </a>
+              ) : placeholder ? (
+                <span class="dock-sos-pending">
+                  <Placeholder value={h.number} />
+                </span>
+              ) : (
+                <span class="dock-sos-demo figure">{h.number}</span>
+              )}
+            </li>
+          )
+        })}
       </ul>
 
       <div class="dock-dialog__foot">
-        <a href={`${p}/ligtas/hotline`} class="btn btn--secondary btn--sm">
-          {fil ? 'Tingnan ang Lahat ng Hotline →' : 'View Full Directory →'}
+        <a href={`${p}/ligtas/hotline`} class="btn btn--secondary btn--block" data-plain>
+          {fil ? 'Buksan ang Buong Direktoryo' : 'Open Full Directory'}
+          <Icon name="chevron-right" size={16} />
         </a>
       </div>
     </div>
   </dialog>
 
-  {/* Dock Buttons Group */}
-  <div class="quick-dock__bar" role="toolbar" aria-label={fil ? 'Mga aksyon' : 'Quick Actions'}>
-    {/* 1. Home / Pulo */}
+  {/* Dock Bar */}
+  <div class="quick-dock__bar" role="toolbar" aria-label={fil ? 'Mabilisang aksyon' : 'Quick actions'}>
     <a
       href={homeHref}
-      class="dock-btn dock-btn--home"
-      title={fil ? 'Pulo ng Tumbod' : 'Home'}
+      class="dock-btn dock-btn--mobile-only"
+      title={fil ? 'Tahanan' : 'Home'}
       aria-current={isHome ? 'page' : undefined}
+      data-plain
     >
       <Icon name="home" size={18} />
       <span class="dock-btn__label">{fil ? 'Pulo' : 'Home'}</span>
     </a>
 
-    {/* 2. Weather & Marine / Panahon */}
     <a
       href={`${p}/panahon`}
-      class="dock-btn dock-btn--weather"
-      title={fil ? 'Panahon at Kalagayan ng Dagat' : 'Weather & Marine Telemetry'}
+      class="dock-btn dock-btn--mobile-only"
+      title={fil ? 'Panahon at Kalagayan ng Dagat' : 'Weather & Marine'}
       aria-current={pathname.startsWith(`${p}/panahon`) ? 'page' : undefined}
+      data-plain
     >
       <Icon name="wind" size={18} />
       <span class="dock-btn__label">{fil ? 'Panahon' : 'Weather'}</span>
     </a>
 
-    {/* 3. SOS / Emergency Button (Center Anchor) */}
     <button
       type="button"
       id="dock-sos-trigger"
@@ -97,35 +121,33 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
       title={fil ? 'Buksan ang mga Numerong Pang-Emergency' : 'Open Emergency Numbers'}
       aria-haspopup="dialog"
       aria-expanded="false"
-      aria-current={pathname.startsWith(`${p}/ligtas`) ? 'page' : undefined}
     >
-      <Icon name="phone" size={18} />
+      <Icon name="phone" size={16} />
       <span class="dock-btn__label">{t.nav.emergency}</span>
     </button>
 
-    {/* 4. Services / Serbisyo */}
     <a
       href={`${p}/serbisyo`}
-      class="dock-btn dock-btn--services"
+      class="dock-btn dock-btn--mobile-only"
       title={fil ? 'Mga Serbisyo ng Barangay' : 'Barangay Services'}
       aria-current={pathname.startsWith(`${p}/serbisyo`) ? 'page' : undefined}
+      data-plain
     >
       <Icon name="document" size={18} />
       <span class="dock-btn__label">{t.nav.services}</span>
     </a>
 
-    {/* 5. Search / Hanapin */}
     <a
-      href={`${p}/hanapin`}
-      class="dock-btn dock-btn--search"
-      title={fil ? 'Mabilisang Paghahanap' : 'Quick Search'}
+      href={searchHref}
+      class="dock-btn dock-btn--mobile-only"
+      title={fil ? 'Hanapin' : 'Search'}
       aria-current={pathname.startsWith(`${p}/hanapin`) ? 'page' : undefined}
+      data-plain
     >
       <Icon name="search" size={18} />
       <span class="dock-btn__label">{fil ? 'Hanapin' : 'Search'}</span>
     </a>
 
-    {/* Scroll To Top Button with Circular Progress (Desktop only) */}
     <button
       type="button"
       id="dock-top-btn"
@@ -146,7 +168,7 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
         />
       </svg>
-      <Icon name="chevron-up" size={18} />
+      <Icon name="chevron-up" size={16} />
     </button>
   </div>
 </aside>
@@ -154,23 +176,22 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
 <style>
   .quick-dock {
     position: fixed;
-    right: max(var(--space-3), env(safe-area-inset-right));
-    bottom: max(var(--space-3), env(safe-area-inset-bottom));
-    z-index: 50;
+    right: max(var(--space-4), env(safe-area-inset-right));
+    bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    z-index: 48;
     pointer-events: none;
   }
 
+  /* Desktop: compact utility pair only (SOS + back-to-top) — never duplicates header nav */
   .quick-dock__bar {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: color-mix(in srgb, var(--surface) 90%, transparent);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: var(--surface-raised);
     border: 1px solid var(--line-strong);
-    border-radius: var(--radius-full);
-    padding: 6px;
-    box-shadow: var(--shadow-lg), 0 8px 30px -6px rgb(15 23 42 / 0.2);
+    border-radius: var(--r-card);
+    padding: 5px;
+    box-shadow: var(--shadow-lg);
     pointer-events: auto;
   }
 
@@ -182,26 +203,33 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
     min-height: 40px;
     min-width: 40px;
     padding: 6px 12px;
-    border-radius: var(--radius-full);
-    border: none;
+    border-radius: var(--r-inner);
+    border: 1px solid transparent;
     background: transparent;
-    color: var(--ink);
+    color: var(--ink-strong);
+    font-family: var(--font-display);
     font-size: var(--text-xs);
     font-weight: 700;
-    font-family: inherit;
     text-decoration: none;
     cursor: pointer;
     position: relative;
-    transition: background-color var(--dur-fast), transform var(--dur-fast), color var(--dur-fast);
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      border-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
+  }
+
+  .dock-btn.dock-btn--mobile-only {
+    display: none;
+  }
+
+  .dock-btn:visited {
+    color: var(--ink-strong);
   }
 
   .dock-btn:hover {
-    background: color-mix(in srgb, var(--interactive) 10%, transparent);
+    background: var(--surface-sunken);
     color: var(--interactive);
-  }
-
-  .dock-btn:active {
-    transform: scale(0.96);
   }
 
   .dock-btn--sos {
@@ -209,9 +237,10 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
     color: var(--alert-emergency-ink);
   }
 
-  .dock-btn--sos:hover {
-    background: color-mix(in srgb, var(--alert-emergency) 85%, black);
-    color: #ffffff;
+  .dock-btn--sos:hover,
+  .dock-btn--sos:focus-visible {
+    background: var(--alert-emergency-hover);
+    color: var(--alert-emergency-ink);
   }
 
   .dock-btn--top {
@@ -219,6 +248,7 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
     width: 40px;
     height: 40px;
     border-radius: var(--radius-full);
+    background: var(--surface-sunken);
   }
 
   .dock-progress-svg {
@@ -232,42 +262,42 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
   .dock-progress-bg {
     fill: none;
     stroke: var(--line);
-    stroke-width: 3;
+    stroke-width: 2.5;
   }
 
   .dock-progress-bar {
     fill: none;
     stroke: var(--interactive);
-    stroke-width: 3.5;
+    stroke-width: 2.5;
     stroke-linecap: round;
-    transition: stroke-dasharray var(--dur-fast);
+    transition: stroke-dasharray var(--motion-fast) var(--ease-standard);
   }
 
+  /* Mobile bottom navigation bar */
   @media (max-width: 768px) {
     .quick-dock {
       right: 0;
       bottom: 0;
       left: 0;
-      width: 100vw;
-      margin: 0;
+      width: 100%;
     }
 
     .quick-dock__bar {
       width: 100%;
       border-radius: 0;
-      border-inline: none;
-      border-bottom: none;
+      border-inline: 0;
+      border-bottom: 0;
       border-top: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface) 95%, transparent);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      padding-top: 6px;
-      padding-inline: 4px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom, 16px));
+      background: var(--surface-raised);
+      padding: 6px 4px max(8px, env(safe-area-inset-bottom, 12px));
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 2px;
-      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 -2px 10px rgb(15 23 42 / 0.08);
+    }
+
+    .dock-btn.dock-btn--mobile-only {
+      display: inline-flex;
     }
 
     .dock-btn {
@@ -275,7 +305,7 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
       gap: 3px;
       padding: 6px 2px;
       min-height: 48px;
-      min-width: 48px;
+      min-width: 44px;
       width: 100%;
       border-radius: var(--radius-sm);
     }
@@ -284,13 +314,17 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
       display: block;
       font-size: 10px;
       font-weight: 700;
-      line-height: 1;
+      line-height: 1.1;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     .dock-btn[aria-current="page"] {
       color: var(--interactive);
-      background: color-mix(in srgb, var(--interactive) 12%, transparent);
+      background: var(--interactive-surface);
+      border-color: var(--interactive-border);
     }
 
     .dock-btn--top {
@@ -301,33 +335,32 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
   /* Dialog styling */
   .dock-dialog {
     border: 1px solid var(--line-strong);
-    border-radius: var(--radius-lg);
-    background: var(--surface);
+    border-radius: var(--r-card);
+    background: var(--surface-raised);
     color: var(--ink);
     padding: 0;
-    max-width: 420px;
+    max-width: 440px;
     width: calc(100vw - 32px);
-    box-shadow: var(--shadow-lg), 0 20px 40px -10px rgb(0 0 0 / 0.3);
+    box-shadow: var(--shadow-lg);
     margin: auto;
     pointer-events: auto;
   }
 
   .dock-dialog::backdrop {
-    background: rgba(15, 23, 42, 0.45);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgb(2 6 23 / 0.6);
   }
 
   .dock-dialog__content {
-    padding: var(--space-4);
+    padding: var(--space-5);
   }
 
   .dock-dialog__head {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--space-3);
     border-bottom: 1px solid var(--line);
-    padding-bottom: var(--space-2);
+    padding-bottom: var(--space-3);
   }
 
   .dock-dialog__title {
@@ -341,32 +374,32 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
   }
 
   .dock-dialog__close {
-    background: transparent;
-    border: none;
-    color: var(--ink-muted);
+    width: 44px;
+    height: 44px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+    color: var(--ink-strong);
     cursor: pointer;
-    padding: 4px;
-    border-radius: var(--radius-sm);
-    display: flex;
+    border-radius: var(--r-inner);
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+    transition: border-color var(--motion-fast) var(--ease-standard);
   }
 
   .dock-dialog__close:hover {
-    color: var(--ink);
-    background: var(--surface-sunken);
+    border-color: var(--line-strong);
+    color: var(--interactive);
   }
 
   .dock-dialog__desc {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     color: var(--ink-muted);
-    margin: var(--space-2) 0 var(--space-3);
+    margin: var(--space-3) 0;
   }
 
   .dock-sos-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
@@ -376,14 +409,16 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
     padding: var(--space-2) var(--space-3);
-    background: var(--surface-raised);
+    background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: var(--r-inner);
   }
 
   .dock-sos-label {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--ink-strong);
   }
@@ -392,27 +427,39 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-height: 40px;
     padding: 6px 12px;
-    border-radius: var(--radius-full);
+    border-radius: var(--r-inner);
     background: var(--alert-emergency);
     color: var(--alert-emergency-ink);
     font-size: var(--text-xs);
     font-weight: 700;
     text-decoration: none;
-    transition: opacity var(--dur-fast);
+    transition: background-color var(--motion-fast) var(--ease-standard);
   }
 
-  .dock-sos-btn:hover {
-    opacity: 0.9;
+  .dock-sos-btn:visited {
+    color: var(--alert-emergency-ink);
+  }
+
+  .dock-sos-btn:hover,
+  .dock-sos-btn:focus-visible {
+    background: var(--alert-emergency-hover);
+    color: var(--alert-emergency-ink);
+  }
+
+  .dock-sos-pending,
+  .dock-sos-demo {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
   }
 
   .dock-dialog__foot {
-    margin-top: var(--space-3);
-    text-align: center;
+    margin-top: var(--space-4);
   }
 </style>
 
-<script is:inline>
+<script is:inline define:vars={{ searchHref }}>
   ;(function () {
     var trigger = document.getElementById('dock-sos-trigger')
     var dialog = document.getElementById('dock-sos-dialog')
@@ -420,7 +467,6 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
     var topBtn = document.getElementById('dock-top-btn')
     var progressBar = document.getElementById('dock-progress-bar')
 
-    // Dialog handling
     if (trigger && dialog) {
       trigger.addEventListener('click', function () {
         if (typeof dialog.showModal === 'function') {
@@ -439,14 +485,15 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
             dialog.removeAttribute('open')
           }
           trigger.setAttribute('aria-expanded', 'false')
+          trigger.focus()
         })
       }
 
       dialog.addEventListener('close', function () {
         trigger.setAttribute('aria-expanded', 'false')
+        trigger.focus()
       })
 
-      // Click outside to close
       dialog.addEventListener('click', function (e) {
         if (e.target === dialog) {
           dialog.close()
@@ -454,18 +501,13 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
       })
     }
 
-    // Scroll handling: back to top and scroll progress circle
     function onScroll() {
       var scrollY = window.scrollY || document.documentElement.scrollTop
       var docHeight = document.documentElement.scrollHeight - window.innerHeight
       var progress = docHeight > 0 ? Math.min(100, Math.max(0, (scrollY / docHeight) * 100)) : 0
 
       if (topBtn) {
-        if (scrollY > 280) {
-          topBtn.hidden = false
-        } else {
-          topBtn.hidden = true
-        }
+        topBtn.hidden = scrollY <= 280
       }
 
       if (progressBar) {
@@ -478,16 +520,20 @@ const HOTLINES = (await getHotlines()).items.slice(0, 5)
 
     if (topBtn) {
       topBtn.addEventListener('click', function () {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })
       })
     }
 
-    // Keyboard shortcut '/' to search
     document.addEventListener('keydown', function (e) {
-      if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
-        e.preventDefault()
-        window.location.href = '/hanapin'
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
+      var active = document.activeElement
+      var tag = active ? active.tagName : ''
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (active && active.isContentEditable)) {
+        return
       }
+      e.preventDefault()
+      window.location.href = searchHref
     })
   })()
 </script>

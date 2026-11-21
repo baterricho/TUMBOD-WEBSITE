@@ -243,10 +243,10 @@ export function fallbackSeaCondition(observedAt: Date): SeaCondition {
 export function fallbackBoatTrip(updatedAt: Date): BoatTrip {
   return {
     id: 'main',
-    route: 'Pantalan ng Liminangcong ↔ Tumbod (Tuluran Island)',
+    route: 'Tumbod Pier ↔ Liminangcong Port (~0.7 km)',
     operator: 'Mga Rehistradong Bangkero ng Tumbod (Bangka Association)',
     departureTime: '6:30 AM – 8:00 AM (Umagahan) & 2:00 PM (Hapon)',
-    fare: '₱120.00 – ₱150.00 bawat pasahero',
+    fare: '',
     status: 'running',
     statusReason: null,
     updatedAt,

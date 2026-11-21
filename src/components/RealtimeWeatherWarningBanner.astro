@@ -2,11 +2,9 @@
 /**
  * RealtimeWeatherWarningBanner.astro
  *
- * Real-time color-coded weather & maritime warning banner positioned at the top of the Safety panel.
- * Evaluates current sea alerts and assigns immediate visual severity:
- *   - RED: Dangerous (Wave >= 1.5m or Wind >= 30 kph or Gale/Squall) -> Strict No-Sail Order
- *   - YELLOW: Caution (Wave >= 1.0m or Wind >= 20 kph) -> Small Craft Advisory
- *   - GREEN: Favorable / Calm -> Safe for all bancas
+ * Real-time maritime & weather warning banner for Barangay Tumbod / Tuluran Island.
+ * Uses paired semantic status tokens (WCAG 2.2 AA in light & dark mode) without
+ * jarring dark slabs or neon glow halos.
  */
 import Icon from './Icon.astro'
 import type { Locale } from '@/lib/i18n'
@@ -26,9 +24,10 @@ const windSpeed = cur?.windSpeedKph ?? 14
 const windGusts = cur?.windGustsKph ?? 19
 const windDir = cur?.windCardinalFil ?? 'Hilagang Silangan (Amihan)'
 const monsoon = cur?.monsoonFil ?? 'Amihan (Northeast Monsoon)'
-const updatedAt = cur?.time ? new Date(cur.time).toLocaleTimeString(fil ? 'fil-PH' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : 'Live'
+const updatedAt = cur?.time
+  ? new Date(cur.time).toLocaleTimeString(fil ? 'fil-PH' : 'en-US', { hour: '2-digit', minute: '2-digit' })
+  : 'Live'
 
-// Severity resolution
 let severity: 'danger' | 'caution' | 'safe' = 'safe'
 if (waveHeight >= 1.5 || windSpeed >= 32 || windGusts >= 42) {
   severity = 'danger'
@@ -40,79 +39,61 @@ const SEVERITY_CONFIG = {
   danger: {
     badgeFil: 'DELIKADO — BAWAL PUMALAOT (NO SAIL)',
     badgeEn: 'DANGER — STRICTLY NO SAILING (GALE ALERT)',
-    color: '#ef4444',
-    bg: '#450a0a',
-    cardBg: 'rgba(239, 68, 68, 0.12)',
-    border: '#ef4444',
-    pulseColor: '#ef4444',
     icon: 'warning',
     headlineFil: 'Mahigpit na Babala sa Dagat: Ipinagbabawal ang Paglayag ng Lahat ng Bangka',
     headlineEn: 'Severe Maritime Warning: All Small Craft Voyages Strictly Suspended',
     subtextFil: `Nasa ${waveHeight} m ang alon at may bugso ng hangin na ${windGusts} km/h sa Kipot ng Tuluran at Look ng Taytay. Alinsunod sa Philippine Coast Guard MC 03-01, ipinagbabawal ang pagpalaot ng mga bangkang mas mababa sa 3 Gross Ton. I-ahon agad ang mga bangka sa ligtas na pampang.`,
     subtextEn: `Wave swell is ${waveHeight} m with gusts up to ${windGusts} km/h across Tuluran Strait and Taytay Bay. Pursuant to PCG regulations, all watercraft under 3 GT are legally barred from unmooring. Haul out bancas to high ground immediately.`,
-    alertClass: 'banner--danger',
   },
   caution: {
     badgeFil: 'MAG-INGAT — LIMITADO ANG PAGLAYAG',
     badgeEn: 'CAUTION — SMALL CRAFT ADVISORY',
-    color: '#f59e0b',
-    bg: '#451a03',
-    cardBg: 'rgba(245, 158, 11, 0.12)',
-    border: '#f59e0b',
-    pulseColor: '#f59e0b',
     icon: 'warning',
     headlineFil: 'Paalala sa Mangingisda: May Katamtamang Alon at Chop sa Kipot ng Tuluran',
     headlineEn: 'Fishermen Advisory: Moderate Cross-Swell & Chop in Tuluran Strait',
     subtextFil: `Umakyat ang alon sa ${waveHeight} m kasama ang hanging ${windSpeed} km/h (${windDir}). Hindi pinapayagan ang maliliit na de-sagwan o bangkang walang katig na tumawid sa malawak na dagat patungong Casian Island o Shark Fin Bay.`,
     subtextEn: `Wave height is ${waveHeight} m with winds at ${windSpeed} km/h (${cur?.windCardinal ?? 'NE'}). Unmotorized or small bancas under 1 GT are advised not to traverse deep waters toward Casian or Shark Fin Bay.`,
-    alertClass: 'banner--caution',
   },
   safe: {
     badgeFil: 'LIGTAS PUMALAOT — NORMAL NA DAGAT',
     badgeEn: 'SAFE TO SAIL — FAVORABLE SEA CONDITIONS',
-    color: '#10b981',
-    bg: '#064e3b',
-    cardBg: 'rgba(16, 185, 129, 0.12)',
-    border: '#10b981',
-    pulseColor: '#10b981',
     icon: 'anchor',
     headlineFil: 'Kondisyon sa Dagat: Payapa at Ligtas ang Karagatan ng Tuluran',
     headlineEn: 'Sea Condition: Calm & Safe for All Fishing Operations',
     subtextFil: `Banayad ang alon (${waveHeight} m) at kaaya-aya ang hangin (${windSpeed} km/h mula sa ${windDir}). Ligtas sa pangingisda sa Look ng Taytay at bukas ang tawiran sa Kipot ng Tuluran.`,
     subtextEn: `Gentle swell (${waveHeight} m) and light sea breeze (${windSpeed} km/h from ${cur?.windCardinal ?? 'NE'}). Open for all artisanal fishing craft across Taytay Bay and regular Tuluran Strait crossings.`,
-    alertClass: 'banner--safe',
   },
-}
+} as const
 
 const active = SEVERITY_CONFIG[severity]
 ---
 
-<div class={`realtime-safety-banner ${active.alertClass}`} id="realtime-safety-banner" role="alert" aria-live="assertive">
-  {/* Top Bar with Live Indicator & Badges */}
+<div
+  class={`realtime-safety-banner banner--${severity}`}
+  id="realtime-safety-banner"
+  role={severity === 'safe' ? 'status' : 'alert'}
+  aria-live={severity === 'danger' ? 'assertive' : 'polite'}
+>
   <div class="banner__topbar">
     <div class="banner__status-cluster">
-      <div class="severity-beacon" style={`background-color:${active.color};box-shadow: 0 0 10px ${active.pulseColor};`}>
-        <span class="beacon-pulse" style={`background-color:${active.color};`}></span>
-      </div>
-      <span class="severity-badge" style={`color:${active.color};border-color:${active.border};background:${active.cardBg};`}>
+      <span class="severity-badge">
         <Icon name={active.icon as any} size={15} />
         <strong>{fil ? active.badgeFil : active.badgeEn}</strong>
       </span>
-      <span class="monsoon-tag">
+      <span class="chip chip--muted">
         <Icon name="compass" size={13} />
         <span>{monsoon}</span>
       </span>
     </div>
 
-    <div class="banner__timestamp">
-      <span class="timestamp-dot"></span>
-      <span>{fil ? `Real-time Telemetry: ${updatedAt}` : `Real-time Telemetry: ${updatedAt}`}</span>
+    <div class="banner__timestamp figure">
+      <span class="timestamp-dot" aria-hidden="true"></span>
+      <span>Telemetry: {updatedAt}</span>
     </div>
   </div>
 
-  {/* Main Alert Message */}
   <div class="banner__body">
-    <h2 class="banner__headline" style={`color:${active.color};`}>
+    <h2 class="banner__headline">
       {fil ? active.headlineFil : active.headlineEn}
     </h2>
     <p class="banner__subtext">
@@ -120,60 +101,58 @@ const active = SEVERITY_CONFIG[severity]
     </p>
   </div>
 
-  {/* Key Sea Readings Bar */}
   <div class="banner__metrics">
     <div class="banner-metric">
-      <div class="metric-icon-wrap">
+      <span class="metric-icon-wrap" aria-hidden="true">
         <Icon name="wave-moderate" size={18} />
-      </div>
+      </span>
       <div class="metric-text">
         <span class="metric-label">{fil ? 'Taas ng Alon' : 'Wave Swell'}</span>
-        <strong>{waveHeight} metro</strong>
+        <strong class="figure">{waveHeight} m</strong>
       </div>
     </div>
 
     <div class="banner-metric">
-      <div class="metric-icon-wrap">
+      <span class="metric-icon-wrap" aria-hidden="true">
         <Icon name="wind" size={18} />
-      </div>
+      </span>
       <div class="metric-text">
         <span class="metric-label">{fil ? 'Lakas ng Hangin' : 'Wind Speed'}</span>
-        <strong>{windSpeed} km/h ({cur?.windCardinal ?? 'NE'})</strong>
+        <strong class="figure">{windSpeed} km/h ({cur?.windCardinal ?? 'NE'})</strong>
       </div>
     </div>
 
     <div class="banner-metric">
-      <div class="metric-icon-wrap">
+      <span class="metric-icon-wrap" aria-hidden="true">
         <Icon name="wind" size={18} />
-      </div>
+      </span>
       <div class="metric-text">
         <span class="metric-label">{fil ? 'Bugso ng Hangin' : 'Wind Gusts'}</span>
-        <strong>{windGusts} km/h</strong>
+        <strong class="figure">{windGusts} km/h</strong>
       </div>
     </div>
 
     <div class="banner-metric banner-metric--hotline">
-      <div class="metric-icon-wrap" style="color:var(--palette-coral-400);">
+      <span class="metric-icon-wrap metric-icon-wrap--emergency" aria-hidden="true">
         <Icon name="phone" size={18} />
-      </div>
+      </span>
       <div class="metric-text">
         <span class="metric-label">{fil ? 'Coast Guard Taytay' : 'PCG Taytay Hotline'}</span>
-        <a href="tel:09178427653" style="color:#fca5a5;font-weight:700;text-decoration:none;">0917-842-7653</a>
+        <a href="tel:09178427653" class="banner-hotline-link figure">0917-842-7653</a>
       </div>
     </div>
   </div>
 
-  {/* Quick Anchor Navigation */}
   <div class="banner__quicklinks">
-    <a href="#fishing-forecast-trends" class="quicklink-btn">
+    <a href="#fishing-forecast-trends" class="btn btn--secondary btn--sm" data-plain>
       <Icon name="bar-chart" size={14} />
-      <span>{fil ? 'Tingnan ang 5-Araw na Forecast Trends' : 'View 5-Day Fishing Trends'}</span>
+      <span>{fil ? '5-Araw na Forecast' : '5-Day Trends'}</span>
     </a>
-    <a href="#emergency-directory" class="quicklink-btn">
+    <a href="#emergency-directory" class="btn btn--secondary btn--sm" data-plain>
       <Icon name="phone" size={14} />
-      <span>{fil ? 'Emergency Contact Directory' : 'Emergency Directory'}</span>
+      <span>{fil ? 'Emergency Directory' : 'Emergency Directory'}</span>
     </a>
-    <a href="#fisherman-safety-section" class="quicklink-btn">
+    <a href="#fisherman-safety-section" class="btn btn--secondary btn--sm" data-plain>
       <Icon name="checklist" size={14} />
       <span>{fil ? 'Bantay-Laot Checklist' : 'Pre-Departure Checklist'}</span>
     </a>
@@ -181,221 +160,164 @@ const active = SEVERITY_CONFIG[severity]
 </div>
 
 <style>
-.realtime-safety-banner {
-  border-radius: var(--radius-xl, 16px);
-  padding: var(--space-4, 18px);
-  color: #f8fafc;
-  background: #090d16;
-  border: 2px solid;
-  margin-bottom: var(--space-4, 20px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-  position: relative;
-  overflow: hidden;
-}
-
-.banner--danger {
-  border-color: #ef4444;
-  background: linear-gradient(180deg, #1f0808 0%, #0d0404 100%);
-  box-shadow: 0 0 25px rgba(239, 68, 68, 0.25);
-}
-
-.banner--caution {
-  border-color: #f59e0b;
-  background: linear-gradient(180deg, #1c1304 0%, #0d0902 100%);
-  box-shadow: 0 0 25px rgba(245, 158, 11, 0.2);
-}
-
-.banner--safe {
-  border-color: #10b981;
-  background: linear-gradient(180deg, #051a14 0%, #030d0a 100%);
-  box-shadow: 0 0 25px rgba(16, 185, 129, 0.15);
-}
-
-/* Top bar */
-.banner__topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2, 10px);
-  margin-bottom: var(--space-3, 14px);
-  padding-bottom: var(--space-2, 10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.banner__status-cluster {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.severity-beacon {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.beacon-pulse {
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border-radius: 50%;
-  opacity: 0.6;
-  animation: beacon-pulse-anim 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
-}
-
-@keyframes beacon-pulse-anim {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.9;
+  .realtime-safety-banner {
+    border-radius: var(--r-card);
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-inline-start-width: 4px;
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    gap: var(--space-4);
   }
-  50% {
-    transform: scale(1.6);
-    opacity: 0.2;
+
+  .banner--safe {
+    background: var(--status-open-surface);
+    border-color: var(--status-open-border);
+    border-inline-start-color: var(--status-open);
+    color: var(--status-open-ink);
   }
-  100% {
-    transform: scale(2);
-    opacity: 0;
+
+  .banner--caution {
+    background: var(--status-caution-surface);
+    border-color: var(--status-caution-border);
+    border-inline-start-color: var(--status-caution);
+    color: var(--status-caution-ink);
   }
-}
 
-.severity-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 12px;
-  border-radius: 9999px;
-  border: 1px solid;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
+  .banner--danger {
+    background: var(--alert-emergency-surface);
+    border-color: var(--alert-emergency-border);
+    border-inline-start-color: var(--alert-emergency);
+    color: var(--alert-emergency-on-surface);
+  }
 
-.monsoon-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 4px 10px;
-  border-radius: 9999px;
-}
+  .banner__topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
 
-.banner__timestamp {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: #94a3b8;
-  font-family: var(--font-mono, monospace);
-}
+  .banner__status-cluster {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
 
-.timestamp-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #22c55e;
-}
+  .severity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    border: 1px solid currentColor;
+    color: currentColor;
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
 
-/* Body */
-.banner__body {
-  margin-bottom: var(--space-3, 14px);
-}
+  .banner__timestamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
 
-.banner__headline {
-  margin: 0 0 6px;
-  font-size: var(--text-xl, 20px);
-  font-weight: 900;
-  line-height: 1.3;
-}
+  .timestamp-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-full);
+    background: var(--status-open);
+  }
 
-.banner__subtext {
-  margin: 0;
-  font-size: var(--text-sm, 14px);
-  color: #cbd5e1;
-  line-height: 1.6;
-  max-width: 85ch;
-}
+  .banner__body {
+    display: grid;
+    gap: 6px;
+  }
 
-/* Metrics */
-.banner__metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
-  margin-bottom: var(--space-3, 14px);
-}
+  .banner__headline {
+    margin: 0;
+    font-size: var(--text-xl);
+    font-weight: 700;
+    line-height: 1.25;
+    color: currentColor;
+  }
 
-.banner-metric {
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md, 10px);
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+  .banner__subtext {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink);
+    line-height: 1.6;
+    max-width: 80ch;
+  }
 
-.metric-icon-wrap {
-  color: #38bdf8;
-  flex-shrink: 0;
-}
+  .banner__metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(11.5rem, 100%), 1fr));
+    gap: var(--space-2);
+  }
 
-.metric-text {
-  display: flex;
-  flex-direction: column;
-}
+  .banner-metric {
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    padding: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
 
-.metric-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #94a3b8;
-  font-weight: 700;
-}
+  .metric-icon-wrap {
+    color: var(--interactive);
+    flex-shrink: 0;
+    display: inline-flex;
+  }
 
-.banner-metric strong {
-  font-size: 13px;
-  color: #ffffff;
-}
+  .metric-icon-wrap--emergency {
+    color: var(--alert-emergency-on-surface);
+  }
 
-.banner-metric--hotline strong {
-  color: #fca5a5;
-}
+  .metric-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
 
-/* Quicklinks */
-.banner__quicklinks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
+  .metric-label {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--ink-muted);
+    font-weight: 700;
+  }
 
-.quicklink-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #e2e8f0;
-  font-size: 12px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: all 0.15s ease;
-}
+  .banner-metric strong {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+  }
 
-.quicklink-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.3);
-}
+  .banner-hotline-link {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--alert-emergency-on-surface);
+    text-decoration: underline;
+  }
+
+  .banner__quicklinks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+  }
 </style>

@@ -245,7 +245,15 @@ test.describe('critical paths', () => {
     }
   })()
 
-  const TILE_HOSTS = ['server.arcgisonline.com', ...supabaseHost]
+  const TILE_HOSTS = [
+    'server.arcgisonline.com',
+    'tile.openstreetmap.org',
+    'api.open-meteo.com',
+    'marine-api.open-meteo.com',
+    ...supabaseHost,
+  ]
+  const isAllowedHomepageHost = (host: string) =>
+    TILE_HOSTS.includes(host) || /(^|\.)windy\.com$|(^|\.)windyty\.com$/.test(host)
 
   for (const route of ['/ligtas', '/ligtas/hotline']) {
     test(`10. no third-party origin is requested on ${route}`, async ({ page }) => {
@@ -259,12 +267,12 @@ test.describe('critical paths', () => {
     })
   }
 
-  test('10b. the homepage requests map tiles and nothing else third-party', async ({ page }) => {
+  test('10b. the homepage requests allowed map/weather hosts and nothing else third-party', async ({ page }) => {
     const disallowed: string[] = []
     page.on('request', (req) => {
       const host = new URL(req.url()).hostname
       if (host === 'localhost') return
-      if (!TILE_HOSTS.includes(host)) disallowed.push(req.url())
+      if (!isAllowedHomepageHost(host)) disallowed.push(req.url())
     })
     await page.goto('/')
     await page.waitForLoadState('networkidle')

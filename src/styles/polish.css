@@ -1,106 +1,22 @@
 /**
- * Polish layer — "premium, spacious, nature-inspired".
+ * Chrome Layer — Site Header, Primary Navigation, Clock, Footer & Mobile Targets.
  *
- * Brief of 2026-08-05: minimalist, elegant, soft shadows, rounded corners,
- * glassmorphism used sparingly, elegant gradients, consistent spacing,
- * professional typography, high readability.
- *
- * The constraint that shapes all of it: this is read on a mid-range Android in
- * sunlight, often on 2G, sometimes at 2am in an evacuation centre. So
- * "premium" here means generous space, quiet surfaces and real typographic
- * hierarchy — NOT heavy shadows, animation, or translucency that costs
- * contrast. Every effect below is cheap to paint and safe in both themes.
- *
- * Loaded last, so it refines the layers beneath rather than replacing them.
+ * Anti-slop civic masthead: crisp 1px borders, 3px official gold top rule,
+ * balanced spacing, unmistakable active states, and >=44px touch targets.
  */
 
-:root {
-  /* Soft, layered elevation, tinted slate rather than pure black so the shade
-     reads as cool paper depth instead of grey haze. oceanic.css redeclares
-     these — it loads last and its values are the ones that ship; these are the
-     fallback for anything that reads them before that file parses. */
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.08);
-  --shadow-md: 0 2px 4px rgb(15 23 42 / 0.04), 0 6px 16px -4px rgb(15 23 42 / 0.12);
-  --shadow-lg: 0 4px 8px rgb(15 23 42 / 0.05), 0 16px 32px -8px rgb(15 23 42 / 0.16);
+/* ── Sticky Header ────────────────────────────────────────────
+   Backdrop blur lives on `::before` so `.siteheader` does NOT become a
+   containing block for fixed-position `.mega__panel` overlays. */
 
-  /* One radius family, applied consistently. */
-  --r-card: 14px;
-  --r-inner: 10px;
-
-  /* Reading measure for label/value rows. Without this they stretch the full
-     1200px on desktop and the distance from a label to its value becomes a
-     journey — the worst readability problem in the wide layout. */
-  --measure-row: 62rem;
-}
-
-/*
- * THE DARK-MODE SHADOW OVERRIDES ARE GONE, deleted rather than updated.
- *
- * They lived under `@media (prefers-color-scheme: dark)` and
- * `:root[data-theme='dark']`, and they were the last theme fork in the
- * stylesheets. The site now ships one theme; a visitor whose OS is set to dark
- * was getting heavy black shadows painted onto a white page, which is the
- * exact bug in reverse that the dark theme had with the light ones. If a
- * second theme ever returns it returns in tokens.css, not here.
- */
-
-/* ── Smooth scrolling ───────────────────────────────────────────
-   `scroll-padding-top` stops an anchored heading landing underneath the
-   sticky header — the bug every sticky nav ships with. */
-
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 7rem;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-}
-
-/* ── Header: glass, used once ───────────────────────────────────
-   The brief asked for glassmorphism "sparingly". This is the primary place it
-   appears: the sticky header, where translucency shows content passing
-   beneath it.
-
-   `backdrop-filter` is progressive, and the fallback is a SOLID background —
-   never a transparent one. Text contrast must not depend on blur support. */
-
-/*
- * THE BLUR IS ON A PSEUDO-ELEMENT, NOT ON THE HEADER ITSELF, and that is
- * load-bearing rather than stylistic.
- *
- * `backdrop-filter` makes an element a containing block for any
- * `position: fixed` descendant. The mega panels are fixed full-screen
- * overlays rendered inside this header — so with the filter on `.siteheader`
- * they resolved their `inset` against the HEADER instead of the viewport and
- * collapsed to an 88px strip with all four columns clipped out of sight.
- *
- * Moving the filter to `::before` keeps the frosted look exactly, because the
- * panels are not descendants of the pseudo-element and therefore escape it.
- */
 .siteheader {
   position: sticky;
   top: 0;
   z-index: 50;
-  border-bottom: 1px solid var(--line);
-  /*
-   * THE GOLD RULE ALONG THE TOP. This is the government marker on the whole
-   * site — the brief's "official gold header accent" — and it is drawn as a
-   * 3px `border-top` rather than as a painted band because gold is a fill that
-   * cannot carry text (2.15:1 under white, 9.39:1 only under near-black). A
-   * gold band would have forced every word in the header to near-black on
-   * amber, which is a warning sign, not a masthead.
-   */
   border-top: 3px solid var(--accent);
-  /* Soft lift, so the header reads as a plane floating over the hero rather
-     than a band painted on it. Small enough to stay invisible at the top of a
-     white page. */
-  box-shadow: var(--shadow-sm);
-  /* SOLID fallback underneath; the pseudo-element paints the glass on top.
-     Text contrast must never depend on blur support. */
+  border-bottom: 1px solid var(--line);
   background-color: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
 }
 
 .siteheader::before {
@@ -108,41 +24,9 @@ html {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-color: color-mix(in srgb, var(--surface-raised) 88%, transparent);
-  /*
-   * ═══════════════════════════════════════════════════════════════
-   * PREFIXED FIRST, STANDARD LAST. Do not "tidy" this back.
-   *
-   * Every `backdrop-filter` pair in this codebase was authored the other way
-   * round — standard first, `-webkit-` second — and that shipped a real bug for
-   * an unknown length of time.
-   *
-   * esbuild (Vite's default CSS minifier) treats `-webkit-backdrop-filter` as
-   * an ALIAS of `backdrop-filter` rather than as a separate property, and
-   * collapses the pair to whichever one comes LAST. With the old order the
-   * build emitted `-webkit-backdrop-filter` alone — 14 of them, verified in
-   * dist/index.html — which Firefox does not implement at all. Firefox got no
-   * blur, and worse, the `@supports` guards were still testing the prefixed
-   * form, so it did not get the opaque fallback either.
-   *
-   * There is no authoring order that keeps BOTH through esbuild; the only lever
-   * that would is switching Vite to `css.transformer: 'lightningcss'` with
-   * explicit targets, which was tried and is a much larger change to the
-   * pipeline than this bug is worth. So the choice is which single property to
-   * ship, and the standard one is correct:
-   *
-   *   Chrome / Edge / Android WebView   blur      (supports both)
-   *   Firefox 103+                      blur      (standard only — was broken)
-   *   Safari 18+                        blur
-   *   Safari < 18                       opaque fallback, via @supports not
-   *
-   * Every engine now lands on blur or on a designed fallback. Nothing lands in
-   * the gap. The cost is honest: Safari 17 and earlier lose the frosted look
-   * and get a solid surface, which is the more readable of the two anyway.
-   * ═══════════════════════════════════════════════════════════════
-   */
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  backdrop-filter: blur(14px) saturate(1.4);
+  background-color: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  backdrop-filter: blur(12px) saturate(1.2);
 }
 
 .siteheader__bar {
@@ -156,19 +40,10 @@ html {
 }
 
 .siteheader__nav {
+  position: relative;
   border-top: 1px solid var(--line);
 }
 
-/*
- * Three-column grid so the nav sits DEAD CENTRE regardless of how wide the
- * "More" disclosure is. With flexbox and `margin-left: auto` the list drifts
- * off-centre by half the width of whatever sits beside it — the usual reason
- * "centred" navs are not.
- *
- * Below 60rem it collapses to a single scrollable row: five icon items plus a
- * disclosure will not fit across a phone, and squeezing them would drop the
- * targets under 44px.
- */
 .siteheader__navbar {
   max-width: 1200px;
   margin-inline: auto;
@@ -179,21 +54,103 @@ html {
   gap: var(--space-4);
 }
 
-/* Desktop only: the disclosure is pinned right in the three-column grid. On
-   phones the navbar is a wrapping flex row and this rule does not apply, which
-   is why `margin-left:auto` was removed from the element's inline style — see
-   SiteHeader.astro. */
 .siteheader__navbar > .navmore {
   grid-column: 3;
   justify-self: end;
   margin-left: auto;
 }
 
+/* ── Brand Identity ─────────────────────────────────────────── */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  color: var(--ink-strong);
+  text-decoration: none;
+}
+
+.brand:visited {
+  color: var(--ink-strong);
+}
+
+.brand__seal {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--nav-indicator);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-raised));
+  color: var(--ink-strong);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.brand__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-base);
+  color: var(--ink-strong);
+}
+
+.brand__place {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* ── Header Clock ───────────────────────────────────────────── */
+
+.siteclock {
+  display: none;
+  margin: 0;
+  text-align: right;
+  line-height: 1.15;
+  min-width: 7.5rem;
+}
+
+@media (min-width: 48rem) {
+  .siteclock:not([hidden]) {
+    display: block;
+  }
+}
+
+.siteclock__time {
+  display: block;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-strong);
+}
+
+.siteclock__date {
+  display: block;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* ── Primary Nav ────────────────────────────────────────────── */
+
 .mainnav {
   grid-column: 2;
   display: flex;
   justify-content: center;
-  gap: clamp(var(--space-2), 2.2vw, var(--space-5));
+  gap: clamp(var(--space-2), 2vw, var(--space-5));
   list-style: none;
   margin: 0;
   padding: 0;
@@ -204,120 +161,131 @@ html {
   display: flex;
 }
 
-/*
- * Icon BESIDE the label, at the larger size the design calls for. The icon is
- * still `aria-hidden` and still never appears without its text — §8.4 stands.
- */
 .mainnav__link {
   position: relative;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: var(--space-2);
-  min-height: 60px;
+  min-height: 52px;
   padding: var(--space-2) var(--space-2) var(--space-3);
   font-family: var(--font-display);
-  font-size: clamp(1rem, 0.86rem + 0.42vw, 1.375rem);
-  letter-spacing: 0.005em;
+  font-weight: 600;
+  font-size: clamp(0.9375rem, 0.88rem + 0.25vw, 1.0625rem);
+  letter-spacing: -0.005em;
   color: var(--ink);
   text-decoration: none;
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
-/* The hover/active indicator is a rule that GROWS from the centre. It is
-   drawn with a pseudo-element rather than `border-bottom` so it can animate
-   without shifting the label by a pixel. */
+.mainnav__link:visited {
+  color: var(--ink);
+}
+
 .mainnav__link::after {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: 6px;
-  height: 3px;
+  bottom: 0;
+  height: 2.5px;
   width: 0;
-  border-radius: 2px;
-  /* The government gold, and the reason it can be gold now is that gold is no
-     longer the ACTION colour: the primary CTA is navy (see `--action` in
-     tokens.css), so "where I am" and "what to press" are two different
-     signals again. This underline is also why `--nav-indicator` is amber-600
-     rather than amber-500 — a 3px rule has to clear 1.4.11's 3:1. */
+  border-radius: 2px 2px 0 0;
   background: var(--nav-indicator);
   translate: -50% 0;
-  transition: width 200ms var(--ease-standard);
+  transition: width var(--motion-base) var(--ease-standard);
 }
 
 .mainnav__link:hover,
-.mainnav__link:focus-visible {
-  color: var(--ink);
+.mainnav__link:focus-visible,
+.mainnav__link[aria-current='page'] {
+  color: var(--ink-strong);
 }
 
 .mainnav__link:hover::after,
-.mainnav__link:focus-visible::after {
-  width: calc(100% - var(--space-4));
-}
-
-/* Current page keeps the rule permanently — location is not a hover state
-   (WCAG 2.4.8). */
+.mainnav__link:focus-visible::after,
 .mainnav__link[aria-current='page']::after {
-  width: calc(100% - var(--space-4));
+  width: calc(100% - var(--space-3));
 }
 
-.mainnav__link[aria-current='page'] {
+/* ── "More" Disclosure ──────────────────────────────────────── */
+
+.navmore {
+  position: relative;
+}
+
+.navmore summary::-webkit-details-marker {
+  display: none;
+}
+
+.navmore__panel {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 55;
+  min-width: 34rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  padding: var(--space-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-lg);
+}
+
+.navmore__heading {
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: var(--space-2);
+}
+
+.navmore__link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding-inline: var(--space-2);
+  margin-inline: calc(var(--space-2) * -1);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.navmore__link:visited {
   color: var(--ink);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mainnav__link::after {
-    transition: none;
-  }
+.navmore__link:hover,
+.navmore__link:focus-visible {
+  background: var(--surface-sunken);
+  color: var(--interactive);
+  text-decoration: underline;
 }
 
-/*
- * ═══════════════════════════════════════════════════════════════
- * PHONE NAVIGATION — IT WRAPS. It used to scroll sideways.
- *
- * THE BUG. The six nav items measure 647px of content. In a 320px scroller
- * that left two items visible, and "Ligtas" — Safety — was off-screen or
- * half-cut at EVERY phone width tested (320/360/375/390/412/414). On a site
- * whose reason for existing is that people can reach safety information during
- * a typhoon, the safety section required a horizontal swipe inside a header,
- * and nothing on screen said the header could be swiped.
- *
- * WHY NOT THE OBVIOUS FIXES.
- *   - Icon-only below a breakpoint fits all six easily, and is forbidden here:
- *     this project's own rule (§8.4) is that a nav icon NEVER appears without
- *     its text, because the readers most likely to need the labels are the ones
- *     least likely to decode a glyph.
- *   - Shrinking the type until it fits trades one accessibility problem for
- *     another, and the review asked explicitly that it not be done.
- *   - Reordering so Ligtas comes earlier makes Safety visible and leaves
- *     Kontak and Higit pa in the same hole.
- *
- * WRAPPING FIXES THE CLASS, not one item: at 320px the six items settle onto
- * two rows and every one of them is visible, with no scrolling and nothing
- * clipped. The cost is about 48px of sticky header, which is why the target
- * height drops from 60px to 48px here — still comfortably past the 44px
- * minimum, and cheaper than a row of content the reader cannot find.
- *
- * The mega panels re-measure `--header-h` on resize, so a two-row header still
- * positions the full-screen overlays correctly.
- * ═══════════════════════════════════════════════════════════════
- */
+/* ── Responsive Header & Phone Navigation ───────────────────── */
+
 @media (max-width: 60rem) {
-  /*
-   * A GRID, NOT A WRAPPING FLEX ROW — and the reason is layout shift.
-   *
-   * Flex-wrap put the items wherever they happened to fit, which meant their
-   * row assignment depended on TEXT WIDTH. When the webfont swapped in, labels
-   * changed width, an item jumped from row one to row two, and everything after
-   * it moved: measured as the single largest layout shift on the homepage
-   * (0.0262 of a 0.044 total) at 7.2s on Slow 4G.
-   *
-   * `minmax(5.75rem, 1fr)` makes the column count a function of the CONTAINER
-   * only. The font can load, swap, or fail entirely and the six items stay in
-   * exactly the same cells — the shift is not reduced, it is impossible.
-   *
-   * It also settles the row count: three columns at every phone width, so six
-   * items are always two rows rather than the three or four that flex produced.
-   */
+  .siteheader {
+    position: static;
+  }
+
+  .siteheader__bar {
+    position: sticky;
+    top: 0;
+    z-index: 51;
+    background-color: var(--surface-raised);
+    border-bottom: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+
   .siteheader__navbar {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(5.75rem, 1fr));
@@ -327,8 +295,6 @@ html {
     overflow-x: visible;
   }
 
-  /* Fill the cell, so the tap target is the whole column rather than the width
-     of the word inside it. */
   .siteheader__navbar > li,
   .siteheader__navbar > .navmore {
     display: flex;
@@ -342,48 +308,10 @@ html {
     min-width: 0;
   }
 
-  /*
-   * `display: contents` so all SIX items share ONE wrapping context.
-   *
-   * Wrapping the two containers independently gave three rows and a 207px
-   * sticky header: `.mainnav` filled two rows with its five items and left
-   * room on the second, then `.navmore` — a sibling, not a list item — was
-   * forced onto a third row of its own with 200px of empty space beside it.
-   * Dissolving the list box lets "Higit pa" flow into that gap, and six items
-   * settle onto two rows.
-   *
-   * The alternative was moving the disclosure into the <ul> in the markup,
-   * which is arguably more correct semantically and would have broken the
-   * three-column grid that centres the nav on desktop — a documented,
-   * deliberate behaviour. This keeps the DOM and confines the change to the
-   * phone breakpoint.
-   *
-   * `role="list"` is set on the element in SiteHeader.astro precisely because
-   * of this rule: `display: contents` removes the box, and several engines drop
-   * the list semantics with it, so a screen reader stops announcing "list, 6
-   * items". The explicit role puts that back. Do not remove one without the
-   * other.
-   */
   .mainnav {
     display: contents;
   }
 
-  /*
-   * TIGHTENED TO FIT TWO ROWS, and the numbers matter.
-   *
-   * Wrapping alone produced FOUR rows at 320px and a 255px sticky header — a
-   * quarter of the screen, permanently, which is a worse bug than the one it
-   * fixed. The six items measure 556px of content; two rows inside a 288px
-   * usable line needs an average item under ~92px, and the widest were 102 and
-   * 109.
-   *
-   * The width comes off the CHROME, not the words: 2px of icon gap, 2px each
-   * side of padding, and a 20px icon instead of 24px. The label keeps its size
-   * — shrinking text was explicitly ruled out, and it is the label that the
-   * readers this nav is built for actually use.
-   *
-   * The target stays 48px tall, past the 44px minimum.
-   */
   .mainnav__link {
     font-size: var(--text-sm);
     min-height: 48px;
@@ -392,340 +320,60 @@ html {
     gap: 6px;
   }
 
-  /* 20px, not 24px. The icon is decorative here — it is `aria-hidden` and never
-     appears without its label — so it is the right place to spend the pixels
-     that buy a shorter header. */
   .mainnav__link svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 
-  /* The underline sits 6px off the bottom of a 60px item; at 48px that reads
-     as floating. Pull it to the edge of the shorter target. */
-  .mainnav__link::after {
-    bottom: 2px;
-  }
-}
-
-/* ── Brand ──────────────────────────────────────────────────────── */
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 44px;
-  color: var(--ink);
-  text-decoration: none;
-}
-
-/*
- * The seal ring is GOLD, and its text is not.
- *
- * amber-600 for the ring (3.19:1 on white — a 2px border is governed by
- * 1.4.11 and needs 3:1; amber-500 would have been 2.15:1 and effectively a
- * ring you cannot see), and the letters inside stay on the inherited body ink.
- * This is the single clearest place the government gold appears at a glance,
- * which is why the ring is the element that carries it rather than a fill.
- */
-.brand__seal {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-full);
-  border: 2px solid var(--nav-indicator);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--ink-strong);
-  font-family: var(--font-display);
-  font-size: var(--text-xs);
-  letter-spacing: 0.02em;
-}
-
-.brand__text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-}
-
-.brand__name {
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-}
-
-.brand__place {
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--ink-muted);
-}
-
-/* ── Spacing: more air ──────────────────────────────────────────
-   "Spacious" is mostly this. Sections breathe on desktop and stay compact on
-   a phone, where vertical space is the scarcest resource. */
-
-.section {
-  padding-block: calc(var(--space-4) * 2);
-}
-
-@media (min-width: 46rem) {
-  .section {
-    padding-block: calc(var(--space-4) * 3.25);
+  .navmore {
+    position: static;
   }
 
-  .section__head {
-    margin-bottom: var(--space-4);
+  .navmore__panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    min-width: 0;
+    grid-template-columns: 1fr;
+    border-radius: 0;
+    border-inline: 0;
+  }
+
+  .brand__place {
+    font-size: var(--text-xs);
+  }
+
+  /* Standalone mobile tap targets (>=44px, WCAG 2.5.8) */
+  footer nav li > a,
+  a.figure,
+  .calevents a,
+  .fcard__body a.figure {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    width: 100%;
+  }
+
+  p > a:only-child,
+  footer p > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .calday {
+    min-height: 44px;
   }
 }
 
-/* ── Typography: real hierarchy ─────────────────────────────────
-   Section titles were all one size, which flattened every page. They now
-   scale with the viewport, and the accent rule is thinner and longer — a
-   chart tick rather than a highlighter. */
+/* ── Site Footer ────────────────────────────────────────────── */
 
-.section__title {
-  font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.375rem);
-  letter-spacing: 0.05em;
-}
-
-.section__title::before {
-  width: 2rem;
-  height: 3px;
-  border-radius: 2px;
-}
-
-.page-title {
-  font-size: clamp(1.875rem, 1.4rem + 2.2vw, 3rem);
-  line-height: 1.08;
-  letter-spacing: -0.015em;
-  text-wrap: balance;
-}
-
-/* Looser leading reads better at arm's length in glare. */
-.prose p,
-.section-lede {
-  line-height: 1.65;
-}
-
-/* ── Reading width ──────────────────────────────────────────────
-   A readability fix, not a decorative one. */
-
-.row,
-.hotlines,
-.office {
-  max-width: var(--measure-row);
-}
-
-/* ── Cards: quieter, rounder, lifted ────────────────────────────── */
-
-.card,
-.fcard,
-.stat,
-.faq details,
-.mapcard {
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-sm);
-}
-
-.fcard {
-  gap: var(--space-3);
-  transition:
-    box-shadow 200ms var(--ease-standard),
-    border-color 200ms var(--ease-standard),
-    transform 200ms var(--ease-standard);
-}
-
-a.fcard:hover,
-a.fcard:focus-visible {
-  background: var(--surface-raised);
-  border-color: var(--line-strong);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-/* ── Card media: much lighter ───────────────────────────────────
-   Was a 16:10 saturated teal block on every card. Six stacked read as a wall
-   of teal and drowned the titles, which are the actual content.
-
-   Now a slim band: soft tinted surface, dashed edge, label in muted ink. It
-   still reserves the place a photograph will go, and still says so, but it no
-   longer outshouts the text. */
-
-.fcard__media {
-  aspect-ratio: auto;
-  min-height: 84px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-start;
-  padding: var(--space-3);
-  border-radius: var(--r-inner);
-  border: 1px dashed var(--line-strong);
-  background:
-    linear-gradient(
-      160deg,
-      color-mix(in srgb, var(--sea-calm) 12%, transparent) 0%,
-      color-mix(in srgb, var(--palette-mangrove) 6%, transparent) 100%
-    ),
-    var(--surface-sunken);
-  color: var(--ink-muted);
-  text-align: left;
-  letter-spacing: 0.06em;
-}
-
-/* ── Tiles: same family as the cards ────────────────────────────── */
-
-.tile {
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-sm);
-  transition:
-    box-shadow 200ms var(--ease-standard),
-    transform 200ms var(--ease-standard);
-}
-
-.tile:hover,
-.tile:focus-visible {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-/* ── Buttons ────────────────────────────────────────────────────── */
-
-.btn {
-  border-radius: var(--r-inner);
-  box-shadow: var(--shadow-sm);
-  transition:
-    box-shadow 180ms var(--ease-standard),
-    transform 180ms var(--ease-standard),
-    background-color 180ms var(--ease-standard);
-}
-
-.btn:hover,
-.btn:focus-visible {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-/* Glass, second and last use. The base is solid enough that white text holds
-   contrast even where blur is unsupported. */
-.btn--ghost {
-  background: rgb(255 255 255 / 0.14);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
-
-.btn--ghost:hover,
-.btn--ghost:focus-visible {
-  background: rgb(255 255 255 / 0.24);
-}
-
-/* ── Hero: depth without a photograph ───────────────────────────
-   Until real photography arrives the hero is a gradient, and a flat gradient
-   looks like a placeholder. These layers give it the horizon and haze of
-   water seen from a boat, using only the existing palette. Decoration only —
-   both are painted behind the scrim, so headline contrast is unchanged. */
-
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    /* sun haze off the water, low and to one side */
-    radial-gradient(
-      120% 70% at 72% 12%,
-      color-mix(in srgb, var(--palette-bangka-yellow) 14%, transparent) 0%,
-      transparent 58%
-    ),
-    radial-gradient(
-      90% 60% at 8% 88%,
-      color-mix(in srgb, var(--palette-sound-deep) 55%, transparent) 0%,
-      transparent 70%
-    );
-  pointer-events: none;
-}
-
-/* A single hairline where deep water meets the shallows. */
-.hero::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--palette-glare) 40%, transparent),
-    transparent
-  );
-  pointer-events: none;
-}
-
-.hero__seal {
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  box-shadow: var(--shadow-md);
-}
-
-/* ── Stats ──────────────────────────────────────────────────────── */
-
-.stat {
-  background: var(--surface-raised);
-}
-
-.stat__value {
-  letter-spacing: -0.02em;
-}
-
-/* ── Timeline: a real spine ─────────────────────────────────────── */
-
-.timeline__body {
-  position: relative;
-  border-left-color: var(--line);
-}
-
-.timeline__body::before {
-  content: '';
-  position: absolute;
-  left: -7px;
-  top: 6px;
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-full);
-  background: var(--accent);
-  border: 2px solid var(--surface);
-}
-
-/* ── Footer ─────────────────────────────────────────────────────── */
-
-footer {
+footer,
+.sitefooter {
   background: var(--surface-sunken);
   border-top: 1px solid var(--line);
 }
 
-/* ── Focus ──────────────────────────────────────────────────────
-   Above the polish in importance: hover must never be the only affordance.
-   Keyboard users get the same emphasis, more loudly. */
-
-:where(a, button, summary, [tabindex]):focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* ── Motion, gated ──────────────────────────────────────────────
-   One block covering every transition and lift added above. */
-
-@media (prefers-reduced-motion: reduce) {
-  .fcard,
-  a.fcard:hover,
-  a.fcard:focus-visible,
-  .tile,
-  .tile:hover,
-  .tile:focus-visible,
-  .btn,
-  .btn:hover,
-  .btn:focus-visible {
-    transition: none;
-    transform: none;
-  }
+.sitefooter__meta {
+  grid-template-columns: minmax(0, 1fr);
 }

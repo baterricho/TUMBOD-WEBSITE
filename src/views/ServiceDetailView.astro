@@ -27,14 +27,17 @@ const p = prefix(locale)
 ---
 
 <Section divider={false}>
-  <nav aria-label={t.common.breadcrumb} style="font-size:var(--text-sm);color:var(--ink-muted)">
-    <a href={p || '/'}>{t.nav.home}</a> › <a href={`${p}/serbisyo`}>{t.services.title}</a> ›{' '}
-    {fil ? service.nameFil : service.nameEn}
+  <nav aria-label={t.common.breadcrumb} class="crumb">
+    <a href={p || '/'}>{t.nav.home}</a>
+    <span aria-hidden="true">/</span>
+    <a href={`${p}/serbisyo`}>{t.services.title}</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{fil ? service.nameFil : service.nameEn}</span>
   </nav>
-  <h1 style="font-size:var(--text-3xl);margin-top:var(--space-3)">
+  <h1 class="page-title svc-title">
     {fil ? service.nameFil : service.nameEn}
   </h1>
-  <p style="margin-top:var(--space-2);max-width:var(--measure);color:var(--ink-muted)">
+  <p class="section-lede svc-lede">
     {fil ? service.descriptionFil : service.descriptionEn}
   </p>
 </Section>
@@ -44,10 +47,10 @@ const p = prefix(locale)
 </Section>
 
 <Section title={t.services.process} titleId="process">
-  <ol style="padding-inline-start:var(--space-5);max-width:var(--measure);display:grid;gap:var(--space-2)">
+  <ol class="svc-steps">
     {service.steps.map((step) => <li>{fil ? step.labelFil : step.labelEn}</li>)}
   </ol>
-  <p style="margin-top:var(--space-4);font-size:var(--text-sm);color:var(--ink-muted);max-width:var(--measure)">
+  <p class="svc-note">
     {t.services.notAutomated}
   </p>
 </Section>
@@ -57,7 +60,45 @@ const p = prefix(locale)
     isPlaceholder(service.legalBasis) ? (
       <Placeholder value={service.legalBasis} display="block" />
     ) : (
-      <p>{service.legalBasis}</p>
+      <p class="prose">{service.legalBasis}</p>
     )
   }
 </Section>
+
+<style>
+  .crumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
+  .crumb a {
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+  .crumb a:hover {
+    color: var(--interactive);
+    text-decoration: underline;
+  }
+  .svc-title {
+    margin-top: var(--space-3);
+  }
+  .svc-lede {
+    margin-top: var(--space-2);
+  }
+  .svc-steps {
+    padding-inline-start: var(--space-5);
+    max-width: var(--measure);
+    display: grid;
+    gap: var(--space-2);
+    line-height: var(--leading-body);
+  }
+  .svc-note {
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    max-width: var(--measure);
+  }
+</style>

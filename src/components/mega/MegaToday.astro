@@ -219,15 +219,15 @@ const ACTIONS: readonly MenuLink[] = [
     </li>
     <li>
       <span class="mega-metric__label">
-        <Icon name="document" size={14} />
-        {fil ? 'Pamasahe' : 'Fare'}
+        <Icon name="bangka" size={14} />
+        {fil ? 'Bangkero' : 'Operator'}
       </span>
       <span class="mega-metric__value mega-metric__value--sm">
         {
-          isPlaceholder(boat.fare) ? (
+          isPlaceholder(boat.operator) ? (
             <span class="mega__meta">{fil ? 'wala pang datos' : 'not yet supplied'}</span>
           ) : (
-            boat.fare
+            boat.operator
           )
         }
       </span>

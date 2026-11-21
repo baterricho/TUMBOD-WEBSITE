@@ -192,9 +192,15 @@ const exploreCards = [
   It is unchanged and still in use on /kontak, where it is the only map on the
   page and answers "where is this place", and in the design-system catalogue.
 */}
-<Section divider={false}>
-  <div class="office">
-    <OfficeStatusBadge hours={office} locale={locale} />
+<Section divider={false} class="home-status-section">
+  <div class="home-status-bar">
+    <div class="office">
+      <OfficeStatusBadge hours={office} locale={locale} />
+    </div>
+    <a href={`${p}/panahon`} class="btn btn--secondary btn--sm" data-plain>
+      <Icon name="wind" size={15} />
+      <span>{fil ? 'Buong Ulat ng Panahon' : 'Full Weather Portal'}</span>
+    </a>
   </div>
 </Section>
 
@@ -245,9 +251,9 @@ const exploreCards = [
   <WeatherMarineWidget locale={locale} />
 </Section>
 
-{/* Interactive Weather & Wind Map (Like the Windy Map) */}
+{/* Interactive Live Weather & Wind Map (Windy Radar + Real Satellite Marine Map) */}
 <Section title={fil ? 'Mapa ng Hangin at Alon (Windy Radar)' : 'Interactive Wind & Sea Map (Windy Radar)'} titleId="mapa-hangin">
-  <WeatherMap locale={locale} />
+  <WeatherMap locale={locale} defaultMode="windy" />
 </Section>
 
 {/* Interactive Crossing Planner for Island Residents & Boats */}
@@ -507,3 +513,19 @@ const exploreCards = [
 
   <p style="margin-top:var(--space-4)"><a href={`${p}/kasaysayan`}>{t.home.readHistory} →</a></p>
 </Section>
+
+<style>
+  .home-status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-inline-start: 3px solid var(--accent);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-sm);
+  }
+</style>

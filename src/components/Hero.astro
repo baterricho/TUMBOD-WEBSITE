@@ -201,44 +201,63 @@ const SLIDES = [
 
 const PHOTOS = SLIDES.filter((s): s is PhotoSlide => s.kind === 'photo')
 const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
+const SLIDE_COUNT = SLIDES.length
 ---
 
 <section class="hero" aria-labelledby="hero-title">
-  {/* ── Copy ────────────────────────────────────────────────── */}
+  {/* ── Copy & Identity Column ─────────────────────────────── */}
   <div class="hero__inner">
-    <p class="hero__eyebrow">{fil ? 'Maligayang pagdating sa' : 'Welcome to'}</p>
+    <p class="hero__eyebrow">
+      <span class="hero__eyebrow-dot" aria-hidden="true"></span>
+      <span>{fil ? 'Pulo ng Tuluran · Malampaya Sound' : 'Tuluran Island · Malampaya Sound'}</span>
+    </p>
 
     <h1 class="hero__title" id="hero-title">Barangay Tumbod</h1>
 
     <p class="hero__lede">
       {
         fil
-          ? 'Isang barangay sa Pulo ng Tuluran — napapaligiran ng dagat sa bawat panig. Narito ang kailangan ninyong malaman ngayong araw.'
-          : 'A barangay on Tuluran Island — surrounded by sea on every side. Here is what you need to know today.'
+          ? 'Opisyal na gabay ng barangay sa Pulo ng Tuluran — pinagsasamang ulat sa paglalayag, serbisyo sa papeles, at mabilisang saklolo para sa komunidad.'
+          : 'An island barangay at the mouth of Malampaya Sound — daily sea & crossing conditions, document requirements, and verified emergency assistance.'
       }
     </p>
 
     <div class="hero__cta">
-      <a class="btn btn--primary" href={`${p}/serbisyo`}>
-        <Icon name="document" size={20} />
-        {fil ? 'Mga serbisyo at requirements' : 'Services and requirements'}
+      <a class="hero__cta-primary" href={`${p}/serbisyo`} data-plain>
+        <Icon name="document" size={18} />
+        <span>{fil ? 'Mga serbisyo at requirements' : 'Services and requirements'}</span>
       </a>
-      <a class="btn btn--ghost" href={`${p}/ligtas`}>
-        <Icon name="anchor" size={20} />
-        {fil ? 'Lagay ng dagat at biyahe' : 'Sea conditions and boat trips'}
+      <a class="hero__cta-secondary" href={`${p}/ligtas`} data-plain>
+        <Icon name="anchor" size={18} />
+        <span>{fil ? 'Lagay ng dagat at biyahe' : 'Sea conditions and boat trips'}</span>
       </a>
     </div>
 
-    <p class="hero__place">
-      <Icon name="pin" size={16} />
-      {SITE.municipality}, {SITE.province}, Philippines
-    </p>
-
+    <dl class="hero__facts">
+      <div class="hero__fact">
+        <dt>{fil ? 'Lokasyon' : 'Location'}</dt>
+        <dd class="hero__place">
+          <Icon name="pin" size={14} />
+          <span>{SITE.municipality}, {SITE.province}</span>
+        </dd>
+      </div>
+      <div class="hero__fact">
+        <dt>{fil ? 'Mga Kipot' : 'Channels'}</dt>
+        <dd>Blockade &amp; Endeavor Straits</dd>
+      </div>
+      <div class="hero__fact">
+        <dt>{fil ? 'Koordinado' : 'Coordinates'}</dt>
+        <dd class="figure">{SITE.coordinates.lat}° N, {SITE.coordinates.lng}° E</dd>
+      </div>
+    </dl>
   </div>
 
   <div class="hero__gallery">
     <div class="hero__gallery-heading">
-      <span>{t.home.galleryHighlights}</span>
+      <div class="hero__gallery-meta">
+        <span class="hero__gallery-kicker">{t.home.galleryHighlights}</span>
+        <span class="hero__gallery-count figure" id="hero-slide-counter">1 / {SLIDE_COUNT}</span>
+      </div>
       <a href={`${p}/larawan`}>
         {t.home.viewGallery}
         <Icon name="chevron-right" size={16} />
@@ -262,7 +281,7 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
           aria-label={fil ? 'Mga larawan ng barangay' : 'Barangay images'}
         >
           <div class="hero__slide" id="hero-map">
-            {/* Poster: real coastline, inline, 0 KB extra, offline-safe. */}
+            {/* Poster: real OSM coastline, inline, 0 KB external fetch, offline-safe. */}
             <div class="hero__poster" id="hero-poster">
               <svg
                 viewBox={CHART_GEOMETRY.viewBox}
@@ -270,8 +289,16 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
                 aria-hidden="true"
                 class="hero__postersvg"
               >
+                <defs>
+                  <pattern id="hero-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+                    <path d="M 24 0 L 0 0 0 24" fill="none" stroke="rgba(148,163,184,0.08)" stroke-width="0.5" />
+                  </pattern>
+                </defs>
+                <rect width="640" height="160" fill="url(#hero-grid)" />
                 {CHART_GEOMETRY.contours.map((d) => <path d={d} class="hero__contour" />)}
                 <path d={CHART_GEOMETRY.islandPath} class="hero__island" />
+                <text x="190" y="84" class="hero__svg-water">Blockade Strait</text>
+                <text x="455" y="84" class="hero__svg-water">Endeavor Strait</text>
               </svg>
             </div>
             {/* Live satellite mounts here after idle. */}
@@ -722,6 +749,10 @@ const VIDEOS = SLIDES.filter((s): s is VideoSlide => s.kind === 'video')
               var i = slides.indexOf(e.target)
               prev.disabled = i <= 0
               next.disabled = i >= slides.length - 1
+              var counter = document.getElementById('hero-slide-counter')
+              if (counter && i >= 0) {
+                counter.textContent = (i + 1) + ' / ' + slides.length
+              }
 
               // The pin label and the map controls belong to the map slide
               // only — neither means anything over a photograph.

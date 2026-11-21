@@ -1,10 +1,7 @@
 ---
 /**
- * Contact body, locale-aware.
- *
- * A static chart rather than an embedded tile map: tiles would blow the byte
- * budget and add a third-party request, both forbidden (§22.3). Coordinates are
- * selectable text so they can be pasted into any map app.
+ * ContactView — Verified location details, sea travel routes, emergency
+ * numbers (via PhoneNumber demo/placeholder guards), and opt-in LocationMap.
  */
 import Section from '@/components/Section.astro'
 import Icon from '@/components/Icon.astro'
@@ -26,115 +23,159 @@ const t = getDictionary(locale)
 const fil = locale === 'fil'
 const p = prefix(locale)
 
-const BOAT_ROUTES = [
+const TRAVEL_ROUTES = [
   {
-    originFil: 'Pantalan ng Liminangcong (Liminangcong Port)',
-    originEn: 'Liminangcong Seaport',
-    destinationFil: 'Sitio Sentro, Barangay Tumbod (Pulo ng Tuluran)',
-    destinationEn: 'Sitio Sentro, Barangay Tumbod (Tuluran Island)',
-    durationFil: '25 – 40 minuto (humigit-kumulang 8 km / 4.3 NM tawid-dagat)',
-    durationEn: '25 – 40 minutes (approx. 8 km / 4.3 NM sea crossing)',
-    scheduleFil: 'Araw-araw: 6:30 AM – 8:00 AM (umaga) at 1:30 PM – 3:00 PM (hapon, depende sa alon)',
-    scheduleEn: 'Daily: 6:30 AM – 8:00 AM (morning) and 1:30 PM – 3:00 PM (afternoon, wave-dependent)',
-    fareFil: '₱120.00 – ₱150.00 bawat pasahero (Regular); ₱800.00 – ₱1,500.00 (Espesyal na arkila)',
-    fareEn: '₱120.00 – ₱150.00 per passenger (Regular); ₱800.00 – ₱1,500.00 (Special charter)',
+    originFil: 'Liminangcong Port (Coastal Gateway)',
+    originEn: 'Liminangcong Port (Coastal Gateway)',
+    destinationFil: 'Pantalan ng Tumbod (Tuluran Island)',
+    destinationEn: 'Tumbod Pier (Tuluran Island)',
+    modeFil: 'Bangka / Motorized Outrigger (Dagat Lamang)',
+    modeEn: 'Motorized Bangka / Boat (Sea Only)',
+    distanceFil: '~0.7 km tawid sa Endeavor Strait · tinatayang ~5–10 minuto',
+    distanceEn: '~0.7 km across Endeavor Strait · estimated ~5–10 minutes',
+    scheduleFil: 'Mga biyahe ayon sa iskedyul ng mga bangkero at lagay ng dagat',
+    scheduleEn: 'Departures subject to registered boat operators and sea conditions',
     operatorFil: 'Mga Rehistradong Bangkero ng Tumbod (Boat Operators Association)',
     operatorEn: 'Registered Boat Operators of Barangay Tumbod',
   },
   {
-    originFil: 'Taytay Poblacion Pier (Muelle ng Taytay)',
-    originEn: 'Taytay Poblacion Pier (Taytay Muelle)',
-    destinationFil: 'Barangay Tumbod (Dumadaan sa Malampaya Sound)',
-    destinationEn: 'Barangay Tumbod (via Malampaya Sound waters)',
-    durationFil: '1.5 – 2 oras depende sa lakas ng hangin at alon',
-    durationEn: '1.5 – 2 hours depending on sea and wind conditions',
-    scheduleFil: 'Tuwing araw ng pamilihan (market days) o sa pamamagitan ng espesyal na arkila',
-    scheduleEn: 'Market days or by special private arrangement/charter',
-    fareFil: '₱250.00 – ₱300.00 bawat pasahero; ₱2,500.00 – ₱3,500.00 (Pakyaw na arkila ng bangka)',
-    fareEn: '₱250.00 – ₱300.00 per passenger; ₱2,500.00 – ₱3,500.00 (Full boat charter)',
-    operatorFil: 'Komposisyon ng mga lisensyadong bangkang pampasahero sa Taytay',
-    operatorEn: 'Licensed passenger motor banca operators',
+    originFil: 'Pantalan ng Tumbod (Tuluran Island)',
+    originEn: 'Tumbod Pier (Tuluran Island)',
+    destinationFil: 'Taytay Poblacion at Mainland Palawan',
+    destinationEn: 'Taytay Poblacion & Mainland Palawan',
+    modeFil: '2 Yugto: Bangka (Dagat) + Van / Bus / Motorsiklo (Kalsada)',
+    modeEn: 'Multi-Leg: Boat (Sea) + Van / Bus / Motorcycle (Highway)',
+    distanceFil: '~0.7 km dagat papuntang Liminangcong Port + ~54.4 km kalsada patungong Taytay (~262.7 km patungong Puerto Princesa)',
+    distanceEn: '~0.7 km sea to Liminangcong Port + ~54.4 km road to Taytay (~262.7 km road to Puerto Princesa)',
+    scheduleFil: 'Hiwalay ang paglipat sa Liminangcong Port; tanungin ang bangkero o terminal sa oras ng alis',
+    scheduleEn: 'Transfer at Liminangcong Port; verify current departures with boat crews and highway van terminals',
+    operatorFil: 'Bangka Operators Association (Dagat) + Mainland Palawan Van / Bus Lines',
+    operatorEn: 'Tumbod Boat Association (Sea) + Mainland Palawan Van / Bus Lines',
   },
 ]
 ---
 
 <Section divider={false} class="section--airy">
   <h1 class="page-title">{t.nav.contact}</h1>
+  <p class="section-lede">
+    {fil
+      ? 'Lokasyon ng Barangay Hall sa Pulo ng Tuluran, iskedyul ng bangka, at opisyal na numerong pang-emergency.'
+      : 'Barangay Hall location on Tuluran Island, boat crossing routes, and verified emergency contact numbers.'}
+  </p>
 </Section>
 
-{/*
-  The chart band is GONE from this page, and the reason is that it was the
-  second map on it.
-
-  /kontak already carries `<LocationMap>` further down: a real tile map with
-  zoom, four base layers, a marker with the PSA-centroid caveat, and links out
-  to Google Maps and OpenStreetMap. The decorative chart strip sat above it
-  showing the same island in schematic form, so a reader scrolling this page met
-  the same place twice in two visual languages — and after the strip became
-  interactive too, two tile maps loading two sets of tiles.
-
-  The strip stays on the homepage, where it is the only map and is doing
-  orienting work rather than duplicating an answer.
-*/}
-
 <Section title={fil ? 'Saan kami' : 'Where we are'} titleId="location">
-  <div style="max-width:var(--measure);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-3)">
-    <p>
-      Barangay Tumbod, {fil ? 'pulo ng Tuluran' : 'Tuluran Island'}, {SITE.municipality},{' '}
+  <div class="contact-card card">
+    <p class="contact-place">
+      Barangay Tumbod, {fil ? 'Pulo ng Tuluran' : 'Tuluran Island'}, {SITE.municipality},{' '}
       {SITE.province}, {SITE.region}.
     </p>
-    <p style="display:flex;align-items:center;gap:var(--space-2)">
-      <Icon name="pin" size={20} />
+    <p class="contact-coords">
+      <Icon name="pin" size={18} />
       <span class="figure">{SITE.coordinates.lat} N, {SITE.coordinates.lng} E</span>
     </p>
-    <p>
-      {t.footer.address}:{' '}
+    <p class="small">
+      <strong>{t.footer.address}:</strong>{' '}
       {isPlaceholder(SITE.address) ? <Placeholder value={SITE.address} /> : SITE.address}
     </p>
-    <p>
-      {t.footer.officeHours}:{' '}
+    <p class="small">
+      <strong>{t.footer.officeHours}:</strong>{' '}
       {isPlaceholder(SITE.officeHours) ? <Placeholder value={SITE.officeHours} /> : SITE.officeHours}
     </p>
   </div>
 </Section>
 
 <Section title={fil ? 'Paano marating ang Tumbod' : 'How to reach Tumbod'} titleId="travel">
-  <div style="max-width:var(--measure);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)">
+  <div class="routes-stack">
     {
-      BOAT_ROUTES.map((route) => (
-        <article class="fcard" style="padding:var(--space-4);background:var(--surface-sunken);border-radius:var(--radius-md);border:1px solid var(--border-subtle)">
-          <h3 style="font-size:var(--text-base);font-weight:600;margin-bottom:var(--space-2)">
+      TRAVEL_ROUTES.map((route) => (
+        <article class="fcard route-card">
+          <h3 class="route-card__title">
             {fil ? route.originFil : route.originEn} → {fil ? route.destinationFil : route.destinationEn}
           </h3>
-          <ul style="margin:0;padding-inline-start:var(--space-4);font-size:var(--text-sm);color:var(--ink-muted);line-height:1.6">
-            <li><strong>{fil ? 'Oras ng Biyahe:' : 'Travel Time:'}</strong> {fil ? route.durationFil : route.durationEn}</li>
-            <li><strong>{fil ? 'Iskedyul:' : 'Schedule:'}</strong> {fil ? route.scheduleFil : route.scheduleEn}</li>
-            <li><strong>{fil ? 'Pamasahe:' : 'Fare:'}</strong> {fil ? route.fareFil : route.fareEn}</li>
-            <li><strong>{fil ? 'Mga Bangkero:' : 'Operators:'}</strong> {fil ? route.operatorFil : route.operatorEn}</li>
+          <ul class="route-card__list">
+            <li><strong>{fil ? 'Sasakyan:' : 'Transport Mode:'}</strong> {fil ? route.modeFil : route.modeEn}</li>
+            <li><strong>{fil ? 'Distansya at Tantyang Oras:' : 'Distance & Est. Time:'}</strong> {fil ? route.distanceFil : route.distanceEn}</li>
+            <li><strong>{fil ? 'Paalala sa Biyahe:' : 'Travel Notes:'}</strong> {fil ? route.scheduleFil : route.scheduleEn}</li>
+            <li><strong>{fil ? 'Mga Operator:' : 'Operators:'}</strong> {fil ? route.operatorFil : route.operatorEn}</li>
           </ul>
         </article>
       ))
     }
-    <p class="is-water" style="margin-top:var(--space-2)">{t.safety.coastGuardRule}</p>
+    <p class="is-water muted small">{t.safety.coastGuardRule}</p>
   </div>
 </Section>
 
 <Section title={t.nav.emergencyLabel} titleId="numbers">
-  <ul style="list-style:none;padding:0;margin:0">
-    {
-      HOTLINES.slice(0, 3).map((line) => (
-        <li style="min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);border-bottom:1px solid var(--line);flex-wrap:wrap">
-          <span>{fil ? line.labelFil : line.labelEn}</span>
-          {/* Was a hand-rolled `tel:` link, which silently bypassed the
-              demo-mode guard — a demo build would have rendered fake numbers as
-              dialable here, the one outcome PhoneNumber.astro exists to
-              prevent. Always go through the component. */}
-          <PhoneNumber number={line.number} locale={locale} />
-        </li>
-      ))
-    }
-  </ul>
-  <p style="margin-top:var(--space-3)"><a href={`${p}/ligtas/hotline`}>{t.home.fullDirectory} →</a></p>
+  <div class="hotlines">
+    <ul class="list-reset">
+      {
+        HOTLINES.slice(0, 3).map((line) => (
+          <li class="row">
+            <span>{fil ? line.labelFil : line.labelEn}</span>
+            <PhoneNumber number={line.number} locale={locale} />
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+  <p class="contact-dir-link">
+    <a href={`${p}/ligtas/hotline`}>{t.home.fullDirectory} →</a>
+  </p>
 </Section>
 
 <LocationMap locale={locale} />
+
+<style>
+  .contact-card {
+    max-width: var(--measure);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+
+  .contact-place {
+    font-weight: 600;
+    color: var(--ink-strong);
+  }
+
+  .contact-coords {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--interactive);
+    font-weight: 600;
+  }
+
+  .routes-stack {
+    max-width: var(--measure);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .route-card {
+    padding: var(--space-5);
+  }
+
+  .route-card__title {
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--ink-strong);
+    margin: 0;
+  }
+
+  .route-card__list {
+    margin: 0;
+    padding-inline-start: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--ink);
+    line-height: 1.65;
+    display: grid;
+    gap: 6px;
+  }
+
+  .contact-dir-link {
+    margin-top: var(--space-4);
+  }
+</style>

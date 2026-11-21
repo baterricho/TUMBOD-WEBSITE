@@ -1,25 +1,12 @@
 /**
- * Component classes — Barangay Tumbod.
+ * Core Component System — Barangay Tumbod.
  *
- * The "bolder bangka" direction (approved 2026-08-04). Same Working Chart
- * concept, much higher visual energy: full-bleed colour bands, a larger and
- * more graphic chart, and quick-action tiles carrying real boat-paint colour.
- *
- * These are classes rather than inline styles because the bold treatment
- * repeats across pages — as inline styles it would bloat every document, and
- * bytes are the one thing this project will not spend carelessly.
- *
- * Every colour pairing here is contrast-checked; ratios noted inline.
+ * Single unified definition for layout primitives, buttons (all variants and
+ * interaction states), badges/chips, form inputs, data tables, accordions,
+ * empty/loading states, stats, timelines, FAQs, and opt-in maps.
  */
 
-/* ── THE ONE ORCHESTRATED MOMENT (DESIGN-SYSTEM.md §6) ───────
-   On first load in a session, the depth bands resolve outward and the pin
-   lands last. It earns its place by NARRATING the geography: the contours
-   settle and the island emerges as the thing between two channels. It teaches
-   the shape in under a second, then never plays again.
-
-   Once per session only — `html[data-motion="seen"]` suppresses it, set by the
-   inline script in Base.astro. Not on scroll. No parallax. CSS only. */
+/* ── Chart intro animation (once per session, CSS only) ─────── */
 
 @keyframes chart-band-in {
   from { opacity: 0; transform: scale(1.06); }
@@ -65,8 +52,6 @@ html:not([data-motion='seen']) .chart-pin {
   animation: chart-pin-in 320ms var(--ease-standard) 620ms forwards;
 }
 
-/* Reduced motion: final state immediately. Nothing to disable beyond this,
-   because no other animation exists on the site. */
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion='seen']) .chart-band,
   html:not([data-motion='seen']) .chart-land,
@@ -78,21 +63,52 @@ html:not([data-motion='seen']) .chart-pin {
   }
 }
 
-/* ── Page rhythm ────────────────────────────────────────────── */
+/* ── Page Rhythm & Sections ─────────────────────────────────── */
 
 .wrap {
+  width: 100%;
   max-width: 1200px;
   margin-inline: auto;
   padding-inline: var(--space-4);
 }
 
 .section {
-  padding-block: var(--space-5);
-  border-top: 1px solid var(--chart-rule);
+  padding-block: var(--space-6);
+  border-top: 1px solid var(--line);
+}
+
+@media (min-width: 48rem) {
+  .section {
+    padding-block: var(--space-7);
+  }
 }
 
 .section--flush {
   border-top: 0;
+}
+
+.section--sunken,
+.section:nth-of-type(even) {
+  background: var(--surface-sunken);
+}
+
+.section--airy {
+  padding-block: var(--space-7) var(--space-5);
+}
+
+@media (min-width: 48rem) {
+  .section--airy {
+    padding-block: var(--space-8) var(--space-5);
+  }
+}
+
+.section--airy + .section {
+  border-top: 0;
+  padding-top: var(--space-5);
+}
+
+.section--airy .section-lede {
+  margin-top: var(--space-3);
 }
 
 .section__head {
@@ -101,33 +117,13 @@ html:not([data-motion='seen']) .chart-pin {
   gap: var(--space-3);
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
-/* Section titles are set in the display face and preceded by a short accent
-   rule — a chart's section marker, made loud. */
-/*
- * SENTENCE CASE, NOT UPPERCASE — a readability fix, not a taste one.
- *
- * These were `text-transform: uppercase` with `--tracking-caps`. Uppercase
- * flattens every word to a rectangle: it removes the ascender and descender
- * profile that lets a reader recognise a word by its shape rather than by
- * decoding it letter by letter. That word-shape cue is worth least to a
- * confident reader and most to the two groups this site names in its own
- * planning documents — readers with low literacy, and older readers.
- *
- * It also cost more than it bought. Filipino compounds are long, and
- * "MADALAS HINGING DOKUMENTO" set in caps with extra tracking took two lines
- * at 320px where the sentence-case version takes one.
- *
- * Hierarchy now comes from size, weight and the accent rule — three signals
- * that survive translation, small screens and glare. It never came from the
- * capitals.
- */
 .section__title {
   font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: 600;
+  font-size: clamp(1.125rem, 1rem + 0.55vw, 1.375rem);
+  font-weight: 700;
   letter-spacing: var(--tracking-display);
   color: var(--ink-strong);
   display: flex;
@@ -137,25 +133,264 @@ html:not([data-motion='seen']) .chart-pin {
 
 .section__title::before {
   content: '';
-  width: var(--space-5);
-  height: 4px;
+  width: 24px;
+  height: 3px;
+  border-radius: 2px;
   background: var(--accent);
   flex-shrink: 0;
 }
 
+.page-title {
+  font-size: var(--text-4xl);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: var(--ink-strong);
+  text-wrap: balance;
+}
+
+.section-lede {
+  max-width: var(--measure);
+  color: var(--ink-muted);
+  font-size: var(--text-lg);
+  line-height: 1.65;
+}
+
 .dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
 
-/* ── Quick action tiles — bold, each with its own boat colour ── */
+/* ── Unified Button System (default / hover / focus / active / disabled / loading) ── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--r-inner);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  line-height: 1.2;
+  letter-spacing: 0.005em;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.btn:active:not(:disabled):not([aria-disabled='true']) {
+  transform: translateY(1px);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn[aria-busy='true'] {
+  cursor: progress;
+  opacity: 0.78;
+}
+
+.btn--sm {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: var(--text-xs);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+/* Primary & Solid CTA — deep navy (light) / ocean blue (dark) under crisp white ink with civic gold edge */
+.btn--primary,
+.btn--solid {
+  background: var(--action, #0f172a);
+  color: var(--action-ink, #fff);
+  -webkit-text-fill-color: var(--action-ink, #fff);
+  border-color: var(--action-edge, #d97706);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--primary:visited,
+.btn--solid:visited {
+  color: var(--action-ink, #fff);
+}
+
+.btn--primary:hover,
+.btn--primary:focus-visible,
+.btn--solid:hover,
+.btn--solid:focus-visible {
+  background: var(--action-hover, #020617);
+  color: var(--action-ink, #fff);
+  -webkit-text-fill-color: var(--action-ink, #fff);
+  border-color: var(--action-edge-hover, #f59e0b);
+  box-shadow: var(--shadow-md);
+}
+
+/* Secondary — crisp bordered neutral surface (works on light AND dark canvases) */
+.btn--secondary {
+  background: var(--surface-raised);
+  color: var(--ink-strong);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--secondary:visited {
+  color: var(--ink-strong);
+}
+
+.btn--secondary:hover,
+.btn--secondary:focus-visible {
+  background: var(--surface-sunken);
+  color: var(--interactive);
+  border-color: var(--interactive);
+}
+
+/* Ghost — safe light/dark theme subtle button (never white-on-white!) */
+.btn--ghost,
+.btn--ghost.on-light {
+  background: transparent;
+  color: var(--ink-strong);
+  border-color: var(--line-strong);
+}
+
+.btn--ghost:visited,
+.btn--ghost.on-light:visited {
+  color: var(--ink-strong);
+}
+
+.btn--ghost:hover,
+.btn--ghost:focus-visible,
+.btn--ghost.on-light:hover,
+.btn--ghost.on-light:focus-visible {
+  background: var(--surface-sunken);
+  color: var(--interactive);
+  border-color: var(--interactive);
+}
+
+/* Ghost on dark panels (hero & explicitly inverse surfaces) */
+.btn--ghost-inverse,
+.hero .btn--ghost {
+  background: rgb(255 255 255 / 0.12);
+  color: var(--palette-white);
+  -webkit-text-fill-color: var(--palette-white);
+  border-color: rgb(255 255 255 / 0.65);
+}
+
+.btn--ghost-inverse:visited,
+.hero .btn--ghost:visited {
+  color: var(--palette-white);
+}
+
+.btn--ghost-inverse:hover,
+.btn--ghost-inverse:focus-visible,
+.hero .btn--ghost:hover,
+.hero .btn--ghost:focus-visible {
+  background: rgb(255 255 255 / 0.22);
+  color: var(--palette-white);
+  -webkit-text-fill-color: var(--palette-white);
+  border-color: var(--palette-white);
+}
+
+/* Danger / Emergency CTA */
+.btn--danger {
+  background: var(--alert-emergency);
+  color: var(--alert-emergency-ink);
+  -webkit-text-fill-color: var(--alert-emergency-ink);
+  border-color: var(--alert-emergency);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--danger:visited {
+  color: var(--alert-emergency-ink);
+}
+
+.btn--danger:hover,
+.btn--danger:focus-visible {
+  background: var(--alert-emergency-hover);
+  border-color: var(--alert-emergency-hover);
+  color: var(--alert-emergency-ink);
+  -webkit-text-fill-color: var(--alert-emergency-ink);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Unified Badges / Chips (clean 6px radii, AA paired surfaces) ── */
+
+.chip,
+.badge,
+.pill,
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  background: var(--interactive-surface);
+  color: var(--interactive);
+  border: 1px solid var(--interactive-border);
+}
+
+.chip--success, .badge--success, .tag--success,
+.chip--open,    .badge--open,
+.chip--stage-tapos {
+  background: var(--status-open-surface);
+  color: var(--status-open-ink);
+  border-color: var(--status-open-border);
+}
+
+.chip--pending, .badge--pending, .tag--pending,
+.chip--warning, .badge--warning,
+.chip--stage-ginagawa {
+  background: var(--status-caution-surface);
+  color: var(--status-caution-ink);
+  border-color: var(--status-caution-border);
+}
+
+.chip--urgent, .badge--urgent, .tag--urgent,
+.chip--danger, .badge--danger {
+  background: var(--alert-emergency-surface);
+  color: var(--alert-emergency-on-surface);
+  border-color: var(--alert-emergency-border);
+}
+
+.chip--info, .badge--info {
+  background: var(--alert-info-surface);
+  color: var(--alert-info-ink);
+  border-color: var(--alert-info-border);
+}
+
+.chip--muted, .badge--muted,
+.chip--stage-bago {
+  background: var(--status-closed-surface);
+  color: var(--status-closed-ink);
+  border-color: var(--status-closed-border);
+}
+
+/* ── Quick Action Tiles ─────────────────────────────────────── */
 
 .tiles {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(10.5rem, 100%), 1fr));
 }
 
 .tile {
@@ -163,66 +398,67 @@ html:not([data-motion='seen']) .chart-pin {
   flex-direction: column;
   justify-content: space-between;
   gap: var(--space-4);
-  min-height: 116px;
+  min-height: 112px;
   padding: var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--r-card);
   text-decoration: none;
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: var(--text-lg);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   border: 1px solid transparent;
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow var(--motion-base) var(--ease-standard),
+    border-color var(--motion-base) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
-/* Colour is never the sole carrier: every tile has an icon AND a label. */
-.tile--doc   { background: var(--surface-inverse);   color: var(--ink-inverse); }      /* 17.28:1 */
-.tile--sos   { background: var(--alert-emergency);   color: var(--alert-emergency-ink); } /* 4.83:1 */
-.tile--boat  { background: var(--accent);            color: var(--accent-ink); }       /* 9.39:1 */
+.tile:hover,
+.tile:focus-visible {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
 
-/*
- * DARK-MODE BUG, fixed 2026-08-05, and the pair below is the fix.
- *
- * This was `background: var(--palette-mangrove); color: var(--ink-inverse)`.
- * The background is a FIXED primitive but the ink was SEMANTIC, so in dark
- * mode `--ink-inverse` flipped to #0c1614 and the tile rendered near-black
- * text on near-black paint — measured 1.06:1. The "Hanapin" tile was
- * effectively invisible at night, which is exactly when this site is used
- * during a brownout or a pre-dawn departure.
- *
- * Rule this enforces: a FIXED background takes a FIXED ink. Never pair a
- * primitive with a token that inverts. It has since survived a full re-theme
- * to the light palette untouched, which is the evidence the rule was right.
- */
-.tile--list  { background: var(--palette-mangrove);  color: var(--palette-glare); }    /* 17.28:1 */
+.tile--doc  { background: var(--surface-inverse);  color: var(--ink-inverse); border-color: var(--line-strong); }
+.tile--sos  { background: var(--alert-emergency);  color: var(--alert-emergency-ink); }
+.tile--boat { background: var(--accent);           color: var(--accent-ink); }
+.tile--list { background: var(--surface-inverse);  color: var(--ink-inverse); border-color: var(--line-strong); }
 
-/*
- * The `prefers-color-scheme` and `[data-theme]` variants of this tile that
- * used to sit here are DELETED, not updated. The site ships one theme; those
- * three blocks were the last place a second one could silently repaint a
- * surface. oceanic.css gives the tile its edge unconditionally.
- */
+.tile--doc:visited,
+.tile--list:visited { color: var(--ink-inverse); }
+.tile--sos:visited  { color: var(--alert-emergency-ink); }
+.tile--boat:visited { color: var(--accent-ink); }
 
-/* ── Office status ──────────────────────────────────────────── */
+/* ── Office Status ──────────────────────────────────────────── */
 
 .office {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+  max-width: var(--measure-row);
   font-family: var(--font-display);
   font-size: var(--text-xl);
-  letter-spacing: var(--tracking-caps);
+  letter-spacing: 0.02em;
 }
 
-/* ── Rows: hotlines, documents ──────────────────────────────── */
+.office > * {
+  min-width: 0;
+}
+
+/* ── Rows & Hotlines ────────────────────────────────────────── */
 
 .row {
   min-height: 56px;
+  max-width: var(--measure-row);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
+  padding-block: var(--space-2);
 }
 
 .row__label {
@@ -237,22 +473,22 @@ html:not([data-motion='seen']) .chart-pin {
   margin: 0;
 }
 
-/* ── Hotline block — emergency numbers get real weight ──────── */
-
 .hotlines {
+  max-width: var(--measure-row);
   background: var(--surface-raised);
-  border: 2px solid var(--alert-emergency);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--alert-emergency-border);
+  border-inline-start: 4px solid var(--alert-emergency);
+  border-radius: var(--r-card);
   padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
 }
 
 .hotlines__title {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
+  font-weight: 700;
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  /* The on-surface variant, not the fill. See tokens.css — the fill is tuned
-     to carry white text and is too dark to BE text on a dark surface. */
   color: var(--alert-emergency-on-surface);
   display: flex;
   align-items: center;
@@ -264,12 +500,16 @@ html:not([data-motion='seen']) .chart-pin {
   border-bottom: 0;
 }
 
-/* ── Prose ──────────────────────────────────────────────────── */
+/* ── Prose & Typography Utilities ───────────────────────────── */
 
 .prose {
   max-width: var(--measure);
   display: grid;
   gap: var(--space-4);
+}
+
+.prose p {
+  line-height: 1.65;
 }
 
 .muted {
@@ -280,30 +520,264 @@ html:not([data-motion='seen']) .chart-pin {
   font-size: var(--text-sm);
 }
 
-.page-title {
-  font-size: var(--text-4xl);
+/* ── Stat Cards ─────────────────────────────────────────────── */
+
+.stats {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
 }
 
-/* ── Cards ──────────────────────────────────────────────────── */
-
-.card {
-  background: var(--surface-raised);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+.stat {
   padding: var(--space-4);
-  box-shadow: var(--elev-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
 }
 
-/* ── Location map ───────────────────────────────────────────────
-   The map is opt-in (see LocationMap.astro for why). These styles cover
-   BOTH states: the zero-cost idle card, and the mounted Leaflet map.
-   ─────────────────────────────────────────────────────────────── */
+.stat__value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink-strong);
+}
+
+.stat__label {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.stat__note {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+/* ── Timeline (History) ─────────────────────────────────────── */
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+  position: relative;
+}
+
+.timeline__item {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.timeline__year {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-base);
+  font-weight: 600;
+  padding-top: 2px;
+  color: var(--ink-muted);
+}
+
+.timeline__body {
+  position: relative;
+  border-left: 2px solid var(--line);
+  padding-left: var(--space-4);
+  padding-bottom: var(--space-2);
+}
+
+.timeline__body::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  border: 2px solid var(--surface);
+}
+
+@media (max-width: 30rem) {
+  .timeline__item {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
+
+/* ── Gallery Placeholders ───────────────────────────────────── */
+
+.gallery {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr));
+}
+
+.gallery__cell {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--r-card);
+  border: 1px dashed var(--line-strong);
+  background: var(--surface-sunken);
+  display: grid;
+  place-items: center;
+  padding: var(--space-3);
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+/* ── FAQ Accordion ──────────────────────────────────────────── */
+
+.faq {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.faq details {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+.faq details[open] {
+  border-color: var(--line-strong);
+}
+
+.faq summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--ink-strong);
+  cursor: pointer;
+}
+
+.faq summary::marker {
+  color: var(--ink-muted);
+}
+
+.faq details > div {
+  padding: 0 var(--space-4) var(--space-4);
+  max-width: var(--measure);
+  color: var(--ink);
+}
+
+/* ── Data Tables & Empty States ─────────────────────────────── */
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+}
+
+.table-wrap:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.data-table th {
+  padding: 12px 16px;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table tbody tr:hover {
+  background: var(--surface-sunken);
+}
+
+.data-table th.num,
+.data-table td.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty-state {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-card);
+  background: var(--surface-raised);
+  color: var(--ink-muted);
+}
+
+.empty-state__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+.empty-state__desc {
+  max-width: 44ch;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+
+.skeleton {
+  background: var(--surface-subtle);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.5s var(--ease-standard) infinite;
+}
+
+/* ── Location Map Card (Opt-in Leaflet) ─────────────────────── */
 
 .mapcard {
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--r-card);
   overflow: hidden;
   background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
 }
 
 .mapcard__head {
@@ -314,12 +788,14 @@ html:not([data-motion='seen']) .chart-pin {
 .mapcard__place {
   font-family: var(--font-display);
   font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--ink-strong);
 }
 
 .mapcard__coords {
   margin-top: var(--space-2);
-  /* Coordinates are a figure: tabular, unambiguous 0/1, readable aloud. */
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .mapcard__caveat {
@@ -328,50 +804,15 @@ html:not([data-motion='seen']) .chart-pin {
 }
 
 .mapcard__slot {
-  /* Reserve the height the map will occupy so mounting it shifts nothing.
-     CLS is measured at 0.000 across the site and stays that way. */
   min-height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* PAIRED tokens. Setting --sea-calm as a background without its matching ink
-     left default dark text on teal at 2.64:1 — axe caught it as a serious
-     violation. These two are defined together and measured at 6.23:1; never
-     take one without the other. */
-  background: var(--sea-calm);
-  color: var(--sea-calm-ink);
+  background: var(--surface-sunken);
+  color: var(--ink);
 }
 
-/* Once the map mounts, the centring that framed the idle panel must go — a
-   flex item with `width: auto` collapses the map and pushes its controls out
-   of reach. */
-/*
- * ═══════════════════════════════════════════════════════════════
- * `isolation: isolate` IS A BUG FIX. Do not drop it as redundant.
- *
- * REPORTED: open the map on /kontak, then open any mega panel. The panel
- * appears — and the map draws straight through it, tiles, zoom buttons and
- * layer switcher sitting on top of the menu.
- *
- * IT IS NOT A MISSING TEARDOWN. Nothing needs to hide the map; the map should
- * simply be painted underneath. Leaflet assigns its own stacking order inside
- * the map, and those numbers are large:
- *     .leaflet-pane          400
- *     .leaflet-control       800
- *     .leaflet-top/-bottom  1000
- * Those are only meant to order Leaflet's parts against EACH OTHER. With no
- * stacking context around the container they escape and compete at the root,
- * where the mega panel is `z-index: 60` — so 400, 800 and 1000 all win, and a
- * full-screen overlay loses to a tile.
- *
- * `isolation: isolate` traps the whole range inside this element. Leaflet's
- * internal ordering is unchanged; it just stops being the page's business.
- *
- * The hero has never shown this bug and carries the same Leaflet map, because
- * `.hero` already sets `isolation: isolate` (redesign.css). This makes the
- * pattern consistent rather than accidental.
- * ═══════════════════════════════════════════════════════════════
- */
+/* `isolation: isolate` traps Leaflet panes inside this stacking context. */
 .mapcard__slot--live {
   display: block;
   position: relative;
@@ -384,7 +825,7 @@ html:not([data-motion='seen']) .chart-pin {
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--space-5);
   text-align: center;
   max-width: var(--measure);
 }
@@ -394,16 +835,22 @@ html:not([data-motion='seen']) .chart-pin {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  /* 44px minimum target — the project's own mandate, not a suggestion. */
-  min-height: 44px;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background: var(--surface-inverse);
-  color: var(--ink-inverse);
+  min-height: 48px;
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--action-edge);
+  border-radius: var(--r-inner);
+  background: var(--action);
+  color: var(--action-ink);
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: var(--text-base);
   cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+.mapcard__btn:hover:not(:disabled),
+.mapcard__btn:focus-visible:not(:disabled) {
+  background: var(--action-hover);
 }
 
 .mapcard__btn:disabled {
@@ -411,7 +858,6 @@ html:not([data-motion='seen']) .chart-pin {
   cursor: default;
 }
 
-/* The data cost is part of the label, not fine print hidden elsewhere. */
 .mapcard__cost {
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
@@ -422,21 +868,19 @@ html:not([data-motion='seen']) .chart-pin {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4);
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--line);
 }
 
-/* Leaflet ships its own link styling; keep ours so outbound links stay
-   underlined (axe `link-in-text-block` — do not remove). */
 .mapcard__links a {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
   text-decoration: underline;
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
-/* Leaflet's default control text is 12px on a white chip. Bring it up to the
-   site's own minimum so it survives a cracked LCD in sunlight (persona P1). */
 .mapcard .leaflet-control-layers,
 .mapcard .leaflet-container .leaflet-control-attribution {
   font-family: var(--font-body);
@@ -450,14 +894,13 @@ html:not([data-motion='seen']) .chart-pin {
   gap: var(--space-2);
 }
 
-/* Tailwind preflight sets `display` on elements, which beats the `hidden`
-   attribute's UA style. Restore it — the opt-in map button relies on `hidden`
-   to stay invisible until JavaScript proves it can act. */
+/* Restore HTML [hidden] over Tailwind preflight */
 [hidden] {
   display: none !important;
 }
 
-/* ── Modern Mobile Form Inputs ───────────────────────────────── */
+/* ── Accessible Form System ─────────────────────────────────── */
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -469,67 +912,107 @@ html:not([data-motion='seen']) .chart-pin {
 .form-label {
   font-size: var(--text-xs);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-caps);
-  color: var(--ink-muted);
+  letter-spacing: 0.02em;
+  color: var(--ink-strong);
   display: block;
 }
 
-input[type="text"],
-input[type="search"],
-input[type="email"],
-input[type="tel"],
-input[type="number"],
-input[type="date"],
+.form-hint {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+
+.form-error {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--error-ink);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']),
 select,
 textarea {
   width: 100%;
-  min-height: 48px;
-  padding: 12px 16px;
+  min-height: 44px;
+  padding: 10px 14px;
   font-family: inherit;
-  font-size: 16px; /* Prevents auto-zoom on mobile Safari */
-  color: var(--ink);
+  font-size: 16px; /* Prevents auto-zoom on mobile iOS/Android */
+  line-height: 1.4;
+  color: var(--ink-strong);
   background-color: var(--surface-raised);
-  border: 1.5px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  box-sizing: border-box;
-  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-inner);
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-muted);
+}
+
+input:not([type='checkbox']):not([type='radio']):hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  border-color: var(--ink-muted);
+}
+
+input:not([type='checkbox']):not([type='radio']):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
   border-color: var(--interactive);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive) 20%, transparent);
 }
 
-input[type="checkbox"],
-input[type="radio"] {
-  width: 22px;
-  height: 22px;
+input[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--alert-emergency);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: var(--surface-sunken);
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  width: 20px;
+  height: 20px;
   accent-color: var(--interactive);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-/* ── Mobile Collapsible Accordions ───────────────────────────── */
+/* ── Collapsible Accordions ─────────────────────────────────── */
+
 .mobile-accordion {
   background: var(--surface-raised);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--r-card);
   margin-bottom: var(--space-2);
   overflow: hidden;
-  transition: box-shadow var(--dur-fast);
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 .mobile-accordion[open] {
-  box-shadow: var(--elev-2);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .mobile-accordion__summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-3);
   min-height: 48px;
   padding: var(--space-3) var(--space-4);
   cursor: pointer;
@@ -545,9 +1028,10 @@ input[type="radio"] {
 }
 
 .mobile-accordion__chevron {
-  transition: transform var(--dur-fast);
+  transition: transform var(--motion-fast) var(--ease-standard);
   font-size: var(--text-sm);
   color: var(--ink-muted);
+  flex-shrink: 0;
 }
 
 .mobile-accordion[open] .mobile-accordion__chevron {
@@ -560,13 +1044,26 @@ input[type="radio"] {
   background: var(--surface-sunken);
 }
 
-/* ── Mobile-First Touch & Margin Adjustments ─────────────────── */
+/* ── Offline Band (in Base.astro) ───────────────────────────── */
+
+.offline-band {
+  background: var(--status-caution-surface);
+  color: var(--status-caution-ink);
+  border-bottom: 1px solid var(--status-caution-border);
+  padding: var(--space-2) var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* ── Mobile Touch Target & Bottom Dock Clearance ────────────── */
+
 @media (max-width: 768px) {
   button,
   .btn,
   a.btn,
   summary {
-    min-height: 48px;
+    min-height: 44px;
   }
 
   #main {

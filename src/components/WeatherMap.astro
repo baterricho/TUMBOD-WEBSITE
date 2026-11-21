@@ -2,19 +2,27 @@
 /**
  * WeatherMap.astro
  *
- * Interactive Weather & Wind Map for Barangay Tumbod / Tuluran Island.
- * "Like the Windy Map" — displays wind streamlines, wave heights, and weather conditions.
- * Features:
- *   1. Embedded Windy.com Interactive Player with dynamic layer switching (Wind, Waves, Rain, Gusts, Temp);
- *   2. High-speed local Canvas Marine Chart with real-time animated wind streamline particles and crossing waypoints;
- *   3. Toggleable fullscreen view and nautical channel route inspection.
+ * Interactive Wind & Geospatial Route Map for Barangay Tumbod & Palawan:
+ *   1. Windy Live Radar (default when online): live ECMWF/GFS radar
+ *      centered on Tuluran Island (10.9856 N, 119.2773 E) with 6 live layers;
+ *   2. Satellite & Palawan Route Map (Leaflet + Esri World Imagery +
+ *      OpenStreetMap): renders verified sea water routes (Endeavor Strait &
+ *      Malampaya Sound) + real OSM-derived Palawan highway routes from
+ *      Liminangcong Port, synchronized live with InteractiveCrossingPlanner.
  */
 import Icon from './Icon.astro'
 import type { Locale } from '@/lib/i18n'
 import { TUMBOD_COORDS } from '@/lib/weather'
+import {
+  LOCATIONS,
+  SEA_ROUTES,
+  MAINLAND_ROUTES,
+  composeSeaJourney,
+} from '@/lib/content/palawan-routes'
 
 interface Props {
   locale: Locale
+  defaultMode?: 'windy' | 'satellite'
   initialWindSpeed?: number
   initialWindDir?: number
   initialWaveHeight?: number
@@ -22,6 +30,7 @@ interface Props {
 
 const {
   locale,
+  defaultMode = 'windy',
   initialWindSpeed = 14,
   initialWindDir = 65,
   initialWaveHeight = 0.6,
@@ -32,13 +41,16 @@ const lat = TUMBOD_COORDS.lat
 const lon = TUMBOD_COORDS.lon
 
 const LAYERS = [
-  { id: 'wind', labelFil: 'Hangin (Wind Streamlines)', labelEn: 'Wind Streamlines', icon: 'wind' },
-  { id: 'waves', labelFil: 'Alon at Swell (Waves)', labelEn: 'Waves & Swell', icon: 'bangka' },
-  { id: 'rain', labelFil: 'Ulan at Radar (Rain)', labelEn: 'Rain & Radar', icon: 'droplet' },
-  { id: 'gust', labelFil: 'Bugso (Wind Gusts)', labelEn: 'Wind Gusts', icon: 'wind' },
-  { id: 'temp', labelFil: 'Temperatura (Temp)', labelEn: 'Temperature', icon: 'sun' },
-  { id: 'clouds', labelFil: 'Ulap at Satelayt (Satellite)', labelEn: 'Clouds & Satellite', icon: 'cloud' },
+  { id: 'wind', labelFil: 'Hangin', labelEn: 'Wind', icon: 'wind' },
+  { id: 'waves', labelFil: 'Alon', labelEn: 'Waves', icon: 'bangka' },
+  { id: 'rain', labelFil: 'Ulan', labelEn: 'Rain', icon: 'droplet' },
+  { id: 'gust', labelFil: 'Bugso', labelEn: 'Gusts', icon: 'wind' },
+  { id: 'temp', labelFil: 'Temperatura', labelEn: 'Temp', icon: 'sun' },
+  { id: 'clouds', labelFil: 'Ulap', labelEn: 'Clouds', icon: 'cloud' },
 ] as const
+
+const defaultSea = composeSeaJourney('tumbod-to-liminangcong')
+const windyDirectUrl = `https://www.windy.com/${lat}/${lon}?${lat},${lon},11`
 ---
 
 <div class="weather-map-wrapper" id="weather-map-section" data-reveal="pending">
@@ -46,50 +58,64 @@ const LAYERS = [
   <div class="weather-map__header">
     <div class="weather-map__title-group">
       <div class="weather-map__badge">
-        <Icon name="compass" size={16} />
-        <span>{fil ? 'Interaktibong Mapa ng Panahon at Hangin' : 'Interactive Wind & Weather Map'}</span>
+        <span class="live-dot" aria-hidden="true"></span>
+        <span>{fil ? 'Live Radar at Mapa ng Ruta sa Palawan' : 'Live Weather Radar & Palawan Route Map'}</span>
       </div>
       <h3 class="weather-map__heading">
-        {fil ? 'Daloy ng Hangin at Alon sa Paligid ng Tuluran' : 'Wind Streamlines & Sea State Around Tuluran Island'}
+        {fil ? 'Live Windy Radar at Satelayt ng mga Ruta' : 'Live Windy Radar & Palawan Travel Routes'}
       </h3>
-      <p class="small muted">
-        {fil
-          ? 'Tingnan ang direksyon at bilis ng hangin, bugso, at laki ng alon sa Kipot ng Tuluran at Dagat ng Taytay tulad ng Windy Map:'
-          : 'Inspect live wind flow directions, velocities, gusts, and wave conditions across Tuluran Strait and Taytay Bay:'}
+      <p class="weather-map__subtitle">
+        {
+          fil
+            ? 'Live na hangin at alon sa Pulo ng Tuluran, kasama ang mga beripikadong rutang pandagat at kalsada mula Liminangcong Port.'
+            : 'Live wind/wave radar around Tuluran Island paired with verified sea channels and Palawan mainland highways via Liminangcong Port.'
+        }
       </p>
     </div>
 
-    {/* Mode Selector (Windy Radar vs Local Marine Vector Canvas) */}
-    <div class="weather-map__mode-tabs" role="tablist" aria-label={fil ? 'Uri ng Mapa' : 'Map Type'}>
+    <div class="weather-map__toolbar">
+      <div class="weather-map__mode-tabs" role="tablist" aria-label={fil ? 'Uri ng Mapa' : 'Map Mode'}>
+        <button
+          type="button"
+          class={`map-tab-btn ${defaultMode === 'windy' ? 'map-tab-btn--active' : ''}`}
+          id="tab-windy"
+          role="tab"
+          aria-selected={defaultMode === 'windy' ? 'true' : 'false'}
+          aria-controls="panel-windy"
+        >
+          <Icon name="wind" size={14} />
+          <span>Windy Live Radar</span>
+        </button>
+        <button
+          type="button"
+          class={`map-tab-btn ${defaultMode === 'satellite' ? 'map-tab-btn--active' : ''}`}
+          id="tab-satellite"
+          role="tab"
+          aria-selected={defaultMode === 'satellite' ? 'true' : 'false'}
+          aria-controls="panel-satellite"
+        >
+          <Icon name="compass" size={14} />
+          <span>{fil ? 'Mapa ng Ruta (Satelayt)' : 'Satellite Route Map'}</span>
+        </button>
+      </div>
+
       <button
         type="button"
-        class="map-tab-btn map-tab-btn--active"
-        id="tab-canvas"
-        role="tab"
-        aria-selected="true"
-        aria-controls="panel-canvas"
+        class="btn btn--secondary btn--sm"
+        id="map-fullscreen-toggle"
+        aria-pressed="false"
+        title={fil ? 'Palakihin ang mapa' : 'Toggle fullscreen'}
       >
-        <Icon name="bangka" size={14} />
-        <span>{fil ? 'Lokal na Tsart ng Bangka (Offline)' : 'Local Nautical Chart (Offline)'}</span>
-      </button>
-      <button
-        type="button"
-        class="map-tab-btn"
-        id="tab-windy"
-        role="tab"
-        aria-selected="false"
-        aria-controls="panel-windy"
-      >
-        <Icon name="wind" size={14} />
-        <span>{fil ? 'Windy Live Radar' : 'Windy Live Radar'}</span>
+        <Icon name="maximize" size={15} />
+        <span>{fil ? 'Palakihin' : 'Fullscreen'}</span>
       </button>
     </div>
   </div>
 
-  {/* Layer Pills for Windy Embed */}
-  <div class="weather-map__layers-bar" id="windy-layers-bar">
-    <span class="weather-map__layers-label">{fil ? 'Patong ng Datos:' : 'Condition Layer:'}</span>
-    <div class="weather-map__layer-pills">
+  {/* Layer Selector Bar (visible when Windy Live Radar tab is active) */}
+  <div class="weather-map__layers-bar" id="windy-layers-bar" hidden={defaultMode !== 'windy'}>
+    <span class="weather-map__layers-label">{fil ? 'Live Radar Layer:' : 'Live Radar Layer:'}</span>
+    <div class="weather-map__layer-pills" role="group" aria-label={fil ? 'Mga patong ng radar' : 'Radar layers'}>
       {LAYERS.map((layer, idx) => (
         <button
           type="button"
@@ -102,127 +128,197 @@ const LAYERS = [
         </button>
       ))}
     </div>
-    <button
-      type="button"
-      class="map-fullscreen-btn"
-      id="map-fullscreen-toggle"
-      title={fil ? 'Palakihin ang mapa' : 'Fullscreen toggle'}
-    >
-      <Icon name="maximize" size={16} />
-      <span class="sr-only">{fil ? 'Palakihin' : 'Fullscreen'}</span>
-    </button>
   </div>
 
-  {/* Container for Maps */}
-  <div class="weather-map__stage" id="weather-map-stage">
-    {/* Panel 1: Local High-Speed Canvas Marine Chart with Animated Wind Streamlines (Offline Safe & 0 External Requests) */}
-    <div class="weather-map__panel weather-map__panel--active" id="panel-canvas" role="tabpanel">
-      <div class="canvas-map-container" id="canvas-container">
-        <canvas id="marine-wind-canvas" class="marine-canvas"></canvas>
+  {/* Compact Route Bar (visible when Satellite Route Map tab is active — zero pill clutter) */}
+  <div class="weather-map__layers-bar weather-map__route-bar" id="satellite-route-bar" hidden={defaultMode !== 'satellite'}>
+    <label for="map-quick-route" class="weather-map__layers-label">
+      {fil ? 'Ipakita ang Ruta:' : 'Highlight Route:'}
+    </label>
+    <select id="map-quick-route" class="map-route-select">
+      <optgroup label={fil ? 'Biyaheng Bangka (Dagat Lamang)' : 'Island Boat Trips (Sea Only)'}>
+        {SEA_ROUTES.map((r) => (
+          <option value={`sea:${r.id}`}>
+            {LOCATIONS[r.fromId]?.[fil ? 'nameFil' : 'nameEn'].replace(' (Tuluran Island)', '').replace(' (Coastal Gateway)', '')} →{' '}
+            {LOCATIONS[r.toId]?.[fil ? 'nameFil' : 'nameEn'].replace(' (Coastal Gateway)', '').replace(' (Malampaya Sound)', '')} ({r.distanceKm} km)
+          </option>
+        ))}
+      </optgroup>
+      <optgroup label={fil ? 'Mula Tumbod → Mainland Palawan (Bangka + Kalsada)' : 'Tumbod → Mainland Palawan (Boat + Road)'}>
+        {MAINLAND_ROUTES.map((r) => (
+          <option value={`multi:${r.toId}`}>
+            Tumbod → Liminangcong → {LOCATIONS[r.toId]?.[fil ? 'nameFil' : 'nameEn']} ({(0.7 + r.highwayKm).toFixed(1)} km)
+          </option>
+        ))}
+      </optgroup>
+    </select>
 
-        {/* Floating Waypoint Info Drawer */}
-        <div class="marine-waypoint-card" id="marine-waypoint-info">
+    <div class="map-legend" aria-label={fil ? 'Gabay sa kulay' : 'Map legend'}>
+      <span class="map-legend__item">
+        <span class="map-legend__swatch map-legend__swatch--sea" aria-hidden="true"></span>
+        <span>{fil ? 'Dagat (Bangka)' : 'Sea (Boat)'}</span>
+      </span>
+      <span class="map-legend__item">
+        <span class="map-legend__swatch map-legend__swatch--road" aria-hidden="true"></span>
+        <span>{fil ? 'Kalsada (Van/Bus/Motor)' : 'Highway (Van/Motor)'}</span>
+      </span>
+    </div>
+  </div>
+
+  {/* Map Viewport Stage */}
+  <div class="weather-map__stage" id="weather-map-stage">
+    {/* Panel 1: Live Windy.com Radar */}
+    <div
+      class={`weather-map__panel ${defaultMode === 'windy' ? 'weather-map__panel--active' : ''}`}
+      id="panel-windy"
+      role="tabpanel"
+      aria-labelledby="tab-windy"
+      hidden={defaultMode !== 'windy'}
+    >
+      <div id="windy-placeholder" class="windy-placeholder" hidden={defaultMode === 'windy'}>
+        <p class="windy-placeholder__desc" id="windy-placeholder-desc">
+          {fil
+            ? 'Buksan ang live radar ng Windy.com para sa Tuluran Island at Taytay Bay.'
+            : 'Open the live interactive Windy.com radar map for Tuluran Island and Taytay Bay.'}
+        </p>
+        <div class="windy-placeholder__actions">
+          <button type="button" id="btn-load-windy" class="btn btn--primary">
+            <Icon name="wind" size={16} />
+            <span>{fil ? 'Buksan ang Windy Live Radar' : 'Load Windy Live Radar'}</span>
+          </button>
+          <a
+            href={windyDirectUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn--ghost-inverse btn--sm"
+          >
+            <span>{fil ? 'Buksan sa Windy.com' : 'Open on Windy.com'}</span>
+            <Icon name="external" size={14} />
+          </a>
+        </div>
+      </div>
+
+      <div id="windy-loading" class="windy-loading" role="status" aria-live="polite" hidden={defaultMode !== 'windy'}>
+        <span class="windy-spinner" aria-hidden="true"></span>
+        <span>{fil ? 'Ikinakarga ang live Windy radar ng Tuluran Island...' : 'Loading live Windy radar for Tuluran Island...'}</span>
+      </div>
+
+      <iframe
+        id="windy-iframe"
+        title={fil ? 'Windy Live Interactive Weather Radar para sa Tuluran Island' : 'Windy Live Interactive Weather Radar for Tuluran Island'}
+        data-src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=11&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&pressure=true&message=true`}
+        class="windy-frame"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        allow="fullscreen"
+        allowfullscreen
+        hidden
+      ></iframe>
+
+      <div class="windy-attribution">
+        <span>
+          {fil
+            ? 'Live ECMWF / GFS · Windy.com · Pulo ng Tuluran'
+            : 'Live ECMWF / GFS · Windy.com · Tuluran Island'}
+        </span>
+        <a
+          href={windyDirectUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="windy-attribution__link"
+        >
+          Windy.com ↗
+        </a>
+      </div>
+    </div>
+
+    {/* Panel 2: Satellite Route Map (Synced Sea Channels + Mainland Palawan Highways) */}
+    <div
+      class={`weather-map__panel ${defaultMode === 'satellite' ? 'weather-map__panel--active' : ''}`}
+      id="panel-satellite"
+      role="tabpanel"
+      aria-labelledby="tab-satellite"
+      hidden={defaultMode !== 'satellite'}
+    >
+      <div class="satellite-map-container" id="satellite-container">
+        <div
+          id="tumbod-leaflet-map"
+          class="leaflet-stage"
+          role="application"
+          aria-label={fil ? 'Satelayt na mapa ng mga ruta sa Dagat at Mainland Palawan' : 'Satellite map of Palawan sea and road travel routes'}
+        ></div>
+
+        <canvas
+          id="satellite-wind-overlay"
+          class="wind-overlay-canvas"
+          aria-hidden="true"
+        ></canvas>
+
+        <div id="satellite-status" class="windy-loading" role="status" aria-live="polite" hidden>
+          <span class="windy-spinner" aria-hidden="true"></span>
+          <span>{fil ? 'Ikinakarga ang satelayt na mapa...' : 'Loading satellite map...'}</span>
+        </div>
+
+        {/* Minimal Unobtrusive Active Route HUD Card */}
+        <div class="marine-waypoint-card" id="marine-waypoint-info" aria-live="polite">
           <div class="marine-waypoint-card__head">
-            <span class="marine-waypoint-card__title" id="waypoint-title">{fil ? 'Kipot ng Tuluran (Tuluran Strait)' : 'Tuluran Strait Crossing'}</span>
-            <span class="marine-waypoint-card__badge" id="waypoint-badge">{fil ? 'Ligtas Tumawid' : 'Safe Crossing'}</span>
+            <span class="marine-waypoint-card__title" id="map-hud-title">
+              {fil ? 'Tumbod → Liminangcong Port' : 'Tumbod → Liminangcong Port'}
+            </span>
+            <span class="marine-waypoint-card__badge" id="map-hud-badge">
+              {fil ? 'Bangka Lamang' : 'Boat Only'}
+            </span>
           </div>
-          <p class="marine-waypoint-card__desc" id="waypoint-desc">
+          <p class="marine-waypoint-card__desc" id="map-hud-desc">
             {fil
-              ? 'Ligtas ang alon at direksyon ng hangin para sa mga regular na biyaheng bangka. Manatiling alerto sa mga babala ng tanod.'
-              : 'Wave conditions and wind vectors are favorable for scheduled banca passenger crossings. Follow maritime warden directives.'}
+              ? 'Direktang tawid sa Endeavor Strait patungong Liminangcong Port.'
+              : 'Direct boat crossing across Endeavor Strait to Liminangcong Port.'}
           </p>
           <div class="marine-waypoint-stats">
             <div class="waypoint-stat">
-              <span class="waypoint-stat__label">{fil ? 'Tinatayang Alon' : 'Wave Height'}</span>
-              <strong class="waypoint-stat__val" id="waypoint-wave">{initialWaveHeight} m</strong>
+              <span class="waypoint-stat__label">{fil ? 'Dagat' : 'Sea'}</span>
+              <strong class="waypoint-stat__val figure" id="map-hud-sea">{defaultSea.seaDistanceKm} km</strong>
             </div>
             <div class="waypoint-stat">
-              <span class="waypoint-stat__label">{fil ? 'Bilis ng Hangin' : 'Wind Speed'}</span>
-              <strong class="waypoint-stat__val" id="waypoint-wind">{initialWindSpeed} km/h</strong>
+              <span class="waypoint-stat__label">{fil ? 'Kalsada' : 'Road'}</span>
+              <strong class="waypoint-stat__val figure" id="map-hud-road">0 km</strong>
             </div>
             <div class="waypoint-stat">
-              <span class="waypoint-stat__label">{fil ? 'Tagal ng Biyahe' : 'Transit Time'}</span>
-              <strong class="waypoint-stat__val" id="waypoint-time">~15–20 min</strong>
+              <span class="waypoint-stat__label">{fil ? 'Dagat Ngayon' : 'Wind / Wave'}</span>
+              <strong class="waypoint-stat__val figure" id="map-hud-weather">{initialWindSpeed} km/h · {initialWaveHeight} m</strong>
             </div>
           </div>
         </div>
-
-        {/* Nautical Waypoint Pills Bar */}
-        <div class="marine-waypoints-selector" role="toolbar" aria-label={fil ? 'Mga Piling Punto ng Dagat' : 'Marine Waypoints'}>
-          <button type="button" class="waypoint-chip waypoint-chip--active" data-wp="strait">
-            <Icon name="anchor" size={14} />
-            <span>{fil ? 'Kipot ng Tuluran' : 'Tuluran Strait'}</span>
-          </button>
-          <button type="button" class="waypoint-chip" data-wp="tumbod-port">
-            <Icon name="pin" size={14} />
-            <span>{fil ? 'Pantalan ng Tumbod' : 'Tumbod Port'}</span>
-          </button>
-          <button type="button" class="waypoint-chip" data-wp="liminangcong">
-            <Icon name="bangka" size={14} />
-            <span>{fil ? 'Rutang Liminangcong' : 'Liminangcong Route'}</span>
-          </button>
-          <button type="button" class="waypoint-chip" data-wp="taytay-bay">
-            <Icon name="compass" size={14} />
-            <span>{fil ? 'Bukas na Look (Taytay Bay)' : 'Open Taytay Bay'}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    {/* Panel 2: Windy.com Interactive Embed (Lazy load on user click, zero external fetch on build) */}
-    <div class="weather-map__panel" id="panel-windy" role="tabpanel" hidden>
-      <div id="windy-placeholder" class="windy-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-6);min-height:360px;background:var(--palette-slate-950);text-align:center;border-radius:var(--radius-md)">
-        <p style="margin-bottom:var(--space-3);color:var(--palette-slate-300);font-size:var(--text-sm);max-width:420px">
-          {fil ? 'Maaaring buksan ang live radar at satellite ng Windy.com para sa Tuluran Island at Taytay Bay kapag may koneksyon sa internet.' : 'Load the live interactive Windy.com radar and satellite map for Tuluran Island and Taytay Bay.'}
-        </p>
-        <button type="button" id="btn-load-windy" class="btn btn--primary" style="min-height:48px;padding:0 var(--space-4);font-weight:600">
-          <Icon name="wind" size={18} />
-          <span>{fil ? 'Buksan ang Windy Live Radar' : 'Load Windy Live Radar'}</span>
-        </button>
-      </div>
-      <iframe
-        id="windy-iframe"
-        title={fil ? 'Windy Interactive Weather Map para sa Tuluran Island' : 'Windy Interactive Weather Map for Tuluran Island'}
-        data-src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=10&overlay=wind&product=ecmwf&level=surface&lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&marker=true&pressure=true`}
-        class="windy-frame"
-        loading="lazy"
-        allowfullscreen
-        style="display:none"
-      ></iframe>
-      <div class="windy-attribution">
-        <span class="small muted">
-          {fil ? 'Datos at Modelo ng Hangin: ECMWF / GFS sa pamamagitan ng Windy.com · Naka-sentro sa Pulo ng Tuluran' : 'Wind model and streamlines provided by ECMWF / GFS via Windy.com · Centered on Tuluran Island'}
-        </span>
       </div>
     </div>
   </div>
 
-  {/* Guide to Reading the Wind Map */}
+  {/* Reading Guide */}
   <div class="weather-map__guide">
     <div class="guide-item">
-      <div class="guide-item__icon">
-        <Icon name="wind" size={20} />
+      <div class="guide-item__icon" aria-hidden="true">
+        <Icon name="bangka" size={18} />
       </div>
       <div>
-        <strong>{fil ? 'Paano Basahin ang Streamlines' : 'Reading Wind Streamlines'}</strong>
-        <p class="small muted">
+        <strong class="guide-item__title">{fil ? 'Liminangcong Port: Coastal Gateway' : 'Liminangcong Port: Coastal Gateway'}</strong>
+        <p class="guide-item__desc">
           {fil
-            ? 'Ang mga gumagalaw na linya ay nagpapakita kung saan papunta ang hangin. Kung mas mabilis at mas makapal ang mga linya, mas malakas ang hangin sa kipot.'
-            : 'Moving streamlines trace the path of the wind. Denser, faster particles indicate stronger gusts and chop across the strait.'}
+            ? 'Ang Liminangcong Port ay daungan ng bangka sa baybayin — hiwalay mula sa Taytay Poblacion (~54 km ang layo sa kalsada).'
+            : 'Liminangcong Port is the coastal boat landing linking Tuluran Island to Taytay (~54.4 km south by road) and the Palawan highway network.'}
         </p>
       </div>
     </div>
 
     <div class="guide-item">
-      <div class="guide-item__icon">
-        <Icon name="bangka" size={20} />
+      <div class="guide-item__icon" aria-hidden="true">
+        <Icon name="shield" size={18} />
       </div>
       <div>
-        <strong>{fil ? 'Kaligtasan ng Katig sa Alon' : 'Outrigger Vessel Safety'}</strong>
-        <p class="small muted">
+        <strong class="guide-item__title">{fil ? 'Bangka sa Dagat · Van/Motor sa Kalsada' : 'Sea vs. Mainland Transport Rules'}</strong>
+        <p class="guide-item__desc">
           {fil
-            ? 'Kapag lumampas sa 1.3 m ang alon o higit sa 25 km/h ang hangin, delikado para sa maliliit na bangkang pangisda ang bukas na dagat papuntang Casian o Shark Fin Bay.'
-            : 'When wave heights exceed 1.3 m or wind exceeds 25 km/h, small fishing bancas should avoid open sea crossings toward Casian or Shark Fin Bay.'}
+            ? 'Pawang bangka lamang sa Cataban, San Jose Island, at Calapa; van, bus, o motorsiklo naman pagkatapos dumaong sa Liminangcong.'
+            : 'Island settlements are served exclusively by boat; mainland municipalities (Taytay, Puerto Princesa, Quezon, Rizal, El Nido) use road vehicles from Liminangcong.'}
         </p>
       </div>
     </div>
@@ -230,723 +326,1122 @@ const LAYERS = [
 </div>
 
 <style>
-.weather-map-wrapper {
-  background: var(--palette-slate-900);
-  border: 1px solid var(--palette-slate-800);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  color: var(--palette-slate-100);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-  margin-block: var(--space-4);
-}
+  .weather-map-wrapper {
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    padding: var(--space-5);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+    margin-block: var(--space-4);
+    display: grid;
+    gap: var(--space-4);
+  }
 
-.weather-map__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
+  .weather-map__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
 
-.weather-map__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-2xs);
-  font-weight: 800;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--palette-sea-400);
-  margin-bottom: 4px;
-}
+  .weather-map__title-group {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
 
-.weather-map__heading {
-  margin: 0 0 6px;
-  font-size: var(--text-xl);
-  font-weight: 800;
-  color: #ffffff;
-}
+  .weather-map__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    color: var(--interactive);
+  }
 
-.weather-map__mode-tabs {
-  display: flex;
-  background: var(--palette-slate-800);
-  padding: 4px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--palette-slate-700);
-}
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--status-open);
+    box-shadow: 0 0 0 3px var(--status-open-surface);
+    flex-shrink: 0;
+  }
 
-.map-tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  background: transparent;
-  color: var(--palette-slate-300);
-  border: none;
-  cursor: pointer;
-  transition: all var(--dur-fast);
-}
+  .weather-map__heading {
+    margin: 0;
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--ink-strong);
+  }
 
-.map-tab-btn--active {
-  background: var(--palette-sea-500);
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
-}
+  .weather-map__subtitle {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    max-width: 62ch;
+  }
 
-/* Layer Pills */
-.weather-map__layers-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--palette-slate-800);
-}
+  .weather-map__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
 
-.weather-map__layers-label {
-  font-size: var(--text-xs);
-  color: var(--palette-slate-400);
-  font-weight: 600;
-}
+  .weather-map__mode-tabs {
+    display: inline-flex;
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    padding: 3px;
+    gap: 2px;
+  }
 
-.weather-map__layer-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
+  .map-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    border: 0;
+    background: transparent;
+    color: var(--ink-muted);
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+  }
 
-.layer-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  font-size: var(--text-2xs);
-  font-weight: 700;
-  background: var(--palette-slate-800);
-  color: var(--palette-slate-300);
-  border: 1px solid var(--palette-slate-700);
-  cursor: pointer;
-  transition: all var(--dur-fast);
-}
+  .map-tab-btn:hover {
+    color: var(--ink-strong);
+  }
 
-.layer-pill:hover {
-  background: var(--palette-slate-700);
-  color: #ffffff;
-}
+  .map-tab-btn--active {
+    background: var(--surface-raised);
+    color: var(--ink-strong);
+    box-shadow: var(--shadow-sm);
+  }
 
-.layer-pill--active {
-  background: var(--palette-slate-700);
-  color: var(--palette-sea-300);
-  border-color: var(--palette-sea-400);
-}
+  /* Bars */
+  .weather-map__layers-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+  }
 
-.map-fullscreen-btn {
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--palette-slate-800);
-  color: var(--palette-slate-300);
-  border: 1px solid var(--palette-slate-700);
-  cursor: pointer;
-  transition: all var(--dur-fast);
-}
+  .weather-map__layers-bar[hidden] {
+    display: none;
+  }
 
-.map-fullscreen-btn:hover {
-  background: var(--palette-slate-700);
-  color: #ffffff;
-}
+  .weather-map__layers-label {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--ink-muted);
+  }
 
-/* Stage & Map container */
-.weather-map__stage {
-  position: relative;
-  width: 100%;
-  height: 520px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--palette-slate-700);
-  background: #09131f;
-}
+  .weather-map__layer-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
 
-.weather-map__panel {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  display: none;
-}
+  .layer-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 34px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--surface-raised);
+    color: var(--ink);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+  }
 
-.weather-map__panel--active {
-  display: block;
-}
+  .layer-pill:hover {
+    border-color: var(--interactive);
+    color: var(--interactive);
+  }
 
-.windy-frame {
-  width: 100%;
-  height: 100%;
-  border: none;
-  display: block;
-}
+  .layer-pill--active {
+    background: var(--action);
+    border-color: var(--action);
+    color: var(--action-ink);
+  }
 
-.windy-attribution {
-  position: absolute;
-  bottom: 6px;
-  left: 10px;
-  z-index: 10;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(6px);
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-}
+  .layer-pill--active:hover {
+    color: var(--action-ink);
+  }
 
-/* Canvas nautical chart */
-.canvas-map-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  background: #0c1a2d;
-}
+  .map-route-select {
+    min-height: 38px;
+    padding: 4px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--ink-strong);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    max-width: min(26rem, 100%);
+  }
 
-.marine-canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-  cursor: crosshair;
-}
+  .map-legend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
 
-.marine-waypoint-card {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  max-width: 340px;
-  background: rgba(15, 23, 42, 0.9);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--palette-slate-700);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  z-index: 15;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
+  .map-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--ink);
+  }
 
-.marine-waypoint-card__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
+  .map-legend__swatch {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+  }
 
-.marine-waypoint-card__title {
-  font-size: var(--text-xs);
-  font-weight: 800;
-  color: #ffffff;
-}
+  .map-legend__swatch--sea {
+    border-top: 3px dashed #38bdf8;
+    height: 0;
+  }
 
-.marine-waypoint-card__badge {
-  font-size: 9px;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: var(--radius-full);
-  background: rgba(16, 185, 129, 0.2);
-  color: var(--palette-sea-400);
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  text-transform: uppercase;
-}
+  .map-legend__swatch--road {
+    background: #f59e0b;
+  }
 
-.marine-waypoint-card__desc {
-  margin: 0 0 10px;
-  font-size: 11px;
-  color: var(--palette-slate-300);
-  line-height: 1.4;
-}
+  /* Stage */
+  .weather-map__stage {
+    position: relative;
+    width: 100%;
+    height: 520px;
+    border-radius: var(--r-card);
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    background: #0a1628;
+  }
 
-.marine-waypoint-card__stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--palette-slate-700);
-  font-size: 11px;
-}
+  .weather-map__panel {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: none;
+  }
 
-.canvas-controls {
-  position: absolute;
-  bottom: 14px;
-  left: 14px;
-  display: flex;
-  gap: 6px;
-  z-index: 15;
-}
+  .weather-map__panel--active {
+    display: block;
+  }
 
-.canvas-ctrl-btn {
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(6px);
-  color: var(--palette-slate-200);
-  border: 1px solid var(--palette-slate-700);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all var(--dur-fast);
-}
+  .windy-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    height: 100%;
+    padding: var(--space-6);
+    background: #0a1628;
+    text-align: center;
+  }
 
-.canvas-ctrl-btn:hover {
-  background: var(--palette-slate-700);
-  color: #ffffff;
-}
+  .windy-placeholder[hidden] {
+    display: none;
+  }
 
-.canvas-legend {
-  position: absolute;
-  bottom: 14px;
-  right: 14px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(6px);
-  border: 1px solid var(--palette-slate-700);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 10px;
-  color: var(--palette-slate-300);
-  z-index: 15;
-}
+  .windy-placeholder__desc {
+    color: #cbd5e1;
+    font-size: var(--text-sm);
+    max-width: 44ch;
+    margin: 0;
+  }
 
-.canvas-legend__row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+  .windy-placeholder__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-2);
+  }
 
-.particle-sample {
-  width: 14px;
-  height: 2px;
-  background: var(--palette-sea-400);
-  border-radius: 1px;
-}
+  .windy-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 450;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgb(10 22 40 / 0.86);
+    color: #f8fafc;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    pointer-events: none;
+  }
 
-.corridor-sample {
-  width: 14px;
-  height: 2px;
-  border-bottom: 2px dashed #fbbf24;
-}
+  .windy-loading[hidden] {
+    display: none;
+  }
 
-/* Fullscreen mode */
-.weather-map-wrapper.is-fullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  border-radius: 0;
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-}
+  .windy-spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgb(125 211 252 / 0.3);
+    border-top-color: #38bdf8;
+    animation: windy-spin 0.8s linear infinite;
+  }
 
-.weather-map-wrapper.is-fullscreen .weather-map__stage {
-  flex: 1;
-  height: auto;
-}
+  @keyframes windy-spin {
+    to { transform: rotate(360deg); }
+  }
 
-/* Guide items */
-.weather-map__guide {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--palette-slate-800);
-}
+  .windy-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
 
-.guide-item {
-  display: flex;
-  gap: var(--space-3);
-  align-items: flex-start;
-}
+  .windy-attribution {
+    position: absolute;
+    bottom: 8px;
+    left: 10px;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgb(10 22 40 / 0.9);
+    color: #cbd5e1;
+    border: 1px solid rgb(255 255 255 / 0.14);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+  }
 
-.guide-item__icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--palette-slate-800);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--palette-sea-400);
-  flex-shrink: 0;
-}
+  .windy-attribution__link {
+    color: #7dd3fc;
+    font-weight: 600;
+    text-decoration: none;
+  }
 
-.guide-item strong {
-  display: block;
-  font-size: var(--text-xs);
-  color: #ffffff;
-  margin-bottom: 2px;
-}
-</style>
+  .windy-attribution__link:hover {
+    text-decoration: underline;
+    color: #ffffff;
+  }
 
-<script is:inline define:vars={{ lat, lon, initialWindSpeed, initialWindDir, fil }}>
-;(function() {
-  var tabWindy = document.getElementById('tab-windy')
-  var tabCanvas = document.getElementById('tab-canvas')
-  var panelWindy = document.getElementById('panel-windy')
-  var panelCanvas = document.getElementById('panel-canvas')
-  var layersBar = document.getElementById('windy-layers-bar')
-  var iframe = document.getElementById('windy-iframe')
-  var fsBtn = document.getElementById('map-fullscreen-toggle')
-  var mapWrap = document.getElementById('weather-map-section')
+  /* Satellite Map */
+  .satellite-map-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: #0a1628;
+  }
 
-  var currentLayer = 'wind'
-  var btnLoadWindy = document.getElementById('btn-load-windy')
-  var windyPlaceholder = document.getElementById('windy-placeholder')
+  .leaflet-stage {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
 
-  function activateWindy() {
-    if (iframe) {
-      if (!iframe.src || iframe.style.display === 'none') {
-        var baseSrc = iframe.getAttribute('data-src') || ''
-        iframe.src = baseSrc
-        iframe.style.display = 'block'
-        if (windyPlaceholder) windyPlaceholder.style.display = 'none'
-      }
+  .wind-overlay-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 380;
+    pointer-events: none;
+  }
+
+  /* Minimal Top-Left HUD Card */
+  .marine-waypoint-card {
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-3);
+    z-index: 420;
+    max-width: min(320px, calc(100% - 64px));
+    background: rgb(10 22 40 / 0.92);
+    border: 1px solid rgb(255 255 255 / 0.16);
+    border-radius: var(--r-inner);
+    padding: var(--space-3);
+    color: #f8fafc;
+    box-shadow: var(--shadow-md);
+    display: grid;
+    gap: 6px;
+  }
+
+  .marine-waypoint-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .marine-waypoint-card__title {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .marine-waypoint-card__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: #082f49;
+    color: #bae6fd;
+    border: 1px solid rgb(56 189 248 / 0.35);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+  }
+
+  .marine-waypoint-card__badge.is-road {
+    background: #2d1b06;
+    color: #fde68a;
+    border-color: #92400e;
+  }
+
+  .marine-waypoint-card__desc {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: #cbd5e1;
+    line-height: 1.45;
+  }
+
+  .marine-waypoint-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgb(255 255 255 / 0.12);
+  }
+
+  .waypoint-stat {
+    display: grid;
+    gap: 1px;
+  }
+
+  .waypoint-stat__label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: #94a3b8;
+  }
+
+  .waypoint-stat__val {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .satellite-map-container :global(.leaflet-top.leaflet-left) {
+    left: auto;
+    right: 10px;
+  }
+
+  /* Fullscreen */
+  .weather-map-wrapper.is-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    margin: 0;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .weather-map-wrapper.is-fullscreen .weather-map__stage {
+    flex: 1;
+    height: auto;
+  }
+
+  /* Reading Guide */
+  .weather-map__guide {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+    gap: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+  }
+
+  .guide-item {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+
+  .guide-item__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--r-inner);
+    background: var(--interactive-surface);
+    border: 1px solid var(--interactive-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--interactive);
+    flex-shrink: 0;
+  }
+
+  .guide-item__title {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--ink-strong);
+    margin-bottom: 2px;
+  }
+
+  .guide-item__desc {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: 1.5;
+  }
+
+  @media (max-width: 640px) {
+    .weather-map-wrapper {
+      padding: var(--space-4);
+    }
+
+    .weather-map__stage {
+      height: 440px;
+    }
+
+    .marine-waypoint-card {
+      padding: 10px;
+    }
+
+    .marine-waypoint-card__desc {
+      display: none;
+    }
+
+    .map-tab-btn,
+    .layer-pill,
+    .map-route-select {
+      min-height: 44px;
+    }
+
+    .map-legend {
+      margin-left: 0;
     }
   }
+</style>
 
-  if (btnLoadWindy) {
-    btnLoadWindy.addEventListener('click', activateWindy)
-  }
+<script
+  is:inline
+  define:vars={{
+    lat,
+    lon,
+    defaultMode,
+    initialWindSpeed,
+    initialWindDir,
+    initialWaveHeight,
+    locations: LOCATIONS,
+    seaRoutes: SEA_ROUTES,
+    mainlandRoutes: MAINLAND_ROUTES,
+    fil,
+  }}
+>
+  ;(function () {
+    var tabWindy = document.getElementById('tab-windy')
+    var tabSatellite = document.getElementById('tab-satellite')
+    var panelWindy = document.getElementById('panel-windy')
+    var panelSatellite = document.getElementById('panel-satellite')
+    var layersBar = document.getElementById('windy-layers-bar')
+    var routeBar = document.getElementById('satellite-route-bar')
+    var quickRouteSelect = document.getElementById('map-quick-route')
 
-  // Tab switching
-  if (tabWindy && tabCanvas && panelWindy && panelCanvas) {
-    tabWindy.addEventListener('click', function() {
+    var iframe = document.getElementById('windy-iframe')
+    var fsBtn = document.getElementById('map-fullscreen-toggle')
+    var mapWrap = document.getElementById('weather-map-section')
+    var btnLoadWindy = document.getElementById('btn-load-windy')
+    var windyPlaceholder = document.getElementById('windy-placeholder')
+    var windyPlaceholderDesc = document.getElementById('windy-placeholder-desc')
+    var windyLoading = document.getElementById('windy-loading')
+    var satelliteStatus = document.getElementById('satellite-status')
+
+    var hudTitle = document.getElementById('map-hud-title')
+    var hudBadge = document.getElementById('map-hud-badge')
+    var hudDesc = document.getElementById('map-hud-desc')
+    var hudSea = document.getElementById('map-hud-sea')
+    var hudRoad = document.getElementById('map-hud-road')
+    var hudWeather = document.getElementById('map-hud-weather')
+
+    var currentLayer = 'wind'
+    var activeMode = defaultMode || 'windy'
+    var liveWindSpeed = Number(initialWindSpeed) || 14
+    var liveWindDir = Number(initialWindDir) || 65
+    var liveWaveHeight = Number(initialWaveHeight) || 0.6
+
+    /* ── 1. Windy.com Live Radar ────────────────────────────── */
+    function buildWindyUrl(layer) {
+      return (
+        'https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=11&overlay=' +
+        layer +
+        '&product=ecmwf&level=surface&lat=' +
+        lat +
+        '&lon=' +
+        lon +
+        '&detailLat=' +
+        lat +
+        '&detailLon=' +
+        lon +
+        '&marker=true&pressure=true&message=true'
+      )
+    }
+
+    function activateWindy() {
+      if (!iframe) return
+      if (navigator.onLine === false) {
+        if (windyLoading) windyLoading.hidden = true
+        if (windyPlaceholder) windyPlaceholder.hidden = false
+        if (windyPlaceholderDesc) {
+          windyPlaceholderDesc.textContent = fil
+            ? 'Walang koneksyon sa internet ngayon. Buksan ang Satelayt na Mapa o subukan muli kapag may signal.'
+            : 'You are currently offline. Switch to the Satellite Route Map tab or retry once back online.'
+        }
+        return
+      }
+      if (!iframe.src || iframe.hidden) {
+        if (windyLoading) windyLoading.hidden = false
+        iframe.src = buildWindyUrl(currentLayer)
+        iframe.hidden = false
+        if (windyPlaceholder) windyPlaceholder.hidden = true
+      }
+    }
+
+    if (iframe) {
+      iframe.addEventListener('load', function () {
+        if (windyLoading) windyLoading.hidden = true
+      })
+    }
+
+    if (btnLoadWindy) {
+      btnLoadWindy.addEventListener('click', activateWindy)
+    }
+
+    /* ── 2. Leaflet Satellite Route Map + Synced Journey Layer ─ */
+    var leafletMap = null
+    var leafletLoading = false
+    var activeRouteLayerGroup = null
+    var staticPinsGroup = null
+    var pendingJourney = null
+
+    var overlayCanvas = document.getElementById('satellite-wind-overlay')
+    var overlayCtx = overlayCanvas ? overlayCanvas.getContext('2d') : null
+    var particles = []
+    var rafId = null
+    var reducedMotion =
+      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    function loadAsset(href, tag) {
+      return new Promise(function (resolve, reject) {
+        if (tag === 'css' && document.querySelector('link[href="' + href + '"]')) return resolve()
+        if (tag === 'js' && window.L) return resolve()
+        var el
+        if (tag === 'css') {
+          el = document.createElement('link')
+          el.rel = 'stylesheet'
+          el.href = href
+        } else {
+          el = document.createElement('script')
+          el.src = href
+        }
+        el.onload = resolve
+        el.onerror = reject
+        document.head.appendChild(el)
+      })
+    }
+
+    function buildJourneyFromSelect(val) {
+      var parts = (val || 'sea:tumbod-to-liminangcong').split(':')
+      var kind = parts[0]
+      var key = parts[1]
+      if (kind === 'sea') {
+        var sr = seaRoutes.find(function (x) { return x.id === key }) || seaRoutes[0]
+        return {
+          originId: sr.fromId,
+          destinationId: sr.toId,
+          seaKm: sr.distanceKm,
+          roadKm: 0,
+          modeLabel: fil ? 'Bangka Lamang' : 'Boat Only',
+          isRoadOnly: false,
+          legs: [{ network: 'sea', desc: fil ? sr.notesFil : sr.notesEn, path: sr.path }],
+        }
+      }
+      var mr = mainlandRoutes.find(function (x) { return x.toId === key }) || mainlandRoutes[0]
+      var sc = seaRoutes[0]
+      return {
+        originId: 'tumbod',
+        destinationId: mr.toId,
+        seaKm: sc.distanceKm,
+        roadKm: mr.highwayKm,
+        modeLabel: fil ? 'Bangka + Kalsada' : 'Boat + Road',
+        isRoadOnly: false,
+        legs: [
+          { network: 'sea', path: sc.path, desc: '' },
+          { network: 'mainland', path: mr.path, desc: fil ? mr.viaFil : mr.viaEn },
+        ],
+      }
+    }
+
+    function drawJourneyOnMap(journey) {
+      if (!journey) journey = buildJourneyFromSelect('sea:tumbod-to-liminangcong')
+      pendingJourney = journey
+
+      var orig = locations[journey.originId]
+      var dest = locations[journey.destinationId]
+      if (hudTitle && orig && dest) {
+        hudTitle.textContent =
+          (fil ? orig.nameFil : orig.nameEn).replace(' (Tuluran Island)', '').replace(' (Coastal Gateway)', '') +
+          ' → ' +
+          (fil ? dest.nameFil : dest.nameEn).replace(' (Coastal Gateway)', '').replace(' (Malampaya Sound)', '')
+      }
+      if (hudBadge) {
+        hudBadge.textContent = journey.roadKm > 0 && journey.seaKm === 0
+          ? (fil ? 'Kalsada Lamang' : 'Road Only')
+          : journey.roadKm > 0
+            ? (fil ? 'Bangka + Kalsada' : 'Boat + Road')
+            : (fil ? 'Bangka Lamang' : 'Boat Only')
+        hudBadge.classList.toggle('is-road', journey.roadKm > 0 && journey.seaKm === 0)
+      }
+      if (hudDesc) {
+        var lastLeg = journey.legs[journey.legs.length - 1]
+        hudDesc.textContent = (lastLeg && lastLeg.desc) || (dest ? (fil ? dest.roleFil : dest.roleEn) : '')
+      }
+      if (hudSea) hudSea.textContent = (journey.seaKm || 0) + ' km'
+      if (hudRoad) hudRoad.textContent = (journey.roadKm || 0) + ' km'
+      if (hudWeather) hudWeather.textContent = Math.round(liveWindSpeed) + ' km/h · ' + Number(liveWaveHeight).toFixed(1) + ' m'
+
+      if (!leafletMap || !window.L) return
+      var L = window.L
+      if (!activeRouteLayerGroup) activeRouteLayerGroup = L.layerGroup().addTo(leafletMap)
+      activeRouteLayerGroup.clearLayers()
+
+      var allBoundsPts = []
+      journey.legs.forEach(function (leg) {
+        if (!leg.path || !leg.path.length) return
+        var isSea = leg.network === 'sea'
+        L.polyline(leg.path, {
+          color: isSea ? '#38bdf8' : '#f59e0b',
+          weight: isSea ? 3.5 : 4,
+          dashArray: isSea ? '8 6' : null,
+          opacity: 0.95,
+        }).addTo(activeRouteLayerGroup)
+        leg.path.forEach(function (pt) { allBoundsPts.push(pt) })
+      })
+
+      // Highlight origin, gateway (when multi-leg), and destination pins
+      var keyIds = [journey.originId]
+      if (journey.seaKm > 0 && journey.roadKm > 0) keyIds.push('liminangcong')
+      if (journey.destinationId && keyIds.indexOf(journey.destinationId) === -1) keyIds.push(journey.destinationId)
+
+      keyIds.forEach(function (id, idx) {
+        var loc = locations[id]
+        if (!loc) return
+        var isDest = idx === keyIds.length - 1
+        var isGateway = loc.kind === 'gateway-port'
+        var fill = isGateway ? '#0ea5e9' : loc.kind === 'mainland-town' ? '#f59e0b' : '#38bdf8'
+        var m = L.circleMarker([loc.lat, loc.lon], {
+          radius: isDest ? 9 : 7,
+          color: '#ffffff',
+          weight: 2.5,
+          fillColor: fill,
+          fillOpacity: 1,
+        }).addTo(activeRouteLayerGroup)
+        m.bindPopup(
+          '<strong>' + (fil ? loc.nameFil : loc.nameEn) + '</strong><br>' +
+            (fil ? loc.roleFil : loc.roleEn) +
+            '<br><small>' + loc.lat.toFixed(4) + '&deg; N, ' + loc.lon.toFixed(4) + '&deg; E</small>',
+        )
+        allBoundsPts.push([loc.lat, loc.lon])
+      })
+
+      if (allBoundsPts.length >= 2) {
+        leafletMap.flyToBounds(L.latLngBounds(allBoundsPts), {
+          paddingTopLeft: [28, 36],
+          paddingBottomRight: [28, 28],
+          maxZoom: journey.roadKm === 0 && journey.seaKm < 2 ? 14 : 12,
+          duration: 0.7,
+        })
+      }
+    }
+
+    function resizeWindCanvas() {
+      if (!overlayCanvas) return
+      var host = document.getElementById('satellite-container')
+      if (!host) return
+      var rect = host.getBoundingClientRect()
+      var w = Math.max(1, Math.floor(rect.width))
+      var h = Math.max(1, Math.floor(rect.height))
+      var dpr = Math.min(window.devicePixelRatio || 1, 2)
+      overlayCanvas.width = w * dpr
+      overlayCanvas.height = h * dpr
+      if (overlayCtx) overlayCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      if (!particles.length) {
+        for (var i = 0; i < 48; i++) {
+          particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            len: 12 + Math.random() * 18,
+            speed: 0.5 + Math.random() * 0.9,
+            alpha: 0.2 + Math.random() * 0.35,
+          })
+        }
+      }
+    }
+
+    function tickWindOverlay() {
+      if (activeMode !== 'satellite' || document.hidden || reducedMotion || !overlayCtx || !overlayCanvas) {
+        rafId = null
+        return
+      }
+      var host = document.getElementById('satellite-container')
+      if (!host) { rafId = null; return }
+      var rect = host.getBoundingClientRect()
+      var w = rect.width
+      var h = rect.height
+      overlayCtx.clearRect(0, 0, w, h)
+
+      var rad = ((liveWindDir + 180) * Math.PI) / 180
+      var vx = Math.sin(rad)
+      var vy = -Math.cos(rad)
+      var mult = Math.max(0.7, Math.min(liveWindSpeed / 14, 2.2))
+
+      overlayCtx.lineCap = 'round'
+      for (var i = 0; i < particles.length; i++) {
+        var p = particles[i]
+        p.x += vx * p.speed * mult
+        p.y += vy * p.speed * mult
+        if (p.x < -30) p.x = w + 30
+        if (p.x > w + 30) p.x = -30
+        if (p.y < -30) p.y = h + 30
+        if (p.y > h + 30) p.y = -30
+
+        overlayCtx.strokeStyle = 'rgba(186, 230, 253, ' + p.alpha.toFixed(2) + ')'
+        overlayCtx.lineWidth = 1.4
+        overlayCtx.beginPath()
+        overlayCtx.moveTo(p.x, p.y)
+        overlayCtx.lineTo(p.x - vx * p.len, p.y - vy * p.len)
+        overlayCtx.stroke()
+      }
+
+      rafId = requestAnimationFrame(tickWindOverlay)
+    }
+
+    function startWindOverlay() {
+      resizeWindCanvas()
+      if (!reducedMotion && !rafId && activeMode === 'satellite' && !document.hidden) {
+        rafId = requestAnimationFrame(tickWindOverlay)
+      }
+    }
+
+    function initSatelliteMap() {
+      var mapHost = document.getElementById('tumbod-leaflet-map')
+      if (!mapHost) return
+      if (leafletMap) {
+        requestAnimationFrame(function () {
+          leafletMap.invalidateSize()
+          drawJourneyOnMap(pendingJourney || window.__tumbodActiveJourney || buildJourneyFromSelect(quickRouteSelect && quickRouteSelect.value))
+          startWindOverlay()
+        })
+        return
+      }
+      if (leafletLoading) return
+      leafletLoading = true
+      if (satelliteStatus) satelliteStatus.hidden = false
+
+      Promise.all([
+        loadAsset('/vendor/leaflet/leaflet.css', 'css'),
+        loadAsset('/vendor/leaflet/leaflet.js', 'js'),
+      ])
+        .then(function () {
+          var L = window.L
+          if (!L) return
+          leafletMap = L.map(mapHost, {
+            center: [10.995, 119.32],
+            zoom: 12,
+            scrollWheelZoom: false,
+            zoomControl: true,
+          })
+
+          var satellite = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            { maxZoom: 18, crossOrigin: true, attribution: 'Imagery &copy; Esri, Maxar' },
+          )
+          var labels = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+            { maxZoom: 18, crossOrigin: true },
+          )
+          var hybrid = L.layerGroup([satellite, labels]).addTo(leafletMap)
+          var streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            crossOrigin: true,
+            attribution: '&copy; OpenStreetMap contributors',
+          })
+
+          var baseLayers = {}
+          baseLayers[fil ? 'Satelayt + Pangalan' : 'Satellite Hybrid'] = hybrid
+          baseLayers[fil ? 'Mapa ng Kalsada' : 'OpenStreetMap'] = streets
+          L.control.layers(baseLayers, null, { collapsed: true }).addTo(leafletMap)
+
+          // Add subtle reference markers for the 5 key local points
+          staticPinsGroup = L.layerGroup().addTo(leafletMap)
+          ;['tumbod', 'liminangcong', 'cataban', 'san-jose', 'calapa'].forEach(function (id) {
+            var loc = locations[id]
+            if (!loc) return
+            L.circleMarker([loc.lat, loc.lon], {
+              radius: 4.5,
+              color: '#e2e8f0',
+              weight: 1.5,
+              fillColor: loc.kind === 'gateway-port' ? '#0ea5e9' : '#38bdf8',
+              fillOpacity: 0.75,
+            })
+              .bindPopup(
+                '<strong>' + (fil ? loc.nameFil : loc.nameEn) + '</strong><br>' +
+                  (fil ? loc.roleFil : loc.roleEn),
+              )
+              .addTo(staticPinsGroup)
+          })
+
+          leafletMap.once('click', function () {
+            leafletMap.scrollWheelZoom.enable()
+          })
+
+          if (satelliteStatus) satelliteStatus.hidden = true
+          requestAnimationFrame(function () {
+            leafletMap.invalidateSize()
+            drawJourneyOnMap(pendingJourney || window.__tumbodActiveJourney || buildJourneyFromSelect(quickRouteSelect && quickRouteSelect.value))
+            startWindOverlay()
+          })
+        })
+        .catch(function () {
+          leafletLoading = false
+          if (satelliteStatus) {
+            satelliteStatus.textContent = fil
+              ? 'Hindi maikarga ang satelayt na mapa — tiyaking may koneksyon sa internet.'
+              : 'Could not load satellite map tiles — check your internet connection.'
+          }
+        })
+    }
+
+    /* ── 3. Tabs, Layer Controls & Planner Sync ─────────────── */
+    function showWindyTab(deferEmbed) {
+      if (!tabWindy || !tabSatellite || !panelWindy || !panelSatellite) return
+      activeMode = 'windy'
       tabWindy.classList.add('map-tab-btn--active')
       tabWindy.setAttribute('aria-selected', 'true')
-      tabCanvas.classList.remove('map-tab-btn--active')
-      tabCanvas.setAttribute('aria-selected', 'false')
+      tabSatellite.classList.remove('map-tab-btn--active')
+      tabSatellite.setAttribute('aria-selected', 'false')
 
       panelWindy.classList.add('weather-map__panel--active')
       panelWindy.hidden = false
-      panelCanvas.classList.remove('weather-map__panel--active')
-      panelCanvas.hidden = true
-      if (layersBar) layersBar.style.display = 'flex'
-      activateWindy()
-    })
+      panelSatellite.classList.remove('weather-map__panel--active')
+      panelSatellite.hidden = true
+      if (layersBar) layersBar.hidden = false
+      if (routeBar) routeBar.hidden = true
+      if (deferEmbed !== true) {
+        mapHydrated = true
+        syncHudWeather()
+        activateWindy()
+      }
+    }
 
-    tabCanvas.addEventListener('click', function() {
-      tabCanvas.classList.add('map-tab-btn--active')
-      tabCanvas.setAttribute('aria-selected', 'true')
+    function showSatelliteTab(deferLoad) {
+      if (!tabWindy || !tabSatellite || !panelWindy || !panelSatellite) return
+      activeMode = 'satellite'
+      tabSatellite.classList.add('map-tab-btn--active')
+      tabSatellite.setAttribute('aria-selected', 'true')
       tabWindy.classList.remove('map-tab-btn--active')
       tabWindy.setAttribute('aria-selected', 'false')
 
-      panelCanvas.classList.add('weather-map__panel--active')
-      panelCanvas.hidden = false
+      panelSatellite.classList.add('weather-map__panel--active')
+      panelSatellite.hidden = false
       panelWindy.classList.remove('weather-map__panel--active')
       panelWindy.hidden = true
-
-      initCanvasMap()
-    })
-  }
-
-  // Dynamic Windy Layer Switching
-  var layerPills = document.querySelectorAll('.layer-pill')
-  layerPills.forEach(function(pill) {
-    pill.addEventListener('click', function() {
-      layerPills.forEach(function(p) {
-        p.classList.remove('layer-pill--active')
-        p.setAttribute('aria-pressed', 'false')
-      })
-      pill.classList.add('layer-pill--active')
-      pill.setAttribute('aria-pressed', 'true')
-
-      currentLayer = pill.getAttribute('data-layer') || 'wind'
-      if (iframe) {
-        iframe.src = 'https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=10&overlay=' + currentLayer + '&product=ecmwf&level=surface&lat=' + lat + '&lon=' + lon + '&detailLat=' + lat + '&detailLon=' + lon + '&marker=true&pressure=true'
+      if (layersBar) layersBar.hidden = true
+      if (routeBar) routeBar.hidden = false
+      if (deferLoad !== true) {
+        mapHydrated = true
+        syncHudWeather()
+        initSatelliteMap()
       }
-    })
-  })
-
-  // Fullscreen toggle
-  if (fsBtn && mapWrap) {
-    fsBtn.addEventListener('click', function() {
-      mapWrap.classList.toggle('is-fullscreen')
-      if (document.body) {
-        document.body.style.overflow = mapWrap.classList.contains('is-fullscreen') ? 'hidden' : ''
-      }
-    })
-  }
-
-  // Local Nautical Canvas Streamline Particle Map
-  var canvasInitialized = false
-  function initCanvasMap() {
-    if (canvasInitialized) return
-    canvasInitialized = true
-
-    var canvas = document.getElementById('marine-wind-canvas')
-    var container = document.getElementById('canvas-container')
-    if (!canvas || !container) return
-
-    var ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    var width = (canvas.width = container.clientWidth)
-    var height = (canvas.height = container.clientHeight)
-
-    window.addEventListener('resize', function() {
-      width = canvas.width = container.clientWidth
-      height = canvas.height = container.clientHeight
-    })
-
-    // Nautical Waypoints (Relative percentages on map)
-    var waypoints = [
-      {
-        id: 'tumbod',
-        nameFil: 'Pantalan ng Tumbod (Pier)',
-        nameEn: 'Tumbod Pier',
-        x: 0.52,
-        y: 0.44,
-        descFil: 'Pangunahing daungan sa Pulo ng Tuluran. May protektadong anchorage sa loob ng look.',
-        descEn: 'Primary harbor on Tuluran Island with protected anchorage inside the cove.',
-        wave: '0.4 m',
-        wind: initialWindSpeed + ' kph',
-        statusFil: 'Ligtas na Daungan',
-        statusEn: 'Safe Harbor',
-      },
-      {
-        id: 'strait',
-        nameFil: 'Kipot ng Tuluran (Tuluran Strait)',
-        nameEn: 'Tuluran Strait Channel',
-        x: 0.43,
-        y: 0.54,
-        descFil: 'Bukas na lagusan ng bangka patungong Taytay. Dito kadalasang sumasalubong ang alon.',
-        descEn: 'Open boat passage to mainland Taytay. Vulnerable to cross-channel wind chop.',
-        wave: '0.8 m',
-        wind: (initialWindSpeed + 4) + ' kph',
-        statusFil: 'Bantayan ang Alon',
-        statusEn: 'Watch Swells',
-      },
-      {
-        id: 'mainland',
-        nameFil: 'Taytay Poblacion Port (Mainland)',
-        nameEn: 'Taytay Mainland Port',
-        x: 0.28,
-        y: 0.72,
-        descFil: 'Pangunahing pantalan sa mainland para sa pamilihan, ospital, at transportasyon.',
-        descEn: 'Mainland port serving markets, municipal hospital, and overland transport.',
-        wave: '0.5 m',
-        wind: initialWindSpeed + ' kph',
-        statusFil: 'Bukas ang Pantalan',
-        statusEn: 'Port Open',
-      },
-      {
-        id: 'biton',
-        nameFil: 'Look ng Biton (Biton Cove)',
-        nameEn: 'Biton Cove',
-        x: 0.62,
-        y: 0.35,
-        descFil: 'Kanlungan ng mga bangkang pangisda kapag malakas ang Amihan mula sa hilagang-silangan.',
-        descEn: 'Safe refuge inlet for fishing outriggers during strong northeast Amihan winds.',
-        wave: '0.3 m',
-        wind: (initialWindSpeed - 3) + ' kph',
-        statusFil: 'Tahimik na Look',
-        statusEn: 'Calm Cove',
-      },
-      {
-        id: 'casian',
-        nameFil: 'Lagusang Casian Island',
-        nameEn: 'Casian Island Passage',
-        x: 0.75,
-        y: 0.22,
-        descFil: 'Malawak na dagat patungong Casian. Bawal sa maliliit na bangka kapag maalon.',
-        descEn: 'Open deep-water strait to Casian. Restricted for small boats during high swells.',
-        wave: '1.2 m',
-        wind: (initialWindSpeed + 6) + ' kph',
-        statusFil: 'May Pag-iingat',
-        statusEn: 'Caution',
-      },
-    ]
-
-    var selectedWaypoint = waypoints[1]
-
-    function updateWaypointCard(wp) {
-      selectedWaypoint = wp
-      var titleEl = document.getElementById('waypoint-title')
-      var badgeEl = document.getElementById('waypoint-badge')
-      var descEl = document.getElementById('waypoint-desc')
-      var waveEl = document.getElementById('waypoint-wave')
-      var windEl = document.getElementById('waypoint-wind')
-      var recEl = document.getElementById('waypoint-rec')
-
-      if (titleEl) titleEl.textContent = fil ? wp.nameFil : wp.nameEn
-      if (badgeEl) badgeEl.textContent = fil ? wp.statusFil : wp.statusEn
-      if (descEl) descEl.textContent = fil ? wp.descFil : wp.descEn
-      if (waveEl) waveEl.textContent = wp.wave
-      if (windEl) windEl.textContent = wp.wind
-      if (recEl) recEl.textContent = fil ? wp.statusFil : wp.statusEn
     }
 
-    // Connect waypoint buttons
-    var btnTumbod = document.getElementById('canvas-btn-tumbod')
-    var btnStrait = document.getElementById('canvas-btn-strait')
-    var btnMainland = document.getElementById('canvas-btn-mainland')
-    if (btnTumbod && waypoints[0]) btnTumbod.addEventListener('click', function() { updateWaypointCard(waypoints[0]) })
-    if (btnStrait && waypoints[1]) btnStrait.addEventListener('click', function() { updateWaypointCard(waypoints[1]) })
-    if (btnMainland && waypoints[2]) btnMainland.addEventListener('click', function() { updateWaypointCard(waypoints[2]) })
+    if (tabWindy && tabSatellite) {
+      tabWindy.addEventListener('click', showWindyTab)
+      tabSatellite.addEventListener('click', showSatelliteTab)
+    }
 
-    // Streamline particle engine
-    var PARTICLE_COUNT = 90
-    var particles = []
-    var rad = (initialWindDir * Math.PI) / 180
-    var vx = Math.cos(rad) * 1.5
-    var vy = Math.sin(rad) * 1.5
-
-    for (var i = 0; i < PARTICLE_COUNT; i++) {
-      particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        speed: 0.8 + Math.random() * 1.6,
-        length: 12 + Math.random() * 20,
-        opacity: 0.15 + Math.random() * 0.55,
+    if (quickRouteSelect) {
+      quickRouteSelect.addEventListener('change', function () {
+        drawJourneyOnMap(buildJourneyFromSelect(quickRouteSelect.value))
       })
     }
 
-    function render() {
-      ctx.clearRect(0, 0, width, height)
+    // Listen to InteractiveCrossingPlanner route updates
+    window.addEventListener('tumbod:route-change', function (ev) {
+      if (!ev || !ev.detail) return
+      pendingJourney = ev.detail
+      drawJourneyOnMap(ev.detail)
+    })
 
-      // Ocean background gradient
-      var oceanGrad = ctx.createLinearGradient(0, 0, width, height)
-      oceanGrad.addColorStop(0, '#0a1727')
-      oceanGrad.addColorStop(1, '#0e233d')
-      ctx.fillStyle = oceanGrad
-      ctx.fillRect(0, 0, width, height)
+    window.addEventListener('tumbod:focus-satellite-route', function (ev) {
+      if (ev && ev.detail) pendingJourney = ev.detail
+      showSatelliteTab()
+    })
 
-      // Bathymetric depth contours
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.arc(width * 0.52, height * 0.44, width * 0.35, 0, Math.PI * 2)
-      ctx.arc(width * 0.52, height * 0.44, width * 0.22, 0, Math.PI * 2)
-      ctx.arc(width * 0.52, height * 0.44, width * 0.12, 0, Math.PI * 2)
-      ctx.stroke()
-
-      // Boat corridors (dashed yellow lines)
-      ctx.save()
-      ctx.strokeStyle = '#f59e0b'
-      ctx.setLineDash([6, 6])
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      // Tumbod to Mainland
-      ctx.moveTo(width * 0.52, height * 0.44)
-      ctx.lineTo(width * 0.43, height * 0.54)
-      ctx.lineTo(width * 0.28, height * 0.72)
-      // Tumbod to Casian
-      ctx.moveTo(width * 0.52, height * 0.44)
-      ctx.lineTo(width * 0.75, height * 0.22)
-      ctx.stroke()
-      ctx.restore()
-
-      // Tuluran Island Silhouette
-      ctx.fillStyle = '#1e3a5f'
-      ctx.strokeStyle = '#38bdf8'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.ellipse(width * 0.54, height * 0.42, width * 0.09, height * 0.14, Math.PI / 6, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.stroke()
-
-      // Island label
-      ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 11px system-ui, sans-serif'
-      ctx.fillText('PULO NG TULURAN', width * 0.50, height * 0.43)
-      ctx.fillStyle = '#94a3b8'
-      ctx.font = '9px system-ui, sans-serif'
-      ctx.fillText('(Brgy. Tumbod)', width * 0.51, height * 0.46)
-
-      // Taytay Mainland Coastline
-      ctx.fillStyle = '#13283f'
-      ctx.beginPath()
-      ctx.moveTo(0, height * 0.50)
-      ctx.quadraticCurveTo(width * 0.20, height * 0.65, width * 0.30, height * 0.85)
-      ctx.lineTo(width * 0.35, height)
-      ctx.lineTo(0, height)
-      ctx.closePath()
-      ctx.fill()
-      ctx.stroke()
-
-      ctx.fillStyle = '#cbd5e1'
-      ctx.font = 'bold 11px system-ui, sans-serif'
-      ctx.fillText('TAYTAY MAINLAND', width * 0.08, height * 0.78)
-
-      // Animate Wind Streamline Particles
-      ctx.save()
-      for (var pIdx = 0; pIdx < particles.length; pIdx++) {
-        var p = particles[pIdx]
-        ctx.strokeStyle = 'rgba(56, 189, 248, ' + p.opacity + ')'
-        ctx.lineWidth = 1.5
-        ctx.beginPath()
-        ctx.moveTo(p.x, p.y)
-        ctx.lineTo(p.x - vx * p.length, p.y - vy * p.length)
-        ctx.stroke()
-
-        p.x += vx * p.speed
-        p.y += vy * p.speed
-
-        if (p.x < -30) p.x = width + 30
-        if (p.x > width + 30) p.x = -30
-        if (p.y < -30) p.y = height + 30
-        if (p.y > height + 30) p.y = -30
-      }
-      ctx.restore()
-
-      // Draw Waypoints
-      for (var wIdx = 0; wIdx < waypoints.length; wIdx++) {
-        var wp = waypoints[wIdx]
-        var wx = width * wp.x
-        var wy = height * wp.y
-        var isSel = selectedWaypoint && selectedWaypoint.id === wp.id
-
-        // Pulse circle
-        ctx.beginPath()
-        ctx.arc(wx, wy, isSel ? 14 : 9, 0, Math.PI * 2)
-        ctx.fillStyle = isSel ? 'rgba(16, 185, 129, 0.35)' : 'rgba(56, 189, 248, 0.25)'
-        ctx.fill()
-
-        // Inner solid
-        ctx.beginPath()
-        ctx.arc(wx, wy, isSel ? 6 : 4, 0, Math.PI * 2)
-        ctx.fillStyle = isSel ? '#10b981' : '#38bdf8'
-        ctx.fill()
-
-        // Label
-        ctx.fillStyle = '#ffffff'
-        ctx.font = isSel ? 'bold 11px system-ui, sans-serif' : '10px system-ui, sans-serif'
-        ctx.fillText(fil ? wp.nameFil.split(' ')[0] : wp.nameEn.split(' ')[0], wx + 8, wy - 6)
-      }
-
-      requestAnimationFrame(render)
-    }
-
-    render()
-
-    // Canvas click detection for waypoints
-    canvas.addEventListener('click', function(e) {
-      var rect = canvas.getBoundingClientRect()
-      var clickX = e.clientX - rect.left
-      var clickY = e.clientY - rect.top
-
-      for (var i = 0; i < waypoints.length; i++) {
-        var wp = waypoints[i]
-        var wx = width * wp.x
-        var wy = height * wp.y
-        var dist = Math.hypot(clickX - wx, clickY - wy)
-        if (dist <= 25) {
-          updateWaypointCard(wp)
-          break
+    var layerPills = document.querySelectorAll('.layer-pill')
+    layerPills.forEach(function (pill) {
+      pill.addEventListener('click', function () {
+        layerPills.forEach(function (p) {
+          p.classList.remove('layer-pill--active')
+          p.setAttribute('aria-pressed', 'false')
+        })
+        pill.classList.add('layer-pill--active')
+        pill.setAttribute('aria-pressed', 'true')
+        currentLayer = pill.getAttribute('data-layer') || 'wind'
+        if (activeMode !== 'windy') {
+          showWindyTab()
+          return
         }
-      }
+        if (iframe && !iframe.hidden) {
+          if (windyLoading) windyLoading.hidden = false
+          iframe.src = buildWindyUrl(currentLayer)
+        } else {
+          activateWindy()
+        }
+      })
     })
-  }
-})()
+
+    function setFullscreen(on) {
+      if (!mapWrap || !fsBtn) return
+      mapWrap.classList.toggle('is-fullscreen', on)
+      fsBtn.setAttribute('aria-pressed', on ? 'true' : 'false')
+      document.documentElement.style.overflow = on ? 'hidden' : ''
+      if (leafletMap) {
+        requestAnimationFrame(function () {
+          leafletMap.invalidateSize()
+          resizeWindCanvas()
+        })
+      }
+    }
+
+    if (fsBtn && mapWrap) {
+      fsBtn.addEventListener('click', function () {
+        setFullscreen(!mapWrap.classList.contains('is-fullscreen'))
+      })
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && mapWrap.classList.contains('is-fullscreen')) {
+          setFullscreen(false)
+        }
+      })
+    }
+
+    window.addEventListener('resize', function () {
+      resizeWindCanvas()
+      if (leafletMap) leafletMap.invalidateSize()
+    })
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && activeMode === 'satellite') startWindOverlay()
+    })
+
+    // Sync live wind/wave readings from Open-Meteo and hydrate heavy map embeds
+    // after initial load/idle so above-the-fold LCP stays unobstructed on Slow 4G.
+    var liveHudSynced = false
+    function syncHudWeather() {
+      if (liveHudSynced || navigator.onLine === false) return
+      liveHudSynced = true
+      Promise.all([
+        fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=wind_speed_10m,wind_direction_10m&timezone=Asia%2FManila').then(function (r) { return r.json() }),
+        fetch('https://marine-api.open-meteo.com/v1/marine?latitude=' + lat + '&longitude=' + lon + '&current=wave_height&timezone=Asia%2FManila').then(function (r) { return r.json() }),
+      ])
+        .then(function (res) {
+          if (res[0] && res[0].current) {
+            if (typeof res[0].current.wind_speed_10m === 'number') liveWindSpeed = res[0].current.wind_speed_10m
+            if (typeof res[0].current.wind_direction_10m === 'number') liveWindDir = res[0].current.wind_direction_10m
+          }
+          if (res[1] && res[1].current && typeof res[1].current.wave_height === 'number') {
+            liveWaveHeight = res[1].current.wave_height
+          }
+          if (hudWeather) hudWeather.textContent = Math.round(liveWindSpeed) + ' km/h · ' + Number(liveWaveHeight).toFixed(1) + ' m'
+        })
+        .catch(function () {})
+    }
+
+    var mapHydrated = false
+    function hydrateLiveMap() {
+      if (mapHydrated) return
+      mapHydrated = true
+      syncHudWeather()
+      if (activeMode === 'windy' && navigator.onLine !== false) {
+        activateWindy()
+      } else {
+        initSatelliteMap()
+      }
+    }
+
+    if (activeMode === 'windy' && navigator.onLine !== false) {
+      showWindyTab(true)
+    } else {
+      showSatelliteTab(true)
+    }
+
+    var scheduleMapHydration = function () {
+      if ('IntersectionObserver' in window && mapWrap) {
+        var mapIo = new IntersectionObserver(
+          function (entries) {
+            if (entries.some(function (e) { return e.isIntersecting })) {
+              mapIo.disconnect()
+              hydrateLiveMap()
+            }
+          },
+          { rootMargin: '250px' },
+        )
+        mapIo.observe(mapWrap)
+      }
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(hydrateLiveMap, { timeout: 1200 })
+      } else {
+        setTimeout(hydrateLiveMap, 400)
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      scheduleMapHydration()
+    } else {
+      window.addEventListener('load', scheduleMapHydration, { once: true })
+    }
+  })()
 </script>

@@ -27,7 +27,7 @@ export default defineConfig({
    * Never reuse: the whole point is to test what actually ships.
    */
   webServer: {
-    command: 'npm run build && npm run preview',
+    command: 'npm run build && npx astro preview --host 127.0.0.1 --port 4321',
     url: 'http://localhost:4321',
     reuseExistingServer: false,
     timeout: 180_000,

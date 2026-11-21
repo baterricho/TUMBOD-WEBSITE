@@ -2,17 +2,14 @@
 /**
  * FishermanWeatherSafety.astro
  *
- * Dedicated weather warning & sea safety guide for the fishermen and residents of Barangay Tumbod.
- * Specifically tuned for Tuluran Island waters, Tuluran Strait, and Taytay Bay.
- *
- * Features:
- *   1. Live Fishermen Sailing & Sea Safety Advisory status based on real-time marine telemetry;
- *   2. Interactive Pre-Departure Safety Checklist with live completion counter;
- *   3. Wave & Wind Threshold Matrix by Outrigger (Bangka) tonnage category;
- *   4. PAGASA TCWS Tropical Cyclone Wind Signal Action Matrix for coastal communities;
- *   5. Boat Hauling & Tie-Down guidelines against storm surges and squalls;
- *   6. Emergency Safe Haven Inlets around Tuluran Island (Biton Cove, Mangrove channels);
- *   7. Marine VHF Channel 16 and Sea Rescue hotlines.
+ * Dedicated maritime safety guide for Barangay Tumbod / Tuluran Island fishers:
+ *   1. Live Fishermen Sailing Status;
+ *   2. Persistent Pre-Departure Safety Checklist (accessible focus & counter);
+ *   3. Vessel Wave & Wind Limit Matrix;
+ *   4. PAGASA TCWS Wind Signal Directives;
+ *   5. Boat Hauling & Tie-Down Protocols;
+ *   6. Safe Haven Inlets around Tuluran Island;
+ *   7. Maritime Rescue Radio & Hotline Bar.
  */
 import Icon from './Icon.astro'
 import PhoneNumber from './PhoneNumber.astro'
@@ -34,8 +31,7 @@ const windGusts = cur?.windGustsKph ?? 19
 const windDir = cur?.windCardinalFil ?? 'Hilagang Silangan (Amihan)'
 const monsoon = cur?.monsoonFil ?? 'Amihan (Northeast Monsoon)'
 
-// Fishermen-specific advisory logic
-let fishermanStatus = 'safe' // 'safe' | 'caution' | 'danger'
+let fishermanStatus: 'safe' | 'caution' | 'danger' = 'safe'
 if (waveHeight >= 1.5 || windSpeed >= 30 || windGusts >= 40) {
   fishermanStatus = 'danger'
 } else if (waveHeight >= 0.9 || windSpeed >= 20 || windGusts >= 28) {
@@ -46,9 +42,6 @@ const STATUS_CONTENT = {
   safe: {
     badgeFil: 'Ligtas Pumalaot (Normal)',
     badgeEn: 'Safe for All Bancas',
-    color: '#10b981',
-    bg: 'rgba(16, 185, 129, 0.12)',
-    border: 'rgba(16, 185, 129, 0.35)',
     icon: 'anchor',
     titleFil: 'Kondisyon ng Dagat: Ligtas at Tahimik ang Karagatan',
     titleEn: 'Sea Condition: Favorable and Calm Waters',
@@ -58,32 +51,25 @@ const STATUS_CONTENT = {
   caution: {
     badgeFil: 'Mag-ingat — Limitado ang Pagpalaot',
     badgeEn: 'Caution — Small Craft Advisory',
-    color: '#f59e0b',
-    bg: 'rgba(245, 158, 11, 0.12)',
-    border: 'rgba(245, 158, 11, 0.35)',
     icon: 'warning',
     titleFil: 'Kondisyon ng Dagat: May Katamtamang Alon at Chop sa Kipot',
     titleEn: 'Sea Condition: Moderate Swell & Cross-Channel Chop',
-    descFil: `Umakyat ang alon sa ${waveHeight} m at ang hangin sa ${windSpeed} km/h (may bugso na ${windGusts} km/h). Hindi inirerekomenda sa maliliit na bangkang walang katig o mas mababa sa 1 Gross Ton ang pumunta sa bukas na dagat patungong Casian Island o Shark Fin Bay. Manatili sa protektadong baybayin.`,
-    descEn: `Wave heights have reached ${waveHeight} m with winds of ${windSpeed} km/h (gusts to ${windGusts} km/h). Small bancas under 1 GT and unmotorized craft are strongly advised against open-sea navigation toward Casian or Shark Fin Bay. Remain in sheltered coastal waters.`,
+    descFil: `Umakyat ang alon sa ${waveHeight} m at ang hangin sa ${windSpeed} km/h (may bugso na ${windGusts} km/h). Hindi inirerekomenda sa maliliit na bangkang walang katig o mas mababa sa 1 Gross Ton ang pumunta sa bukas na dagat patungong Casian Island o Shark Fin Bay.`,
+    descEn: `Wave heights have reached ${waveHeight} m with winds of ${windSpeed} km/h (gusts to ${windGusts} km/h). Small bancas under 1 GT and unmotorized craft are strongly advised against open-sea navigation toward Casian or Shark Fin Bay.`,
   },
   danger: {
     badgeFil: 'DELIKADO — BAWAL PUMALAOT (NO SAIL)',
     badgeEn: 'DANGER — GALE WARNING / NO SAIL ORDER',
-    color: '#ef4444',
-    bg: 'rgba(239, 68, 68, 0.15)',
-    border: 'rgba(239, 68, 68, 0.45)',
     icon: 'warning',
     titleFil: 'Mahigpit na Babala: Ipinagbabawal ang Paglayag ng Lahat ng Bangka',
     titleEn: 'Strict Advisory: All Small Watercraft Sailing Suspended',
-    descFil: `Mapanganib ang dagat (${waveHeight} m alon, ${windSpeed} km/h hangin, bugso ${windGusts} km/h). Alinsunod sa Philippine Coast Guard Memorandum Circular No. 03-01, ipinagbabawal ang paglalayag ng lahat ng sasakyang-dagat na mas mababa sa 3 Gross Tonnage (3 GT). I-ahon agad ang mga bangka sa pampang.`,
-    descEn: `Hazardous sea state (${waveHeight} m waves, ${windSpeed} km/h wind, gusts ${windGusts} km/h). Pursuant to Philippine Coast Guard regulations, all watercraft below 3 Gross Tonnage (3 GT) are legally prohibited from unmooring. Haul out all outriggers to high ground immediately.`,
+    descFil: `Mapanganib ang dagat (${waveHeight} m alon, ${windSpeed} km/h hangin, bugso ${windGusts} km/h). Alinsunod sa Philippine Coast Guard MC 03-01, ipinagbabawal ang paglalayag ng lahat ng sasakyang-dagat na mas mababa sa 3 GT. I-ahon agad ang mga bangka sa pampang.`,
+    descEn: `Hazardous sea state (${waveHeight} m waves, ${windSpeed} km/h wind, gusts ${windGusts} km/h). Pursuant to Philippine Coast Guard regulations, all watercraft below 3 GT are barred from unmooring. Haul out all outriggers immediately.`,
   },
-}
+} as const
 
-const activeStatus = STATUS_CONTENT[fishermanStatus as keyof typeof STATUS_CONTENT]
+const activeStatus = STATUS_CONTENT[fishermanStatus]
 
-// Vessel Category matrix
 const BOAT_CATEGORIES = [
   {
     typeFil: 'Maliit na Bangka / De-sagwan (< 1 GT)',
@@ -96,8 +82,8 @@ const BOAT_CATEGORIES = [
     notesEn: 'Prohibited from mid-strait crossing during strong tidal chop.',
   },
   {
-    typeFil: 'Katamtamang Bangkang De-motor (1 - 3 GT)',
-    typeEn: 'Motorized Outrigger Fishing Banca (1 - 3 GT)',
+    typeFil: 'Katamtamang Bangkang De-motor (1 – 3 GT)',
+    typeEn: 'Motorized Outrigger Fishing Banca (1 – 3 GT)',
     waveMax: '1.2 m',
     windMax: '24 km/h',
     zoneFil: 'Kipot ng Tuluran at baybayin ng Look ng Taytay',
@@ -106,8 +92,8 @@ const BOAT_CATEGORIES = [
     notesEn: 'Must carry spare paddles, bailer bucket, and life vests onboard.',
   },
   {
-    typeFil: 'Pampasahero at Malaking Bangka (3 - 10 GT)',
-    typeEn: 'Passenger Ferry & Deep Sea Banca (3 - 10 GT)',
+    typeFil: 'Pampasahero at Malaking Bangka (3 – 10 GT)',
+    typeEn: 'Passenger Ferry & Deep Sea Banca (3 – 10 GT)',
     waveMax: '2.0 m',
     windMax: '35 km/h',
     zoneFil: 'Tuluran hanggang Taytay Mainland Pantalan',
@@ -117,46 +103,16 @@ const BOAT_CATEGORIES = [
   },
 ]
 
-// Checklist items for fishermen
 const CHECKLIST_ITEMS = [
-  {
-    id: 'chk-vest',
-    labelFil: 'Rehistradong Life Vest para sa bawat sakay at tripulante',
-    labelEn: 'Approved Life Jacket for every passenger and crew member',
-  },
-  {
-    id: 'chk-paddles',
-    labelFil: 'Dalawang (2) matitibay na sagwan kung sakaling tumirik ang makina',
-    labelEn: 'Two (2) heavy-duty spare paddles in case of engine stall',
-  },
-  {
-    id: 'chk-bailer',
-    labelFil: 'Pampa-baile (timba o pambomba) para sa sumasalpok na tubig-dagat',
-    labelEn: 'Bailing bucket or manual bilge scoop for incoming spray',
-  },
-  {
-    id: 'chk-light',
-    labelFil: 'Waterproof na flashlight at sulo/lighter na nakatago sa plastic',
-    labelEn: 'Waterproof torch / flashlight and matches sealed in plastic',
-  },
-  {
-    id: 'chk-phone',
-    labelFil: 'Cellphone sa selyadong waterproof pouch (may load at full battery)',
-    labelEn: 'Mobile phone sealed in waterproof pouch (charged and with credit)',
-  },
-  {
-    id: 'chk-fuel',
-    labelFil: 'Sapat na gasolina/krudo at 1 litrong reserba kasama ang ekstra langis',
-    labelEn: 'Sufficient marine fuel plus 1-liter reserve and 2T/engine oil',
-  },
-  {
-    id: 'chk-float',
-    labelFil: 'Nagsabi sa pamilya o Tanod Outpost kung saan mangingisda at kailan uuwi',
-    labelEn: 'Informed family or Barangay Tanod outpost of destination & ETA',
-  },
+  { id: 'chk-vest', labelFil: 'Rehistradong Life Vest para sa bawat sakay at tripulante', labelEn: 'Approved Life Jacket for every passenger and crew member' },
+  { id: 'chk-paddles', labelFil: 'Dalawang (2) matitibay na sagwan kung sakaling tumirik ang makina', labelEn: 'Two (2) heavy-duty spare paddles in case of engine stall' },
+  { id: 'chk-bailer', labelFil: 'Pampa-baile (timba o pambomba) para sa sumasalpok na tubig-dagat', labelEn: 'Bailing bucket or manual bilge scoop for incoming spray' },
+  { id: 'chk-light', labelFil: 'Waterproof na flashlight at sulo/lighter na nakatago sa plastic', labelEn: 'Waterproof torch / flashlight and matches sealed in plastic' },
+  { id: 'chk-phone', labelFil: 'Cellphone sa selyadong waterproof pouch (may load at full battery)', labelEn: 'Mobile phone sealed in waterproof pouch (charged and with credit)' },
+  { id: 'chk-fuel', labelFil: 'Sapat na gasolina/krudo at 1 litrong reserba kasama ang ekstra langis', labelEn: 'Sufficient marine fuel plus 1-liter reserve and 2T/engine oil' },
+  { id: 'chk-float', labelFil: 'Nagsabi sa pamilya o Tanod Outpost kung saan mangingisda at kailan uuwi', labelEn: 'Informed family or Barangay Tanod outpost of destination & ETA' },
 ]
 
-// Natural Havens around Tuluran Island
 const SAFE_HAVENS = [
   {
     nameFil: 'Look ng Biton (Biton Cove)',
@@ -186,57 +142,53 @@ const SAFE_HAVENS = [
 ---
 
 <div class="fisherman-safety" id="fisherman-safety-section">
-  {/* 1. Live Weather Status Banner for Fishermen */}
-  <div
-    class="fisherman-status-banner"
-    style={`background:${activeStatus.bg};border-color:${activeStatus.border};`}
-  >
+  {/* 1. Live Sea Safety Status */}
+  <div class={`fisherman-status-banner fisherman-status-banner--${fishermanStatus}`}>
     <div class="fisherman-status-banner__head">
-      <div class="fisherman-status-badge" style={`color:${activeStatus.color};border-color:${activeStatus.border};`}>
-        <Icon name={activeStatus.icon as any} size={18} />
+      <span class="fisherman-status-badge">
+        <Icon name={activeStatus.icon as any} size={16} />
         <span>{fil ? activeStatus.badgeFil : activeStatus.badgeEn}</span>
-      </div>
-      <div class="fisherman-monsoon-tag">
+      </span>
+      <span class="chip chip--muted">
         <Icon name="compass" size={14} />
         <span>{monsoon}</span>
-      </div>
+      </span>
     </div>
 
-    <h3 class="fisherman-status-title" style={`color:${fishermanStatus === 'danger' ? '#f87171' : fishermanStatus === 'caution' ? '#fbbf24' : '#34d399'};`}>
+    <h3 class="fisherman-status-title">
       {fil ? activeStatus.titleFil : activeStatus.titleEn}
     </h3>
     <p class="fisherman-status-desc">
       {fil ? activeStatus.descFil : activeStatus.descEn}
     </p>
 
-    {/* Live Key Marine Readings */}
     <div class="fisherman-metrics-strip">
       <div class="metric-pill">
         <Icon name="wave-moderate" size={16} />
         <div>
           <span class="metric-label">{fil ? 'Taas ng Alon' : 'Wave Height'}</span>
-          <strong>{waveHeight} m</strong>
+          <strong class="figure">{waveHeight} m</strong>
         </div>
       </div>
       <div class="metric-pill">
         <Icon name="wind" size={16} />
         <div>
           <span class="metric-label">{fil ? 'Bilis ng Hangin' : 'Wind Speed'}</span>
-          <strong>{windSpeed} km/h</strong>
+          <strong class="figure">{windSpeed} km/h</strong>
         </div>
       </div>
       <div class="metric-pill">
         <Icon name="wind" size={16} />
         <div>
           <span class="metric-label">{fil ? 'Bugso (Gusts)' : 'Wind Gusts'}</span>
-          <strong>{windGusts} km/h</strong>
+          <strong class="figure">{windGusts} km/h</strong>
         </div>
       </div>
       <div class="metric-pill">
         <Icon name="compass" size={16} />
         <div>
           <span class="metric-label">{fil ? 'Direksyon' : 'Direction'}</span>
-          <strong>{cur?.windCardinal ?? 'ENE'}</strong>
+          <strong class="figure">{cur?.windCardinal ?? 'ENE'}</strong>
         </div>
       </div>
     </div>
@@ -245,85 +197,85 @@ const SAFE_HAVENS = [
   {/* 2. Interactive Pre-Departure Safety Checklist */}
   <div class="fisherman-card">
     <div class="fisherman-card__header">
-      <div class="fisherman-card__title-group">
-        <div class="fisherman-card__badge">
-          <Icon name="checklist" size={16} />
+      <div>
+        <span class="fisherman-card__badge">
+          <Icon name="checklist" size={15} />
           <span>{fil ? 'Bantay-Laot Checklist' : 'Pre-Departure Inspection'}</span>
-        </div>
+        </span>
         <h4 class="fisherman-card__heading">
           {fil ? 'Kagamitang Pangkaligtasan Bago Pumalaot' : 'Mandatory Pre-Departure Safety Checklist'}
         </h4>
       </div>
-      <div class="checklist-progress" id="checklist-progress-box">
-        <span class="checklist-progress__count" id="checklist-counter">0 / {CHECKLIST_ITEMS.length}</span>
+      <div class="checklist-progress" id="checklist-progress-box" aria-live="polite">
+        <span class="checklist-progress__count figure" id="checklist-counter">0 / {CHECKLIST_ITEMS.length}</span>
         <span class="checklist-progress__label">{fil ? 'Nasiyasat' : 'Verified'}</span>
       </div>
     </div>
 
-    <p class="small muted" style="margin-bottom:var(--space-3);">
+    <p class="fisherman-card__lead">
       {fil
-        ? 'Huwag aalis ng dalampasigan nang hindi nasusuri ang pitong (7) kagamitang ito para sa kaligtasan ng inyong pamilya at tripulante:'
-        : 'Do not unmoor or depart from Tuluran Island without verifying these seven (7) essential survival items:'}
+        ? 'Huwag aalis ng dalampasigan nang hindi nasusuri ang pitong (7) kagamitang ito para sa kaligtasan ng pamilya at tripulante:'
+        : 'Do not unmoor from Tuluran Island without verifying these seven (7) essential survival items:'}
     </p>
 
     <div class="checklist-grid" id="fisherman-checklist">
       {CHECKLIST_ITEMS.map((item) => (
         <label class="checklist-item" for={item.id}>
           <input type="checkbox" id={item.id} class="checklist-item__input" />
-          <span class="checklist-item__custom-box" aria-hidden="true">
-            <Icon name="check" size={14} />
-          </span>
           <span class="checklist-item__text">{fil ? item.labelFil : item.labelEn}</span>
         </label>
       ))}
     </div>
 
-    <div class="checklist-notice" id="checklist-notice" hidden>
-      <Icon name="shield" size={20} />
+    <div class="checklist-notice" id="checklist-notice" role="status" hidden>
+      <Icon name="shield" size={18} />
       <span>
         {fil
-          ? 'Mabuhay! Kumpleto ang inyong mga kagamitan sa kaligtasan. Mag-ingat sa dagat at magmasid sa mga ulap sa abot-tanaw!'
-          : 'All safety equipment verified! Sail safely, maintain lookout for squall lines on the horizon, and observe safe distances.'}
+          ? 'Kumpleto ang inyong mga kagamitan sa kaligtasan. Mag-ingat sa dagat at magmasid sa mga ulap sa abot-tanaw.'
+          : 'All safety equipment verified. Sail safely, watch the horizon for squall lines, and stay within safe limits.'}
       </span>
     </div>
   </div>
 
   {/* 3. Bangka Capacity & Wave Limit Matrix */}
   <div class="fisherman-card">
-    <div class="fisherman-card__badge">
-      <Icon name="bangka" size={16} />
+    <span class="fisherman-card__badge">
+      <Icon name="bangka" size={15} />
       <span>{fil ? 'Limitasyon sa Alon' : 'Vessel Wave Limits'}</span>
-    </div>
+    </span>
     <h4 class="fisherman-card__heading">
       {fil ? 'Talahanayan ng Laki ng Bangka at Limitasyon sa Dagat' : 'Bangka Category & Safe Wave Limit Matrix'}
     </h4>
-    <p class="small muted" style="margin-bottom:var(--space-3);">
+    <p class="fisherman-card__lead">
       {fil
-        ? 'Alamin ang ligtas na kapasidad ng inyong sasakyang-dagat batay sa taas ng alon at lakas ng hangin:'
-        : 'Observe safe operating parameters for your specific outrigger craft based on wave heights and wind speed:'}
+        ? 'Sundin ang ligtas na limitasyon ng inyong bangka batay sa taas ng alon at lakas ng hangin:'
+        : 'Observe safe operating parameters for your craft based on wave height and wind speed:'}
     </p>
 
-    <div class="boat-table-wrapper">
-      <table class="boat-table">
+    <div
+      class="table-wrap"
+      tabindex="0"
+      role="region"
+      aria-label={fil ? 'Talahanayan ng Laki ng Bangka at Limitasyon sa Dagat' : 'Bangka Category and Safe Wave Limit Matrix'}
+    >
+      <table class="data-table">
         <thead>
           <tr>
-            <th>{fil ? 'Uri ng Sasakyang-Dagat' : 'Vessel Classification'}</th>
-            <th>{fil ? 'Sagad na Alon' : 'Max Wave'}</th>
-            <th>{fil ? 'Sagad na Hangin' : 'Max Wind'}</th>
-            <th>{fil ? 'Ligtas na Lugar' : 'Safe Operating Zone'}</th>
-            <th>{fil ? 'Paalala sa Kaligtasan' : 'Safety Requirement'}</th>
+            <th scope="col">{fil ? 'Uri ng Sasakyang-Dagat' : 'Vessel Classification'}</th>
+            <th scope="col" class="num">{fil ? 'Sagad na Alon' : 'Max Wave'}</th>
+            <th scope="col" class="num">{fil ? 'Sagad na Hangin' : 'Max Wind'}</th>
+            <th scope="col">{fil ? 'Ligtas na Lugar' : 'Safe Operating Zone'}</th>
+            <th scope="col">{fil ? 'Paalala sa Kaligtasan' : 'Safety Requirement'}</th>
           </tr>
         </thead>
         <tbody>
           {BOAT_CATEGORIES.map((cat) => (
             <tr>
-              <td>
-                <strong>{fil ? cat.typeFil : cat.typeEn}</strong>
-              </td>
-              <td><span class="limit-chip limit-chip--wave">{cat.waveMax}</span></td>
-              <td><span class="limit-chip limit-chip--wind">{cat.windMax}</span></td>
+              <td><strong>{fil ? cat.typeFil : cat.typeEn}</strong></td>
+              <td class="num"><span class="chip chip--info">{cat.waveMax}</span></td>
+              <td class="num"><span class="chip chip--warning">{cat.windMax}</span></td>
               <td>{fil ? cat.zoneFil : cat.zoneEn}</td>
-              <td class="small muted">{fil ? cat.notesFil : cat.notesEn}</td>
+              <td class="muted">{fil ? cat.notesFil : cat.notesEn}</td>
             </tr>
           ))}
         </tbody>
@@ -331,12 +283,12 @@ const SAFE_HAVENS = [
     </div>
   </div>
 
-  {/* 4. PAGASA Tropical Cyclone Wind Signal (TCWS) Protocols */}
+  {/* 4. PAGASA Tropical Cyclone Wind Signal Protocols */}
   <div class="fisherman-card">
-    <div class="fisherman-card__badge">
-      <Icon name="warning" size={16} />
+    <span class="fisherman-card__badge">
+      <Icon name="warning" size={15} />
       <span>{fil ? 'Babala sa Bagyo (TCWS)' : 'Typhoon Wind Signals'}</span>
-    </div>
+    </span>
     <h4 class="fisherman-card__heading">
       {fil ? 'Alituntunin ng BDRRMC at Coast Guard sa Signal ng Bagyo' : 'Typhoon Warning Signals (TCWS) & Maritime Directives'}
     </h4>
@@ -344,143 +296,143 @@ const SAFE_HAVENS = [
     <div class="tcws-grid">
       <div class="tcws-card tcws-card--1">
         <div class="tcws-card__badge">SIGNAL #1</div>
-        <div class="tcws-card__wind">39 – 61 km/h</div>
-        <p class="small">
+        <div class="tcws-card__wind figure">39 – 61 km/h</div>
+        <p class="tcws-card__desc">
           {fil
             ? 'Awtomatikong suspendido ang paglalayag ng mga bangkang mas mababa sa 3 GT. Kanselahin ang malayuang pangingisda sa Casian at Shark Fin Bay.'
-            : 'Automatic sailing suspension for vessels below 3 GT. Halt all deep-sea fishing runs toward Casian Island and Shark Fin Bay.'}
+            : 'Automatic sailing suspension for vessels below 3 GT. Halt deep-sea runs toward Casian Island and Shark Fin Bay.'}
         </p>
       </div>
 
       <div class="tcws-card tcws-card--2">
         <div class="tcws-card__badge">SIGNAL #2</div>
-        <div class="tcws-card__wind">62 – 88 km/h</div>
-        <p class="small">
+        <div class="tcws-card__wind figure">62 – 88 km/h</div>
+        <p class="tcws-card__desc">
           {fil
-            ? 'Lahat ng biyahe sa kipot (Tuluran-Taytay) ay suspendido. I-ahon na agad ang lahat ng bangka nang 15-20 metro mula sa high-tide line.'
-            : 'All Tuluran Strait crossings completely halted. Haul all outrigger boats 15-20 meters above the high-tide watermark immediately.'}
+            ? 'Lahat ng biyahe sa kipot (Tuluran–Taytay) ay suspendido. I-ahon agad ang lahat ng bangka nang 15–20 metro mula sa high-tide line.'
+            : 'All Tuluran Strait crossings halted. Haul all outrigger boats 15–20 meters above the high-tide mark immediately.'}
         </p>
       </div>
 
       <div class="tcws-card tcws-card--3">
         <div class="tcws-card__badge">SIGNAL #3 & #4</div>
-        <div class="tcws-card__wind">89 – 184+ km/h</div>
-        <p class="small">
+        <div class="tcws-card__wind figure">89 – 184+ km/h</div>
+        <p class="tcws-card__desc">
           {fil
-            ? 'Banta ng Delubyo at Storm Surge (higit 2.5 - 3.5 metro tulad ng Bagyong Tino). Lumikas sa mga matataas na evacuation center. Mahigpit na bawal lumapit sa dalampasigan.'
-            : 'Severe Storm Surge threat (>2.5 - 3.5 meters as experienced during Typhoon Tino). Evacuate to elevated shelters. Coastal areas strictly off-limits.'}
+            ? 'Banta ng delubyo at storm surge (>2.5–3.5 m). Lumikas sa matataas na evacuation center. Mahigpit na bawal lumapit sa dalampasigan.'
+            : 'Severe storm surge threat (>2.5–3.5 m). Evacuate to elevated shelters. Coastal zones strictly off-limits.'}
         </p>
       </div>
     </div>
   </div>
 
-  {/* 5. Hauling & Tie-Down Guidelines for Bancas */}
+  {/* 5. Hauling & Tie-Down Guidelines */}
   <div class="fisherman-card">
-    <div class="fisherman-card__badge">
-      <Icon name="anchor" size={16} />
+    <span class="fisherman-card__badge">
+      <Icon name="anchor" size={15} />
       <span>{fil ? 'Pangangalaga sa Bangka' : 'Vessel Protection'}</span>
-    </div>
+    </span>
     <h4 class="fisherman-card__heading">
       {fil ? 'Gabay sa Pag-ahon at Pagtatali ng mga Katig sa Unos' : 'Boat Hauling & Storm Tie-Down Protocols'}
     </h4>
 
     <div class="hauling-steps-grid">
       <div class="hauling-step">
-        <div class="hauling-step__num">1</div>
+        <span class="hauling-step__num figure">1</span>
         <strong>{fil ? 'Pag-ahon sa Dalampasigan' : 'High Ground Hauling'}</strong>
-        <p class="small muted">
+        <p>
           {fil
-            ? 'I-ahon ang bangka sa mataas na lupa gamit ang mga troso o rollers. Siguraduhing lumampas ito sa pinakamataas na abot ng tubig-dagat.'
-            : 'Haul bancas inland using skids or timber rollers. Ensure the craft is positioned well beyond the predicted maximum storm tide level.'}
+            ? 'I-ahon ang bangka sa mataas na lupa gamit ang mga troso o rollers nang lagpas sa pinakamataas na abot ng tubig-dagat.'
+            : 'Haul bancas inland using timber rollers well past the predicted maximum storm tide level.'}
         </p>
       </div>
 
       <div class="hauling-step">
-        <div class="hauling-step__num">2</div>
+        <span class="hauling-step__num figure">2</span>
         <strong>{fil ? 'Four-Point Tie Down' : '4-Point Lashing'}</strong>
-        <p class="small muted">
+        <p>
           {fil
-            ? 'Talian ang prowa (unahan), popa (hulihan), at magkabilang katig sa matitibay na puno ng niyog o malalalim na istaka upang hindi liparin ng hangin.'
-            : 'Secure four independent nylon ropes to bow, stern, and both outrigger wings anchored to mature coconut trunks or deep ground stakes.'}
+            ? 'Talian ang prowa, popa, at magkabilang katig sa matitibay na puno ng niyog o malalalim na istaka.'
+            : 'Secure four nylon lines to bow, stern, and both outriggers anchored to sturdy trunks or deep stakes.'}
         </p>
       </div>
 
       <div class="hauling-step">
-        <div class="hauling-step__num">3</div>
+        <span class="hauling-step__num figure">3</span>
         <strong>{fil ? 'Pangangalaga sa Makina' : 'Engine Protection'}</strong>
-        <p class="small muted">
+        <p>
           {fil
-            ? 'Baklasin ang outboard engine o takpan ang inboard engine ng makapal na tarpaulin upang hindi pasukin ng buhangin at tubig-alat.'
-            : 'Dismount outboard motors and carry them to indoor shelters. For inboard diesels, seal exhaust and air intakes with heavy canvas.'}
+            ? 'Baklasin ang outboard engine o takpan ang inboard engine ng makapal na tarpaulin laban sa buhangin at tubig-alat.'
+            : 'Dismount outboard motors to indoor shelter; seal inboard exhaust and intakes with heavy canvas.'}
         </p>
       </div>
 
       <div class="hauling-step">
-        <div class="hauling-step__num">4</div>
+        <span class="hauling-step__num figure">4</span>
         <strong>{fil ? 'Ligtas na Anchorage' : 'Safe Anchorage Refuge'}</strong>
-        <p class="small muted">
+        <p>
           {fil
-            ? 'Para sa mga malalaking bangka na hindi kayang iahon, i-angkla ang mga ito sa Look ng Biton o loob ng mangrove river tributaries.'
-            : 'For large passenger craft that cannot be beached, navigate to Biton Cove or sheltered mangrove creeks with double bow-and-stern anchors.'}
+            ? 'Para sa malalaking bangka na hindi kayang iahon, i-angkla sa Look ng Biton o loob ng mga sapa ng bakawan.'
+            : 'For large craft that cannot be beached, anchor in Biton Cove or sheltered mangrove creeks with dual anchors.'}
         </p>
       </div>
     </div>
   </div>
 
-  {/* 6. Emergency Safe Haven Inlets */}
+  {/* 6. Safe Haven Inlets */}
   <div class="fisherman-card">
-    <div class="fisherman-card__badge">
-      <Icon name="compass" size={16} />
+    <span class="fisherman-card__badge">
+      <Icon name="compass" size={15} />
       <span>{fil ? 'Ligtas na Kanlungan' : 'Emergency Havens'}</span>
-    </div>
+    </span>
     <h4 class="fisherman-card__heading">
-      {fil ? 'Mga Ligtas na Kanlungan (Safe Havens) sa Paligid ng Tuluran' : 'Natural Marine Shelters Around Tuluran Island'}
+      {fil ? 'Mga Ligtas na Kanlungan sa Paligid ng Tuluran' : 'Natural Marine Shelters Around Tuluran Island'}
     </h4>
-    <p class="small muted" style="margin-bottom:var(--space-3);">
+    <p class="fisherman-card__lead">
       {fil
-        ? 'Kung inabutan ng biglaang unos, buhawi, o matinding alon sa dagat, dumaong sa mga natural na kanlungang ito:'
-        : 'If caught by sudden squalls or high cross-waves at sea, seek immediate refuge at these natural island harbors:'}
+        ? 'Kung inabutan ng biglaang unos o matinding alon sa dagat, dumaong sa mga natural na kanlungang ito:'
+        : 'If caught by sudden squalls or high cross-waves at sea, seek refuge at these natural harbors:'}
     </p>
 
     <div class="haven-cards-grid">
       {SAFE_HAVENS.map((haven) => (
         <div class="haven-item">
           <div class="haven-item__head">
-            <Icon name="anchor" size={18} />
+            <Icon name="anchor" size={16} />
             <strong>{fil ? haven.nameFil : haven.nameEn}</strong>
           </div>
-          <span class="haven-feature">{fil ? haven.featureFil : haven.featureEn}</span>
-          <p class="small muted">{fil ? haven.descFil : haven.descEn}</p>
+          <span class="chip chip--info">{fil ? haven.featureFil : haven.featureEn}</span>
+          <p class="haven-item__desc">{fil ? haven.descFil : haven.descEn}</p>
         </div>
       ))}
     </div>
   </div>
 
-  {/* 7. Emergency Contact Bar for Fishermen */}
+  {/* 7. Maritime Rescue Bar */}
   <div class="fisherman-emergency-bar">
     <div class="emergency-bar__left">
       <div class="emergency-bar__badge">
-        <Icon name="phone" size={18} />
+        <Icon name="phone" size={16} />
         <span>{fil ? 'Saklolo sa Dagat (Coast Guard & BDRRMC)' : 'Maritime Emergency & Rescue'}</span>
       </div>
       <p class="emergency-bar__desc">
         {fil
           ? 'Kung may bangkang tumirik, nagkaproblema sa katig, o hindi nakauwi sa takdang oras, makipag-ugnayan agad sa radyo o telepono:'
-          : 'For engine failure, damaged outriggers, capsizing, or overdue fishing bancas, call immediately on radio or mobile:'}
+          : 'For engine failure, damaged outriggers, capsizing, or overdue bancas, call immediately on radio or mobile:'}
       </p>
     </div>
 
     <div class="emergency-bar__contacts">
       <div class="emergency-contact-pill">
-        <span class="contact-name">{fil ? 'VHF Marine Radio:' : 'VHF Radio:'}</span>
-        <strong>Channel 16 (156.8 MHz)</strong>
+        <span class="contact-name">{fil ? 'VHF Marine Radio' : 'VHF Radio'}</span>
+        <strong class="figure">Channel 16 (156.8 MHz)</strong>
       </div>
       <div class="emergency-contact-pill">
-        <span class="contact-name">{fil ? 'Coast Guard Taytay:' : 'PCG Taytay:'}</span>
+        <span class="contact-name">{fil ? 'Coast Guard Taytay' : 'PCG Taytay'}</span>
         <PhoneNumber number="0917-842-7653" locale={locale} />
       </div>
       <div class="emergency-contact-pill">
-        <span class="contact-name">{fil ? 'BDRRMC Sea Rescue:' : 'BDRRMC Rescue:'}</span>
+        <span class="contact-name">{fil ? 'BDRRMC Sea Rescue' : 'BDRRMC Rescue'}</span>
         <PhoneNumber number="0917-123-4567" locale={locale} />
       </div>
     </div>
@@ -488,500 +440,473 @@ const SAFE_HAVENS = [
 </div>
 
 <style>
-.fisherman-safety {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  margin-block: var(--space-3);
-}
+  .fisherman-safety {
+    display: grid;
+    gap: var(--space-5);
+    margin-block: var(--space-3);
+  }
 
-/* Status Banner */
-.fisherman-status-banner {
-  border-radius: var(--radius-lg);
-  border: 1px solid;
-  padding: var(--space-4);
-  color: var(--palette-slate-100);
-  background: var(--palette-slate-900);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-}
+  /* Status Banner */
+  .fisherman-status-banner {
+    border-radius: var(--r-card);
+    border: 1px solid var(--line);
+    border-inline-start-width: 4px;
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    gap: var(--space-3);
+  }
 
-.fisherman-status-banner__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
+  .fisherman-status-banner--safe {
+    background: var(--status-open-surface);
+    border-color: var(--status-open-border);
+    border-inline-start-color: var(--status-open);
+    color: var(--status-open-ink);
+  }
 
-.fisherman-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
-  border: 1px solid;
-  font-size: var(--text-xs);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-caps);
-  background: rgba(15, 23, 42, 0.6);
-}
+  .fisherman-status-banner--caution {
+    background: var(--status-caution-surface);
+    border-color: var(--status-caution-border);
+    border-inline-start-color: var(--status-caution);
+    color: var(--status-caution-ink);
+  }
 
-.fisherman-monsoon-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-xs);
-  color: var(--palette-slate-300);
-  background: rgba(15, 23, 42, 0.4);
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-}
+  .fisherman-status-banner--danger {
+    background: var(--alert-emergency-surface);
+    border-color: var(--alert-emergency-border);
+    border-inline-start-color: var(--alert-emergency);
+    color: var(--alert-emergency-on-surface);
+  }
 
-.fisherman-status-title {
-  margin: 0 0 6px;
-  font-size: var(--text-lg);
-  font-weight: 800;
-}
+  .fisherman-status-banner__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
 
-.fisherman-status-desc {
-  margin: 0 0 var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--palette-slate-200);
-  line-height: 1.5;
-  max-width: 80ch;
-}
+  .fisherman-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    border: 1px solid currentColor;
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
 
-.fisherman-metrics-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
+  .fisherman-status-title {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: currentColor;
+  }
 
-.metric-pill {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+  .fisherman-status-desc {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink);
+    line-height: 1.6;
+    max-width: 78ch;
+  }
 
-.metric-pill svg {
-  color: var(--palette-sea-400);
-  flex-shrink: 0;
-}
+  .fisherman-metrics-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr));
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+  }
 
-.metric-label {
-  display: block;
-  font-size: 10px;
-  color: var(--palette-slate-400);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+  .metric-pill {
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    padding: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--interactive);
+  }
 
-.metric-pill strong {
-  display: block;
-  font-size: var(--text-sm);
-  color: #ffffff;
-}
+  .metric-label {
+    display: block;
+    font-size: var(--text-2xs);
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    font-weight: 600;
+  }
 
-/* Card Container */
-.fisherman-card {
-  background: #ffffff;
-  border: 1px solid var(--palette-slate-200);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
+  .metric-pill strong {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+  }
 
-.fisherman-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-bottom: var(--space-2);
-}
+  /* Module Cards */
+  .fisherman-card {
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    gap: var(--space-3);
+  }
 
-.fisherman-card__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-2xs);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-caps);
-  color: var(--palette-sea-700);
-  margin-bottom: 4px;
-}
+  .fisherman-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
 
-.fisherman-card__heading {
-  margin: 0;
-  font-size: var(--text-base);
-  font-weight: 800;
-  color: var(--palette-slate-900);
-}
+  .fisherman-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--interactive);
+    margin-bottom: 4px;
+  }
 
-/* Checklist */
-.checklist-progress {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  background: var(--palette-sea-50);
-  border: 1px solid var(--palette-sea-200);
-  border-radius: var(--radius-md);
-  padding: 6px 14px;
-}
+  .fisherman-card__heading {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--ink-strong);
+  }
 
-.checklist-progress__count {
-  font-size: var(--text-base);
-  font-weight: 800;
-  color: var(--palette-sea-800);
-}
+  .fisherman-card__lead {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    max-width: 72ch;
+  }
 
-.checklist-progress__label {
-  font-size: 10px;
-  color: var(--palette-sea-600);
-  text-transform: uppercase;
-  font-weight: 700;
-}
+  /* Checklist */
+  .checklist-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    background: var(--interactive-surface);
+    border: 1px solid var(--interactive-border);
+    border-radius: var(--r-inner);
+    padding: 6px 12px;
+  }
 
-.checklist-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--space-2);
-}
+  .checklist-progress__count {
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--interactive);
+  }
 
-.checklist-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: var(--palette-slate-50);
-  border: 1px solid var(--palette-slate-200);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--dur-fast);
-  user-select: none;
-}
+  .checklist-progress__label {
+    font-size: 10px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
 
-.checklist-item:hover {
-  background: var(--palette-slate-100);
-  border-color: var(--palette-slate-300);
-}
+  .checklist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(17.5rem, 100%), 1fr));
+    gap: var(--space-2);
+  }
 
-.checklist-item__input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    min-height: 48px;
+    padding: var(--space-3);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    cursor: pointer;
+    transition: border-color var(--motion-fast) var(--ease-standard);
+  }
 
-.checklist-item__custom-box {
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  border: 2px solid var(--palette-slate-400);
-  background: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: transparent;
-  transition: all var(--dur-fast);
-}
+  .checklist-item:hover {
+    border-color: var(--line-strong);
+  }
 
-.checklist-item__input:checked + .checklist-item__custom-box {
-  background: var(--palette-sea-600);
-  border-color: var(--palette-sea-600);
-  color: #ffffff;
-}
+  .checklist-item:has(.checklist-item__input:checked) {
+    background: var(--status-open-surface);
+    border-color: var(--status-open-border);
+  }
 
-.checklist-item__text {
-  font-size: var(--text-xs);
-  color: var(--palette-slate-800);
-  font-weight: 600;
-  line-height: 1.4;
-}
+  .checklist-item__text {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+    font-weight: 500;
+    line-height: 1.45;
+  }
 
-.checklist-notice {
-  margin-top: var(--space-3);
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  color: var(--palette-sea-900);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: var(--text-xs);
-  font-weight: 700;
-}
+  .checklist-notice {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--r-inner);
+    background: var(--status-open-surface);
+    border: 1px solid var(--status-open-border);
+    color: var(--status-open-ink);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
 
-/* Boat Table */
-.boat-table-wrapper {
-  overflow-x: auto;
-  border: 1px solid var(--palette-slate-200);
-  border-radius: var(--radius-md);
-}
+  /* TCWS Cards */
+  .tcws-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+    gap: var(--space-3);
+  }
 
-.boat-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-xs);
-  text-align: left;
-}
+  .tcws-card {
+    padding: var(--space-4);
+    border-radius: var(--r-inner);
+    border: 1px solid var(--line);
+    border-top-width: 3px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
 
-.boat-table th {
-  background: var(--palette-slate-100);
-  padding: 10px 14px;
-  font-weight: 700;
-  color: var(--palette-slate-800);
-  border-bottom: 1px solid var(--palette-slate-200);
-}
+  .tcws-card--1 {
+    background: var(--status-caution-surface);
+    border-color: var(--status-caution-border);
+    border-top-color: var(--status-caution);
+    color: var(--status-caution-ink);
+  }
 
-.boat-table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--palette-slate-100);
-  vertical-align: middle;
-}
+  .tcws-card--2 {
+    background: var(--alert-warning-surface);
+    border-color: var(--alert-warning-border);
+    border-top-color: var(--alert-warning);
+    color: var(--alert-warning-ink);
+  }
 
-.boat-table tr:last-child td {
-  border-bottom: none;
-}
+  .tcws-card--3 {
+    background: var(--alert-emergency-surface);
+    border-color: var(--alert-emergency-border);
+    border-top-color: var(--alert-emergency);
+    color: var(--alert-emergency-on-surface);
+  }
 
-.limit-chip {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  font-weight: 800;
-  font-size: 11px;
-}
+  .tcws-card__badge {
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+  }
 
-.limit-chip--wave {
-  background: var(--palette-ocean-100);
-  color: var(--palette-ocean-800);
-}
+  .tcws-card__wind {
+    font-size: var(--text-lg);
+    font-weight: 700;
+  }
 
-.limit-chip--wind {
-  background: var(--palette-amber-100);
-  color: var(--palette-amber-800);
-}
+  .tcws-card__desc {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink);
+    line-height: 1.5;
+  }
 
-/* TCWS Grid */
-.tcws-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-3);
-}
+  /* Hauling Steps */
+  .hauling-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(13.5rem, 100%), 1fr));
+    gap: var(--space-3);
+  }
 
-.tcws-card {
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid;
-}
+  .hauling-step {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    padding: var(--space-4);
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
 
-.tcws-card--1 {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #78350f;
-}
+  .hauling-step__num {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    background: var(--action);
+    color: var(--action-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: var(--text-xs);
+  }
 
-.tcws-card--2 {
-  background: #fff7ed;
-  border-color: #fed7aa;
-  color: #9a3412;
-}
+  .hauling-step strong {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+  }
 
-.tcws-card--3 {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
-}
+  .hauling-step p {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: 1.55;
+  }
 
-.tcws-card__badge {
-  font-size: var(--text-xs);
-  font-weight: 900;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
+  /* Safe Havens */
+  .haven-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    gap: var(--space-3);
+  }
 
-.tcws-card__wind {
-  font-size: var(--text-lg);
-  font-weight: 800;
-  margin-bottom: 6px;
-}
+  .haven-item {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    padding: var(--space-4);
+    display: grid;
+    gap: var(--space-2);
+    align-content: start;
+    justify-items: start;
+  }
 
-/* Hauling steps */
-.hauling-steps-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-3);
-}
+  .haven-item__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--interactive);
+  }
 
-.hauling-step {
-  background: var(--palette-slate-50);
-  border: 1px solid var(--palette-slate-200);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  display: flex;
-  flex-direction: column;
-}
+  .haven-item__head strong {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+  }
 
-.hauling-step__num {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-full);
-  background: var(--palette-sea-600);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: var(--text-xs);
-  margin-bottom: 8px;
-}
+  .haven-item__desc {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    line-height: 1.55;
+  }
 
-.hauling-step strong {
-  font-size: var(--text-xs);
-  color: var(--palette-slate-900);
-  margin-bottom: 4px;
-}
+  /* Maritime Rescue Bar */
+  .fisherman-emergency-bar {
+    background: var(--surface-raised);
+    border: 1px solid var(--alert-emergency-border);
+    border-inline-start: 4px solid var(--alert-emergency);
+    border-radius: var(--r-card);
+    padding: var(--space-5);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    box-shadow: var(--shadow-sm);
+  }
 
-/* Haven Cards */
-.haven-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--space-3);
-}
+  .emergency-bar__left {
+    max-width: 48ch;
+    display: grid;
+    gap: 6px;
+  }
 
-.haven-item {
-  background: var(--palette-slate-50);
-  border: 1px solid var(--palette-slate-200);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-}
+  .emergency-bar__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--alert-emergency-on-surface);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+  }
 
-.haven-item__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  color: var(--palette-ocean-700);
-}
+  .emergency-bar__desc {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: 1.5;
+  }
 
-.haven-item__head strong {
-  font-size: var(--text-xs);
-  color: var(--palette-slate-900);
-}
+  .emergency-bar__contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
 
-.haven-feature {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: var(--palette-ocean-800);
-  background: var(--palette-ocean-100);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  margin-bottom: 8px;
-}
+  .emergency-contact-pill {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    padding: var(--space-2) var(--space-3);
+    display: grid;
+    gap: 2px;
+  }
 
-/* Emergency Bar */
-.fisherman-emergency-bar {
-  background: var(--palette-slate-900);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  color: #ffffff;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-3);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-}
+  .contact-name {
+    font-size: var(--text-2xs);
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    font-weight: 700;
+  }
 
-.emergency-bar__left {
-  max-width: 50ch;
-}
-
-.emergency-bar__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--palette-coral-400);
-  font-weight: 800;
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-caps);
-  margin-bottom: 4px;
-}
-
-.emergency-bar__desc {
-  margin: 0;
-  font-size: var(--text-xs);
-  color: var(--palette-slate-300);
-  line-height: 1.5;
-}
-
-.emergency-bar__contacts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.emergency-contact-pill {
-  background: var(--palette-slate-800);
-  border: 1px solid var(--palette-slate-700);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.contact-name {
-  font-size: 10px;
-  color: var(--palette-slate-400);
-  text-transform: uppercase;
-  font-weight: 700;
-}
-
-.emergency-contact-pill strong {
-  font-size: var(--text-xs);
-  color: #ffffff;
-}
+  .emergency-contact-pill strong {
+    font-size: var(--text-sm);
+    color: var(--ink-strong);
+  }
 </style>
 
 <script is:inline>
-;(function() {
-  var inputs = document.querySelectorAll('#fisherman-checklist .checklist-item__input')
-  var counter = document.getElementById('checklist-counter')
-  var notice = document.getElementById('checklist-notice')
-  var total = inputs.length
+  ;(function () {
+    var inputs = [].slice.call(document.querySelectorAll('#fisherman-checklist .checklist-item__input'))
+    var counter = document.getElementById('checklist-counter')
+    var notice = document.getElementById('checklist-notice')
+    var total = inputs.length
+    if (!total) return
 
-  function updateChecklist() {
-    var checked = 0
-    inputs.forEach(function(input) {
-      if (input.checked) checked++
-    })
-    if (counter) counter.textContent = checked + ' / ' + total
-    if (notice) {
-      if (checked === total) {
-        notice.hidden = false
-      } else {
-        notice.hidden = true
-      }
+    var KEY = 'tumbod:fisherman-checklist'
+    try {
+      var saved = JSON.parse(localStorage.getItem(KEY) || '{}')
+      inputs.forEach(function (input) {
+        if (saved[input.id]) input.checked = true
+      })
+    } catch (e) {}
+
+    function updateChecklist() {
+      var checked = 0
+      var state = {}
+      inputs.forEach(function (input) {
+        if (input.checked) checked++
+        state[input.id] = input.checked
+      })
+      if (counter) counter.textContent = checked + ' / ' + total
+      if (notice) notice.hidden = checked !== total
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state))
+      } catch (e) {}
     }
-  }
 
-  inputs.forEach(function(input) {
-    input.addEventListener('change', updateChecklist)
-  })
-})()
+    inputs.forEach(function (input) {
+      input.addEventListener('change', updateChecklist)
+    })
+    updateChecklist()
+  })()
 </script>

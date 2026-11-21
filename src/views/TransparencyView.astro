@@ -1,11 +1,7 @@
 ---
 /**
- * Full Disclosure Board body, locale-aware.
- *
- * An honest "not yet posted" with a reason beats an empty table that implies
- * non-compliance where there is only a delay (§20). Every document, when
- * posted, requires a plain-language one-line summary — an ordinance nobody can
- * read is not disclosure.
+ * TransparencyView — Barangay Full Disclosure Policy Board (DILG MC 2010-083 /
+ * RA 7160 §352) with scannable jump index and clean structured cards.
  */
 import Section from '@/components/Section.astro'
 import { getDictionary, type Locale } from '@/lib/i18n'
@@ -18,14 +14,6 @@ const { locale } = Astro.props
 const t = getDictionary(locale)
 const fil = locale === 'fil'
 
-/**
- * The SEVEN documents the Barangay Full Disclosure Policy legally requires
- * (DILG MC 2010-083, updated 2022; posting obligation RA 7160 §352).
- *
- * Official wording is kept so the barangay can match documents to headings one-to-one;
- * the plain-language explanation sits underneath, because a heading nobody understands
- * is not disclosure.
- */
 const CATEGORIES = [
   {
     headingFil: 'Barangay Financial Report',
@@ -184,58 +172,56 @@ const CATEGORIES = [
     ],
   },
 ]
+
+const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 ---
 
 <Section divider={false} class="section--airy">
   <h1 class="page-title">{t.nav.transparency}</h1>
-  <div class="prose" style="margin-top:var(--space-3)">
+  <div class="prose trans-intro">
     <p>
-      {
-        fil
-          ? 'Pitong dokumento ang kailangang ipaskil ng bawat barangay ayon sa batas — sa loob ng barangay hall at sa website. Nasa ibaba ang pitong iyon, at ang paliwanag kung ano ang bawat isa.'
-          : 'Every barangay is legally required to post seven documents — inside the barangay hall and on its website. Those seven are listed below, with an explanation of what each one is.'
-      }
+      {fil
+        ? 'Pitong dokumento ang kailangang ipaskil ng bawat barangay ayon sa batas — sa loob ng barangay hall at sa website. Nasa ibaba ang pitong iyon, at ang paliwanag kung ano ang bawat isa.'
+        : 'Every barangay is legally required to post seven documents — inside the barangay hall and on its website. Those seven are listed below, with a plain-language explanation of each.'}
     </p>
     <p class="small muted">
-      {
-        fil
-          ? 'Batayan: DILG Memorandum Circular 2010-083 (Full Disclosure Policy), at Seksyon 352 ng RA 7160 — dapat ipaskil sa loob ng 30 araw pagkatapos ng bawat taon ng pananalapi.'
-          : 'Basis: DILG Memorandum Circular 2010-083 (Full Disclosure Policy), and Section 352 of RA 7160 — to be posted within 30 days of the end of each fiscal year.'
-      }
+      {fil
+        ? 'Batayan: DILG Memorandum Circular 2010-083 (Full Disclosure Policy), at Seksyon 352 ng RA 7160 — dapat ipaskil sa loob ng 30 araw pagkatapos ng bawat taon ng pananalapi.'
+        : 'Basis: DILG Memorandum Circular 2010-083 (Full Disclosure Policy) and Section 352 of RA 7160 — to be posted within 30 days of the end of each fiscal year.'}
     </p>
     <p>
-      {
-        fil
-          ? 'Ang mga orihinal at buong dokumento ay nakapaskil sa pisikal na Full Disclosure Board (FDPB) sa lobby ng Barangay Hall, Purok 1 (Sentro). Ang buod ng bawat kategorya ay nakatala sa ibaba para sa kaalaman at pagsusuri ng publiko.'
-          : 'Physical copies of all documents are posted on the Full Disclosure Policy Board (FDPB) in the lobby of the Barangay Hall at Purok 1 (Sentro). Summaries of each category are outlined below for public record.'
-      }
+      {fil
+        ? 'Ang mga orihinal at buong dokumento ay nakapaskil sa pisikal na Full Disclosure Board (FDPB) sa lobby ng Barangay Hall, Purok 1 (Sentro).'
+        : 'Physical copies of all documents are posted on the Full Disclosure Policy Board (FDPB) in the lobby of the Barangay Hall at Purok 1 (Sentro).'}
     </p>
   </div>
+
+  {/* Scannable quick-jump directory */}
+  <nav class="trans-toc" aria-label={fil ? 'Listahan ng mga ulat' : 'Disclosure sections'}>
+    {CATEGORIES.map((c) => (
+      <a href={`#${slugify(c.headingEn)}`} class="btn btn--secondary btn--sm" data-plain>
+        {fil ? c.headingFil : c.headingEn}
+      </a>
+    ))}
+  </nav>
 </Section>
 
 {
   CATEGORIES.map((c) => (
-    <Section
-      title={fil ? c.headingFil : c.headingEn}
-      titleId={c.headingEn.toLowerCase().replace(/[^a-z]+/g, '-')}
-    >
-      <p style="max-width:var(--measure);color:var(--ink-muted);font-size:var(--text-sm)">
-        {fil ? c.detailFil : c.detailEn}
-      </p>
-      <div style="margin-top:var(--space-3);max-width:var(--measure)">
-        <div class="fcard" style="padding:var(--space-4);background:var(--surface-sunken);border-radius:var(--radius-md);border:1px solid var(--border-subtle)">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-2);margin-bottom:var(--space-2)">
-            <span class="badge" style="background:var(--surface-panel);color:var(--ink);border:1px solid var(--border-subtle);font-size:var(--text-xs);font-weight:600;padding:2px 8px;border-radius:4px">
+    <Section title={fil ? c.headingFil : c.headingEn} titleId={slugify(c.headingEn)}>
+      <p class="trans-detail">{fil ? c.detailFil : c.detailEn}</p>
+      <div class="trans-card-wrap">
+        <div class="card trans-card">
+          <div class="trans-card__head">
+            <span class="chip chip--open">
               {fil ? 'Katayuan: Opisyal na Naipaskil' : 'Status: Officially Posted'}
             </span>
-            <span style="font-size:var(--text-xs);color:var(--ink-muted)">
+            <span class="trans-card__custodian">
               {fil ? 'Tagapamahala: Cecilia T. Ebajo (Treasurer)' : 'Custodian: Cecilia T. Ebajo (Treasurer)'}
             </span>
           </div>
-          <p style="font-size:var(--text-base);font-weight:500;margin-bottom:var(--space-2)">
-            {fil ? c.summaryFil : c.summaryEn}
-          </p>
-          <ul style="margin:0;padding-inline-start:var(--space-4);font-size:var(--text-sm);color:var(--ink-muted);line-height:1.6">
+          <p class="trans-card__summary">{fil ? c.summaryFil : c.summaryEn}</p>
+          <ul class="trans-card__points">
             {(fil ? c.pointsFil : c.pointsEn).map((point: string) => (
               <li>{point}</li>
             ))}
@@ -245,3 +231,66 @@ const CATEGORIES = [
     </Section>
   ))
 }
+
+<style>
+  .trans-intro {
+    margin-top: var(--space-3);
+  }
+
+  .trans-toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    max-width: 56rem;
+  }
+
+  .trans-detail {
+    max-width: var(--measure);
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+  }
+
+  .trans-card-wrap {
+    margin-top: var(--space-3);
+    max-width: var(--measure);
+  }
+
+  .trans-card {
+    padding: var(--space-5);
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .trans-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .trans-card__custodian {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+
+  .trans-card__summary {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--ink-strong);
+  }
+
+  .trans-card__points {
+    margin: 0;
+    padding-inline-start: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--ink);
+    line-height: 1.65;
+    display: grid;
+    gap: 6px;
+  }
+</style>

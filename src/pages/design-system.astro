@@ -2,8 +2,9 @@
 /**
  * /design-system — THE SOURCE OF TRUTH.
  *
- * Built before any page layout (Phase 3 conflict resolution). If a pattern is
- * not on this page, it does not exist. Noindexed, excluded from the sitemap.
+ * Every design token, surface, control variant, table pattern, and state
+ * primitive used across the Barangay Tumbod website, verifiable in both
+ * light and dark themes. Noindexed, excluded from the sitemap.
  */
 import Base from '@/layouts/Base.astro'
 import Section from '@/components/Section.astro'
@@ -26,39 +27,41 @@ const ICONS: IconName[] = [
   'evacuation', 'offline', 'search', 'print', 'copy', 'external',
 ]
 
-/*
- * The civic palette, by ROLE rather than by ramp position. The compatibility
- * aliases this list used to show (`--palette-shoal`, `--palette-mangrove` and
- * the rest) are still defined in tokens.css for the call sites that have not
- * been migrated, but they are named after a palette the site no longer runs —
- * showing them here taught the wrong vocabulary to anyone reading this page as
- * the source of truth.
- */
+const SEMANTIC_SURFACES = [
+  { token: '--surface', role: 'Page canvas (light: slate-50, dark: #090e1a)' },
+  { token: '--surface-raised', role: 'Cards, panels, inputs (light: white, dark: #0f172a)' },
+  { token: '--surface-sunken', role: 'Subtle wells, hover rows, alternating bands' },
+  { token: '--surface-inverse', role: 'Fixed dark surfaces (hero, mega hero, SOS tiles)' },
+  { token: '--line', role: 'Hairline dividers and card borders' },
+  { token: '--line-strong', role: 'Control borders and hover borders' },
+]
+
 const PALETTE = [
-  { token: '--palette-slate-50', source: 'the canvas — off-white page' },
-  { token: '--palette-white', source: 'cards and section surfaces' },
-  { token: '--palette-slate-100', source: 'alternating bands, icon wells' },
-  { token: '--palette-slate-200', source: 'borders and dividers' },
-  { token: '--palette-slate-500', source: 'muted labels and captions' },
-  { token: '--palette-slate-700', source: 'body text' },
-  { token: '--palette-slate-900', source: 'dark panels, hero overlay' },
-  { token: '--palette-slate-950', source: 'headings' },
-  { token: '--palette-amber-500', source: 'official gold — FILL AND EDGE ONLY' },
-  { token: '--palette-amber-700', source: 'the only gold that may carry text' },
-  { token: '--palette-red-600', source: 'RESERVED: emergency hotlines' },
-  { token: '--palette-green-700', source: 'public works and eco-tourism' },
-  { token: '--palette-cyan-700', source: 'port, sea and marine sanctuaries' },
-  { token: '--palette-sky-700', source: 'links and interactive text' },
-  { token: '--palette-purple-600', source: 'education and youth sector' },
+  { token: '--ink-strong', source: 'Headings & primary figures (AAA contrast)' },
+  { token: '--ink', source: 'Body text (WCAG AA/AAA)' },
+  { token: '--ink-muted', source: 'Secondary labels & metadata (≥4.5:1)' },
+  { token: '--interactive', source: 'Primary brand accent — links & active controls' },
+  { token: '--action', source: 'Solid button fill (paired with --action-ink)' },
+  { token: '--accent-strong', source: 'Accessible amber text & badge accent' },
+  { token: '--alert-emergency', source: 'RESERVED: emergency hotlines & destructive actions' },
+  { token: '--status-open', source: 'Open / calm / confirmed state' },
+  { token: '--status-caution', source: 'Advisory / moderate caution state' },
+  { token: '--sector-infra', source: 'Public works & eco-tourism' },
+  { token: '--sector-marine', source: 'Port, sea & marine sanctuaries' },
+  { token: '--sector-youth', source: 'Education & youth sector' },
 ]
 
 const SPACES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-const RADII = ['none', 'sm', 'md', 'lg']
+const RADII = [
+  { token: '--radius-none', label: 'none (0px)', note: 'Charts & full-bleed bands' },
+  { token: '--radius-sm', label: 'sm (6px)', note: 'Inputs, buttons, chips' },
+  { token: '--radius-md', label: 'md (8px)', note: 'Default controls & panels' },
+  { token: '--radius-lg', label: 'lg (12px)', note: 'Cards & dialogs' },
+]
 
 const now = new Date('2026-08-04T05:00:00+08:00')
 const later = new Date('2026-08-04T14:00:00+08:00')
 const stale = new Date('2026-08-02T05:00:00+08:00')
-
 ---
 
 <Base
@@ -69,22 +72,38 @@ const stale = new Date('2026-08-02T05:00:00+08:00')
   noindex
 >
   <Section divider={false}>
-    <h1 style="font-size:var(--text-4xl)">Design system</h1>
-    <p style="margin-top:var(--space-3);max-width:var(--measure)">
-      Barangay Tumbod. Every token and component, in both themes. If a pattern
-      is not here, it does not exist.
+    <h1 class="page-title">Design system</h1>
+    <p class="section-lede ds-lede">
+      Barangay Tumbod. Every token, surface, and UI component across light and dark themes.
+      Calibrated for WCAG 2.2 AA contrast (≥ 4.5:1) and 8pt spatial rhythm.
     </p>
   </Section>
 
-  <Section title="Colour — primitives with physical sources" titleId="ds-colour">
-    <div style="display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(min(14rem,100%),1fr))">
+  <Section title="Semantic surfaces & borders" titleId="ds-surfaces">
+    <div class="ds-grid">
+      {
+        SEMANTIC_SURFACES.map((e) => (
+          <div class="ds-swatch card">
+            <div class="ds-swatch__chip" style={`background-color:var(${e.token})`}></div>
+            <div class="ds-swatch__meta">
+              <code>{e.token}</code>
+              <p>{e.role}</p>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </Section>
+
+  <Section title="Semantic ink & signal tokens" titleId="ds-colour">
+    <div class="ds-grid">
       {
         PALETTE.map((e) => (
-          <div style="border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden">
-            <div style={`height:56px;background-color:var(${e.token})`}></div>
-            <div style="padding:var(--space-2)">
-              <code style="font-family:var(--font-mono);font-size:var(--text-xs)">{e.token}</code>
-              <p style="font-size:var(--text-xs);color:var(--ink-muted)">{e.source}</p>
+          <div class="ds-swatch card">
+            <div class="ds-swatch__chip" style={`background-color:var(${e.token})`}></div>
+            <div class="ds-swatch__meta">
+              <code>{e.token}</code>
+              <p>{e.source}</p>
             </div>
           </div>
         ))
@@ -93,75 +112,146 @@ const stale = new Date('2026-08-02T05:00:00+08:00')
   </Section>
 
   <Section title="Typography" titleId="ds-type">
-    <div style="display:flex;flex-direction:column;gap:var(--space-3)">
-      <p style="font-family:var(--font-display);font-size:var(--text-4xl)">Ngayon sa Tumbod</p>
-      <p style="font-size:var(--text-base);max-width:var(--measure)">
-        Inter — katawan. Ang mga titik na may tuldik: á é í ó ú ñ Ñ.
+    <div class="ds-stack">
+      <p class="page-title">Ngayon sa Tumbod</p>
+      <p class="section-title">Mga Serbisyo ng Barangay</p>
+      <p class="prose">
+        Inter — body copy. Ang mga titik na may tuldik: á é í ó ú ñ Ñ.
         Sinusubok sa Filipino dahil iyon ang kanonikal na wika ng site na ito.
       </p>
-      <p class="figure" style="font-size:var(--text-lg)">
+      <p class="figure ds-mono-sample">
         IBM Plex Mono — 0123456789 · ₱1,234.50 · 10.9856 N 119.2773 E
       </p>
-      <p>
+      <p class="small muted">
         Chart rule: <span class="is-land">TUMBOD</span> (land, upright) ·
         <span class="is-water">Blockade Strait</span> (water, italic)
       </p>
     </div>
   </Section>
 
-  <Section title="Spacing" titleId="ds-spacing">
-    <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+  <Section title="Buttons & chips" titleId="ds-controls">
+    <div class="ds-stack">
+      <div class="ds-row">
+        <button type="button" class="btn btn--primary">Primary action</button>
+        <button type="button" class="btn btn--secondary">Secondary</button>
+        <button type="button" class="btn btn--ghost">Ghost</button>
+        <button type="button" class="btn btn--danger">Emergency / Danger</button>
+        <button type="button" class="btn btn--primary" disabled>Disabled</button>
+        <button type="button" class="btn btn--secondary btn--sm">Compact</button>
+      </div>
+      <div class="ds-row">
+        <span class="chip">Default chip</span>
+        <span class="chip chip--info">Info</span>
+        <span class="chip chip--ok">Open / Calm</span>
+        <span class="chip chip--warn">Advisory</span>
+        <span class="chip chip--danger">Emergency</span>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="Form inputs" titleId="ds-forms">
+    <div class="ds-form-demo">
+      <div class="form-field">
+        <label class="form-label" for="ds-input">Pangalan / Full name</label>
+        <input id="ds-input" class="input" type="text" placeholder="Hal. Juan dela Cruz" />
+        <span class="form-help">Top-aligned label with explicit helper copy.</span>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="ds-select">Uri ng dokumento</label>
+        <select id="ds-select" class="select">
+          <option>Barangay Clearance</option>
+          <option>Sertipiko ng Indigency</option>
+          <option>Business Clearance</option>
+        </select>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="Data table & empty state" titleId="ds-table">
+    <div class="ds-stack">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Sample sea condition routes table">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ruta / Route</th>
+              <th>Status</th>
+              <th class="num">Alon (m)</th>
+              <th class="num">Oras (min)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tumbod — Port Barton</td>
+              <td><span class="chip chip--ok">Kalma</span></td>
+              <td class="num">0.4</td>
+              <td class="num">45</td>
+            </tr>
+            <tr>
+              <td>Tumbod — Taytay Poblacion</td>
+              <td><span class="chip chip--warn">Mag-ingat</span></td>
+              <td class="num">1.3</td>
+              <td class="num">75</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty-state">
+        <p class="empty-state__title">Walang nakitang tala</p>
+        <p class="empty-state__body">Gamitin ang ganitong empty state kapag walang resulta sa filter o talaan.</p>
+        <button type="button" class="btn btn--secondary btn--sm">I-reset ang filter</button>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="Spacing (8pt rhythm)" titleId="ds-spacing">
+    <div class="ds-space-list">
       {
         SPACES.map((n) => (
-          <div style="display:flex;gap:var(--space-3);align-items:center">
-            <code style="font-family:var(--font-mono);font-size:var(--text-xs);width:7rem">--space-{n}</code>
-            <div style={`height:12px;width:var(--space-${n});background-color:var(--interactive)`}></div>
+          <div class="ds-space-row">
+            <code>--space-{n}</code>
+            <div class="ds-space-bar" style={`width:var(--space-${n})`}></div>
           </div>
         ))
       }
     </div>
   </Section>
 
-  <Section title="Radius — bimodal by intent" titleId="ds-radius">
-    <div style="display:flex;flex-wrap:wrap;gap:var(--space-4)">
+  <Section title="Radius scale" titleId="ds-radius">
+    <div class="ds-radii">
       {
         RADII.map((r) => (
-          <div style="text-align:center">
-            <div style={`width:64px;height:64px;background-color:var(--surface-sunken);border:1px solid var(--line-strong);border-radius:var(--radius-${r})`}></div>
-            <code style="font-size:var(--text-xs)">{r}</code>
+          <div class="ds-radius-item">
+            <div class="ds-radius-box" style={`border-radius:var(${r.token})`}></div>
+            <code>{r.label}</code>
+            <span class="small muted">{r.note}</span>
           </div>
         ))
       }
     </div>
-    <p style="margin-top:var(--space-3);font-size:var(--text-sm);color:var(--ink-muted);max-width:var(--measure)">
-      0 for chart and data surfaces, 4px for touch controls. The contrast is the
-      intent — zero-everywhere is itself a flagged anti-pattern.
-    </p>
   </Section>
 
   <Section title="Icons" titleId="ds-icons">
-    <div style="display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(min(6rem,100%),1fr))">
+    <div class="ds-icons">
       {
         ICONS.map((name) => (
-          <div style="text-align:center">
-            <div style="display:flex;justify-content:center"><Icon name={name} /></div>
-            <p style="font-size:var(--text-2xs);color:var(--ink-muted)">{name}</p>
+          <div class="ds-icon-item">
+            <Icon name={name} />
+            <span>{name}</span>
           </div>
         ))
       }
     </div>
   </Section>
 
-
-
-  <Section title="Alerts — colour AND icon AND leading word" titleId="ds-alerts">
-    <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+  <Section title="Alerts — colour, icon, and leading word" titleId="ds-alerts">
+    <div class="ds-stack">
       {ALERT_LEVELS.map((level) => <Alert level={level} locale="fil">Halimbawa ng mensahe sa antas na ito.</Alert>)}
     </div>
   </Section>
 
   <Section title="Office status" titleId="ds-office">
-    <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+    <div class="ds-stack">
       <OfficeStatusBadge locale="fil" hours={{ state: 'open', todayLabel: 'Martes', hoursToday: '8:00 AM – 5:00 PM', nextOpen: '8:00 AM' }} />
       <OfficeStatusBadge locale="fil" hours={{ state: 'limited', todayLabel: 'Sabado', hoursToday: '8:00 AM – 12:00 NN', nextOpen: '8:00 AM' }} />
       <OfficeStatusBadge locale="fil" hours={{ state: 'closed', todayLabel: 'Linggo', hoursToday: needsData('oras', 'Secretary'), nextOpen: '8:00 AM' }} />
@@ -169,7 +259,7 @@ const stale = new Date('2026-08-02T05:00:00+08:00')
   </Section>
 
   <Section title="LastUpdated — fresh, warn, stale" titleId="ds-updated">
-    <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+    <div class="ds-stack">
       <LastUpdated at={later} now={later} locale="fil" source="PAGASA" warnOnStale />
       <LastUpdated at={now} now={later} locale="fil" source="PAGASA" warnOnStale />
       <LastUpdated at={stale} now={later} locale="fil" source="PAGASA" warnOnStale />
@@ -177,13 +267,67 @@ const stale = new Date('2026-08-02T05:00:00+08:00')
   </Section>
 
   <Section title="Placeholders — absence is visible, never faked" titleId="ds-placeholder">
-    <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+    <div class="ds-stack">
       <Placeholder value={needsData('numero ng barangay hotline (sample)', 'Barangay Secretary', false)} display="block" />
       <Placeholder value={needsData('pamasahe', 'bangkero')} display="block" />
     </div>
   </Section>
 
-  <Section title="Living Chart Header — the signature element" titleId="ds-chart">
+  <Section title="Living Chart Header" titleId="ds-chart">
     <LivingChartHeader locale="fil" />
   </Section>
 </Base>
+
+<style>
+  .ds-lede { margin-top: var(--space-3); }
+  .ds-stack { display: flex; flex-direction: column; gap: var(--space-3); }
+  .ds-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+  .ds-grid {
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  }
+  .ds-swatch { overflow: hidden; padding: 0; }
+  .ds-swatch__chip { height: 52px; border-bottom: 1px solid var(--line); }
+  .ds-swatch__meta { padding: var(--space-2) var(--space-3); }
+  .ds-swatch__meta code { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--ink-strong); }
+  .ds-swatch__meta p { margin: 2px 0 0; font-size: var(--text-xs); color: var(--ink-muted); }
+  .ds-mono-sample { font-size: var(--text-lg); margin: 0; }
+  .ds-form-demo {
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    max-width: 44rem;
+  }
+  .ds-space-list { display: flex; flex-direction: column; gap: var(--space-2); }
+  .ds-space-row { display: flex; gap: var(--space-3); align-items: center; }
+  .ds-space-row code { font-family: var(--font-mono); font-size: var(--text-xs); width: 7rem; color: var(--ink-muted); }
+  .ds-space-bar { height: 10px; border-radius: 3px; background-color: var(--interactive); }
+  .ds-radii { display: flex; flex-wrap: wrap; gap: var(--space-5); }
+  .ds-radius-item { display: flex; flex-direction: column; gap: 4px; max-width: 11rem; }
+  .ds-radius-box {
+    width: 64px;
+    height: 64px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--line-strong);
+  }
+  .ds-radius-item code { font-family: var(--font-mono); font-size: var(--text-xs); }
+  .ds-icons {
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fit, minmax(min(6rem, 100%), 1fr));
+  }
+  .ds-icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-inner);
+    background: var(--surface-raised);
+    font-size: var(--text-2xs);
+    color: var(--ink-muted);
+    text-align: center;
+  }
+</style>

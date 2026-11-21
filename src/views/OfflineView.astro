@@ -27,14 +27,14 @@ const available = [
 ---
 
 <Section divider={false}>
-  <p style="display:flex;align-items:center;gap:var(--space-2);color:var(--ink-muted)">
-    <Icon name="offline" size={20} />
-    {fil ? 'Walang koneksyon ngayon.' : 'No connection right now.'}
+  <p class="offline-kicker">
+    <Icon name="offline" size={18} />
+    <span>{fil ? 'Walang koneksyon ngayon.' : 'No connection right now.'}</span>
   </p>
-  <h1 style="font-size:var(--text-3xl);margin-top:var(--space-2)">
+  <h1 class="page-title offline-title">
     {fil ? 'May magagamit ka pa rin' : 'You can still use these'}
   </h1>
-  <p style="margin-top:var(--space-3);max-width:var(--measure)">
+  <p class="section-lede offline-lede">
     {
       fil
         ? 'Ang mga pahinang ito ay naka-save na sa telepono mo. Bubuksan ang mga ito kahit walang signal.'
@@ -44,18 +44,19 @@ const available = [
 </Section>
 
 <Section>
-  <ul style="list-style:none;padding:0;margin:0">
+  <ul class="offline-list card" role="list">
     {
       available.map((item) => (
-        <li style="border-bottom:1px solid var(--line)">
-          <a href={item.href} style="display:flex;align-items:center;min-height:56px">
-            {item.label}
+        <li class="offline-item">
+          <a href={item.href} class="offline-link">
+            <span>{item.label}</span>
+            <span class="offline-arrow" aria-hidden="true">→</span>
           </a>
         </li>
       ))
     }
   </ul>
-  <p style="margin-top:var(--space-4);font-size:var(--text-sm);color:var(--ink-muted);max-width:var(--measure)">
+  <p class="offline-note">
     {
       fil
         ? 'Ang mga numerong nakikita mo ay ang huling nakuha. Kung may bagyo o emergency, tumawag pa rin — baka may mas bago nang abiso.'
@@ -63,3 +64,57 @@ const available = [
     }
   </p>
 </Section>
+
+<style>
+  .offline-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--ink-muted);
+    margin: 0;
+  }
+  .offline-title {
+    margin-top: var(--space-2);
+  }
+  .offline-lede {
+    margin-top: var(--space-3);
+  }
+  .offline-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    max-width: var(--measure);
+  }
+  .offline-item + .offline-item {
+    border-top: 1px solid var(--line);
+  }
+  .offline-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: 56px;
+    padding: 0 var(--space-4);
+    font-weight: 600;
+    color: var(--ink-strong);
+    text-decoration: none;
+    transition: background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+  }
+  .offline-link:hover {
+    background: var(--surface-sunken);
+    color: var(--interactive);
+  }
+  .offline-arrow {
+    color: var(--ink-muted);
+  }
+  .offline-note {
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    max-width: var(--measure);
+    line-height: var(--leading-body);
+  }
+</style>

@@ -1,10 +1,8 @@
 ---
 /**
- * Hotline directory body, locale-aware.
- *
- * Enhanced with interactive category filters, instant keyword search,
- * and 1-tap clipboard copy with tactile feedback, while maintaining
- * complete zero-JS fallback functionality and WCAG compliance.
+ * Hotline directory view — instant category filter, keyword search,
+ * 1-tap verified calling, and clipboard copy, with full zero-JS fallback
+ * and >=44px mobile touch targets.
  */
 import Section from '@/components/Section.astro'
 import Icon from '@/components/Icon.astro'
@@ -48,20 +46,23 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
   <h1 class="page-title">{t.nav.emergencyLabel}</h1>
   <p class="section-lede">{t.safety.mayBeNewer}</p>
 
-  {/* Interactive search and filter bar */}
   <div class="hotline-controls">
     <div class="hotline-search-wrap">
-      <Icon name="search" size={18} />
+      <label for="hotline-filter-input" class="sr-only">
+        {fil ? 'Maghanap ng emergency contact' : 'Search emergency contact'}
+      </label>
+      <span class="hotline-search-icon" aria-hidden="true">
+        <Icon name="search" size={18} />
+      </span>
       <input
         type="search"
         id="hotline-filter-input"
-        placeholder={fil ? 'Mabilisang hanapin (hal. Coast Guard, Ambulansya, Pulis)...' : 'Quick search (e.g. Coast Guard, Ambulance, Police)...'}
+        placeholder={fil ? 'Hanapin (hal. Coast Guard, Ambulansya, Pulis)...' : 'Quick search (e.g. Coast Guard, Ambulance, Police)...'}
         class="hotline-search-input"
-        aria-label={fil ? 'Maghanap ng emergency contact' : 'Search emergency contact'}
       />
     </div>
 
-    <div class="hotline-cat-pills" role="tablist">
+    <div class="hotline-cat-pills" role="tablist" aria-label={fil ? 'Kategorya ng hotline' : 'Hotline categories'}>
       {
         CATEGORY_LABELS.map((cat, idx) => (
           <button
@@ -118,9 +119,7 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
                 </span>
               ) : (
                 <span class="hotcard__cta hotcard__cta--off">
-                  {IS_DEMO
-                    ? fil ? 'Demo' : 'Demo'
-                    : fil ? 'Wala pa' : 'Not yet'}
+                  {IS_DEMO ? 'Demo' : fil ? 'Wala pa' : 'Not yet'}
                 </span>
               )}
               {!missing && (
@@ -131,7 +130,7 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
                   title={fil ? 'Kopyahin ang numero' : 'Copy phone number'}
                   aria-label={`${fil ? 'Kopyahin ang numero ng' : 'Copy phone number for'} ${label}`}
                 >
-                  <Icon name="copy" size={16} />
+                  <Icon name="copy" size={15} />
                   <span class="hotcard__copy-text">{fil ? 'Kopyahin' : 'Copy'}</span>
                 </button>
               )}
@@ -153,16 +152,26 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
       })
     }
   </ul>
-  <p id="hotline-empty-msg" class="hotline-empty" hidden>
-    {fil ? 'Walang nahanap na numero sa kategoryang ito.' : 'No contact found in this category.'}
-  </p>
+
+  <div id="hotline-empty-msg" class="empty-state hotline-empty" hidden>
+    <p class="empty-state__title">
+      {fil ? 'Walang nahanap na numero' : 'No matching emergency contacts'}
+    </p>
+    <p class="empty-state__desc">
+      {fil
+        ? 'Subukan ang ibang salita o ipakita muli ang lahat ng kategorya.'
+        : 'Try another search keyword or reset the category filter.'}
+    </p>
+    <button type="button" class="btn btn--secondary btn--sm" id="hotline-reset-btn">
+      {fil ? 'Ipakita ang lahat ng hotline' : 'Show all hotlines'}
+    </button>
+  </div>
 </Section>
 
 <style>
   .hotline-controls {
     margin-top: var(--space-4);
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: var(--space-3);
   }
 
@@ -173,28 +182,16 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
     max-width: var(--measure);
   }
 
-  .hotline-search-wrap :global(svg) {
+  .hotline-search-icon {
     position: absolute;
     left: var(--space-3);
     color: var(--ink-muted);
     pointer-events: none;
+    display: inline-flex;
   }
 
   .hotline-search-input {
-    width: 100%;
-    min-height: 46px;
-    padding: var(--space-2) var(--space-3) var(--space-2) calc(var(--space-4) + 16px);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--line-strong);
-    background: var(--surface-raised);
-    color: var(--ink);
-    font-size: var(--text-sm);
-    font-family: inherit;
-  }
-
-  .hotline-search-input:focus-visible {
-    outline: 2px solid var(--interactive);
-    border-color: var(--interactive);
+    padding-left: calc(var(--space-4) + 20px) !important;
   }
 
   .hotline-cat-pills {
@@ -206,16 +203,20 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
   .hotline-cat-btn {
     display: inline-flex;
     align-items: center;
-    min-height: 36px;
-    padding: 4px 14px;
-    border-radius: var(--radius-full);
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: var(--r-inner);
     border: 1px solid var(--line);
     background: var(--surface-raised);
-    color: var(--ink);
+    color: var(--ink-strong);
+    font-family: var(--font-display);
     font-size: var(--text-xs);
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    transition: all var(--dur-fast);
+    transition:
+      border-color var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
   }
 
   .hotline-cat-btn:hover {
@@ -223,10 +224,11 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
     color: var(--interactive);
   }
 
+  /* High contrast in both light and dark modes */
   .hotline-cat-btn.is-active {
-    background: var(--interactive);
-    color: #ffffff;
-    border-color: var(--interactive);
+    background: var(--action);
+    color: var(--action-ink);
+    border-color: var(--action-edge);
   }
 
   .hotcard__actions {
@@ -234,44 +236,55 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
     align-items: center;
     gap: var(--space-2);
     margin-left: auto;
+    flex-wrap: wrap;
   }
 
   .hotcard__copy-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 10px;
-    border-radius: var(--radius-full);
+    justify-content: center;
+    gap: 5px;
+    min-height: 44px;
+    padding: 6px 12px;
+    border-radius: var(--r-inner);
     border: 1px solid var(--line-strong);
     background: var(--surface);
-    color: var(--ink);
+    color: var(--ink-strong);
     font-size: var(--text-xs);
     font-weight: 600;
     cursor: pointer;
-    transition: background-color var(--dur-fast);
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      border-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
     z-index: 2;
   }
 
   .hotcard__copy-btn:hover {
     background: var(--surface-sunken);
+    border-color: var(--interactive);
     color: var(--interactive);
   }
 
+  .hotcard__copy-btn.is-copied {
+    background: var(--status-open-surface);
+    border-color: var(--status-open-border);
+    color: var(--status-open-ink);
+  }
+
   .hotline-empty {
-    text-align: center;
-    padding: var(--space-6);
-    color: var(--ink-muted);
-    font-size: var(--text-sm);
+    margin-top: var(--space-4);
   }
 </style>
 
 <script is:inline define:vars={{ fil }}>
   ;(function () {
     var input = document.getElementById('hotline-filter-input')
-    var catBtns = document.querySelectorAll('.hotline-cat-btn')
-    var items = document.querySelectorAll('.hotgrid__item')
+    var catBtns = [].slice.call(document.querySelectorAll('.hotline-cat-btn'))
+    var items = [].slice.call(document.querySelectorAll('.hotgrid__item'))
     var emptyMsg = document.getElementById('hotline-empty-msg')
-    var copyBtns = document.querySelectorAll('.hotcard__copy-btn')
+    var resetBtn = document.getElementById('hotline-reset-btn')
+    var copyBtns = [].slice.call(document.querySelectorAll('.hotcard__copy-btn'))
 
     var activeCat = 'all'
 
@@ -282,23 +295,17 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
       items.forEach(function (item) {
         var cat = item.dataset.category
         var label = item.dataset.label || ''
-
         var matchesCat = activeCat === 'all' || cat === activeCat
         var matchesQuery = !q || label.indexOf(q) !== -1
-
         var show = matchesCat && matchesQuery
-        item.style.display = show ? '' : 'none'
+        item.hidden = !show
         if (show) visible++
       })
 
-      if (emptyMsg) {
-        emptyMsg.hidden = visible > 0
-      }
+      if (emptyMsg) emptyMsg.hidden = visible > 0
     }
 
-    if (input) {
-      input.addEventListener('input', filter)
-    }
+    if (input) input.addEventListener('input', filter)
 
     catBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -308,33 +315,45 @@ const dialable = (n: string) => n.replace(/[^\d+]/g, '')
         })
         btn.classList.add('is-active')
         btn.setAttribute('aria-selected', 'true')
-        activeCat = btn.dataset.cat
+        activeCat = btn.dataset.cat || 'all'
         filter()
       })
     })
 
-    // Copy to clipboard with visual feedback
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        if (input) input.value = ''
+        activeCat = 'all'
+        catBtns.forEach(function (b, idx) {
+          b.classList.toggle('is-active', idx === 0)
+          b.setAttribute('aria-selected', idx === 0 ? 'true' : 'false')
+        })
+        filter()
+        if (input) input.focus()
+      })
+    }
+
     copyBtns.forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.preventDefault()
         e.stopPropagation()
         var num = btn.dataset.number
-        if (!num) return
+        if (!num || !navigator.clipboard || !navigator.clipboard.writeText) return
 
-        navigator.clipboard.writeText(num).then(function () {
-          var labelSpan = btn.querySelector('.hotcard__copy-text')
-          if (labelSpan) {
+        navigator.clipboard
+          .writeText(num)
+          .then(function () {
+            var labelSpan = btn.querySelector('.hotcard__copy-text')
+            if (!labelSpan) return
             var origText = labelSpan.textContent
-            labelSpan.textContent = fil ? '✓ Nakopya!' : '✓ Copied!'
-            btn.style.color = 'var(--status-open-ink)'
-            btn.style.borderColor = 'var(--status-open)'
+            labelSpan.textContent = fil ? 'Nakopya' : 'Copied'
+            btn.classList.add('is-copied')
             setTimeout(function () {
               labelSpan.textContent = origText
-              btn.style.color = ''
-              btn.style.borderColor = ''
+              btn.classList.remove('is-copied')
             }, 2000)
-          }
-        })
+          })
+          .catch(function () {})
       })
     })
   })()
